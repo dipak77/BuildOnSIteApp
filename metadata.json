@@ -1,0 +1,6 @@
+{
+  "name": "ConstructPro",
+  "description": "Premium glassmorphism dashboard built for construction project management, budget mapping, transaction flow, real-time worker safety & shift attendance logs, tasks, and data exports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

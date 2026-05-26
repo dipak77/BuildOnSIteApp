@@ -1,0 +1,295 @@
+package com.example.ui
+
+import android.app.Application
+import android.content.Context
+import android.widget.Toast
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.example.data.*
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+
+enum class AppScreen {
+    Dashboard, Money, Tasks, Site, More
+}
+
+class MainViewModel(private val repository: ConstructionRepository) : ViewModel() {
+
+    // UI States
+    var currentScreen by mutableStateOf(AppScreen.Dashboard)
+    var selectedProjectId by mutableStateOf<Int?>(1) // Default to first project
+    var attendanceDate by mutableStateOf("2026-05-26") // Date navigator
+    var darkThemeEnabled by mutableStateOf(true) // Premium dark glassmorphism mode toggle
+
+    // Filtering/Search States
+    var transactionSearchQuery by mutableStateOf("")
+    var transactionTypeFilter by mutableStateOf("All") // "All", "Money In", "Money Out"
+    var transactionCategoryFilter by mutableStateOf("All") // "All", "Material", "Labor", "Equipment", etc.
+
+    var taskStatusFilter by mutableStateOf("All") // "All", "To Do", "In Progress", "Done"
+
+    // Base Database Flows
+    val projects = repository.allProjects.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val workers = repository.allWorkers.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val attendance = repository.allAttendance.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val tasks = repository.allTasks.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val transactions = repository.allTransactions.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val moms = repository.allMOMs.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val payroll = repository.allPayroll.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val estimates = repository.allEstimates.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Active Project
+    val activeProject: StateFlow<Project?> = combine(projects, snapshotFlow { selectedProjectId }) { projectList: List<Project>, selectedId: Int? ->
+        if (selectedId == null) projectList.firstOrNull()
+        else projectList.find { it.id == selectedId } ?: projectList.firstOrNull()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    // Set selected project automatically if first project loads and selected is null
+    init {
+        viewModelScope.launch {
+            projects.collectLatest { projectList ->
+                if (selectedProjectId == null && projectList.isNotEmpty()) {
+                    selectedProjectId = projectList.first().id
+                }
+            }
+        }
+    }
+
+    // ==========================================
+    // CRUD DATA MUTATORS
+    // ==========================================
+
+    // Projects
+    fun addProject(name: String, location: String, budget: Double) {
+        viewModelScope.launch {
+            val id = repository.insertProject(Project(name = name, location = location, budget = budget, status = "Active"))
+            selectedProjectId = id.toInt()
+        }
+    }
+
+    fun updateProject(project: Project) {
+        viewModelScope.launch {
+            repository.updateProject(project)
+        }
+    }
+
+    fun deleteProject(project: Project, context: Context) {
+        viewModelScope.launch {
+            repository.deleteProject(project)
+            Toast.makeText(context, "Project deleted successfully", Toast.LENGTH_SHORT).show()
+            // Reset project focus
+            selectedProjectId = null
+        }
+    }
+
+    // Workers
+    fun addWorker(name: String, role: String, shift: String, wageRate: Double, color: Int) {
+        viewModelScope.launch {
+            repository.insertWorker(Worker(name = name, role = role, shift = shift, wageRate = wageRate, avatarColor = color))
+        }
+    }
+
+    fun updateWorker(worker: Worker) {
+        viewModelScope.launch {
+            repository.updateWorker(worker)
+        }
+    }
+
+    fun deleteWorker(worker: Worker, context: Context) {
+        viewModelScope.launch {
+            repository.deleteWorker(worker)
+            Toast.makeText(context, "Worker profile removed", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Attendance (Toggle/Mark)
+    fun recordAttendance(workerId: Int, projectId: Int, date: String, status: String, overtimeHours: Double = 0.0) {
+        viewModelScope.launch {
+            if (status == "Clear") {
+                repository.deleteAttendanceRecord(workerId, date)
+            } else {
+                repository.insertAttendance(
+                    Attendance(
+                        workerId = workerId,
+                        projectId = projectId,
+                        date = date,
+                        status = status,
+                        overtimeHours = overtimeHours
+                    )
+                )
+            }
+        }
+    }
+
+    // Tasks
+    fun addTask(projectId: Int, title: String, priority: String, assignee: String, dueDate: String) {
+        viewModelScope.launch {
+            repository.insertTask(
+                Task(
+                    projectId = projectId,
+                    title = title,
+                    priority = priority,
+                    status = "To Do",
+                    dueDate = dueDate,
+                    assignee = assignee
+                )
+            )
+        }
+    }
+
+    fun cycleTaskStatus(task: Task) {
+        viewModelScope.launch {
+            val nextStatus = when (task.status) {
+                "To Do" -> "In Progress"
+                "In Progress" -> "Done"
+                else -> "To Do"
+            }
+            repository.updateTask(task.copy(status = nextStatus))
+        }
+    }
+
+    fun updateTask(task: Task) {
+        viewModelScope.launch {
+            repository.updateTask(task)
+        }
+    }
+
+    fun deleteTask(task: Task) {
+        viewModelScope.launch {
+            repository.deleteTask(task)
+        }
+    }
+
+    // Transactions
+    fun addTransaction(projectId: Int, type: String, amount: Double, category: String, description: String, date: String) {
+        viewModelScope.launch {
+            repository.insertTransaction(
+                Transaction(
+                    projectId = projectId,
+                    type = type,
+                    amount = amount,
+                    category = category,
+                    description = description,
+                    date = date
+                )
+            )
+        }
+    }
+
+    fun deleteTransaction(transaction: Transaction) {
+        viewModelScope.launch {
+            repository.deleteTransaction(transaction)
+        }
+    }
+
+    // MOM
+    fun addMOM(projectId: Int, title: String, content: String, date: String) {
+        viewModelScope.launch {
+            repository.insertMOM(MOM(projectId = projectId, title = title, content = content, date = date))
+        }
+    }
+
+    fun deleteMOM(mom: MOM) {
+        viewModelScope.launch {
+            repository.deleteMOM(mom)
+        }
+    }
+
+    // Payroll
+    fun addPayroll(workerId: Int, projectId: Int, date: String, wagesPaid: Double, status: String) {
+        viewModelScope.launch {
+            repository.insertPayroll(Payroll(workerId = workerId, projectId = projectId, date = date, wagesPaid = wagesPaid, status = status))
+        }
+    }
+
+    fun updatePayroll(payroll: Payroll) {
+        viewModelScope.launch {
+            repository.updatePayroll(payroll)
+        }
+    }
+
+    fun deletePayroll(payroll: Payroll) {
+        viewModelScope.launch {
+            repository.deletePayroll(payroll)
+        }
+    }
+
+    // Estimates
+    fun addEstimate(projectId: Int, itemName: String, quantity: Double, unit: String, rate: Double) {
+        viewModelScope.launch {
+            repository.insertEstimate(
+                Estimate(
+                    projectId = projectId,
+                    itemName = itemName,
+                    quantity = quantity,
+                    unit = unit,
+                    rate = rate,
+                    totalCost = quantity * rate
+                )
+            )
+        }
+    }
+
+    fun deleteEstimate(estimate: Estimate) {
+        viewModelScope.launch {
+            repository.deleteEstimate(estimate)
+        }
+    }
+
+    // ==========================================
+    // DATA EXPORT/IMPORT RIGS
+    // ==========================================
+
+    fun exportTransactionsCSV(context: Context) {
+        viewModelScope.launch {
+            val activeProj = activeProject.value ?: return@launch
+            val list = transactions.value.filter { it.projectId == activeProj.id }
+            DataIO.exportTransactionsCSV(context, list, activeProj.name)
+        }
+    }
+
+    fun exportFullBackup(context: Context) {
+        viewModelScope.launch {
+            DataIO.exportBackupJSON(
+                context,
+                projects.value,
+                workers.value,
+                tasks.value,
+                transactions.value,
+                attendance.value,
+                moms.value,
+                payroll.value,
+                estimates.value
+            )
+        }
+    }
+
+    fun importFullBackup(context: Context, jsonString: String) {
+        viewModelScope.launch {
+            val success = DataIO.importBackupJSON(jsonString, AppDatabase.getDatabase(context).constructionDao())
+            if (success) {
+                Toast.makeText(context, "Database backup restored successfully!", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(context, "Failed to restore backup. Please verify file integrity.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    // ==========================================
+    // VIEW MODEL FACTORY DEFINITION
+    // ==========================================
+    class Factory(private val repository: ConstructionRepository) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
+                @Suppress("UNCHECKED_CAST")
+                return MainViewModel(repository) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class")
+        }
+    }
+}
