@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -249,13 +250,23 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
                         }
                     }
 
-                    // Glassmorphism Bottom Navigation Bar
+                    // Elegant Floating Glassmorphism Bottom Navigation Bar
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(68.dp)
-                            .background(if (dark) Color(0x35111827) else Color(0xDFFFFFFF))
-                            .padding(bottom = 2.dp),
+                            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 8.dp)
+                            .height(66.dp)
+                            .background(
+                                if (dark) Color(0x7D0B0F19) else Color(0xD2F8FAFC),
+                                RoundedCornerShape(24.dp)
+                            )
+                            .border(
+                                BorderStroke(
+                                    1.dp,
+                                    if (dark) GlassBorderDark else Color(0x1F6366F1)
+                                ),
+                                RoundedCornerShape(24.dp)
+                            ),
                         horizontalArrangement = Arrangement.SpaceAround,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -937,7 +948,7 @@ fun SidebarNavRow(
     }
 }
 
-// Bottom Bar Core Item views on mobile screens
+// Bottom Bar Core Item views on mobile screens - dynamic luxury capsule styling
 @Composable
 fun BottomBarNavItem(
     icon: ImageVector,
@@ -947,16 +958,23 @@ fun BottomBarNavItem(
     onClick: () -> Unit
 ) {
     val tc = if (active) {
-        if (darkTheme) NeonCyan else Color(0xFF0284C7)
+        if (darkTheme) NeonCyan else Color(0xFF0369A1) // Sky 700 for spectacular contrast in light theme
     } else {
         if (darkTheme) TextSecondary else TextSecondaryLight
     }
 
+    val bubbleBg = if (active) {
+        if (darkTheme) NeonCyan.copy(alpha = 0.12f) else Color(0x1F0284C7)
+    } else {
+        Color.Transparent
+    }
+
     Column(
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(16.dp))
+            .background(bubbleBg)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -964,14 +982,14 @@ fun BottomBarNavItem(
             imageVector = icon,
             contentDescription = label,
             tint = tc,
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = label,
             color = tc,
             fontSize = 11.sp,
-            fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
+            fontWeight = if (active) FontWeight.Black else FontWeight.Bold
         )
     }
 }

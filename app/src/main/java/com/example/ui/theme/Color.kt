@@ -22,8 +22,8 @@ val TextSecondary = Color(0xFF9CA3AF)
 val TextMuted = Color(0xFF6B7280)
 
 // Premium Light Glass Theme Backups (for appearance toggle)
-val GlassBackgroundLight = Color(0xFFF3F4F6)
-val GlassSurfaceLight = Color(0xBFDFE4EC)
-val GlassBorderLight = Color(0x4D111827)
-val TextPrimaryLight = Color(0xFF111827)
-val TextSecondaryLight = Color(0xFF4B5563)
+val GlassBackgroundLight = Color(0xFFF8FAFC) // Satin warm white/slate hybrid aura
+val GlassSurfaceLight = Color(0xD2FDFDFD)    // Lux ice-frosted white layout background
+val GlassBorderLight = Color(0x2B6366F1)      // Ultra-fine light Indigo translucent border stroke (Apple studio styling)
+val TextPrimaryLight = Color(0xFF0F172A)      // Obsidian dark gray for extreme crisp text readability
+val TextSecondaryLight = Color(0xFF475569)    // Sophisticated Cool Slate gray for subheaders and descriptions

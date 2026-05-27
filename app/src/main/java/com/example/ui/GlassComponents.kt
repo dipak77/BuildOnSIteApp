@@ -4,6 +4,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -74,12 +75,29 @@ fun GlassAtmosphereBox(
                         )
                     )
                 } else {
-                    // Soft sunny light ambient gradients
+                    // Elegant Luxury Sunrise aurora flow for 100-billion-dollar premium styling
+                    // 1. Soft glowing sky blue in the top-right
                     drawCircle(
                         brush = Brush.radialGradient(
-                            colors = listOf(NeonCyan.copy(alpha = 0.1f), Color.Transparent),
-                            center = Offset(size.width * 0.8f, size.height * 0.1f),
-                            radius = size.width * 0.6f
+                            colors = listOf(Color(0xFFBAE6FD).copy(alpha = 0.42f), Color.Transparent),
+                            center = Offset(size.width * 0.85f, size.height * 0.12f),
+                            radius = size.width * 0.75f
+                        )
+                    )
+                    // 2. Sophisticated blush pink in the middle-left
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(Color(0xFFFBCFE8).copy(alpha = 0.32f), Color.Transparent),
+                            center = Offset(size.width * 0.12f, size.height * 0.52f),
+                            radius = size.width * 0.75f
+                        )
+                    )
+                    // 3. Luxurious golden amber in the bottom-right
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(Color(0xFFFEF08A).copy(alpha = 0.38f), Color.Transparent),
+                            center = Offset(size.width * 0.88f, size.height * 0.88f),
+                            radius = size.width * 0.7f
                         )
                     )
                 }
@@ -111,14 +129,15 @@ fun GlassCard(
         label = "clickScale"
     )
 
-    // Frosted colors
+    // Frosted colors - Ultra-clean satin white with rich contrast for light theme
     val bg = if (darkTheme) {
         Color(0x2E111827) // Slate 900 tint 18% alpha
     } else {
-        Color(0xBFFFFFFF) // Translucent light white
+        Color(0xF0FAFAFC) // Translucent light alabaster/white
     }
 
-    val defaultBorder = if (darkTheme) GlassBorderDark else GlassBorderLight
+    // Pro-level elegant borders
+    val defaultBorder = if (darkTheme) GlassBorderDark else Color(0x2E6366F1) // Translucent luxury indigo stroke
     val borderStroke = BorderStroke(1.dp, borderColor ?: defaultBorder)
 
     val contentModifier = modifier
@@ -133,6 +152,15 @@ fun GlassCard(
                     color = glowColor.copy(alpha = 0.08f),
                     radius = size.maxDimension * 0.42f,
                     center = center
+                )
+            } else if (!darkTheme) {
+                // Soft luxury ambient studio drop shadow aura for light theme
+                val shadowColor = glowColor?.copy(alpha = 0.05f) ?: Color(0xFF6366F1).copy(alpha = 0.04f)
+                drawRoundRect(
+                    color = shadowColor,
+                    topLeft = Offset(-4f, 2f),
+                    size = Size(size.width + 8f, size.height + 8f),
+                    cornerRadius = CornerRadius(22.dp.toPx(), 22.dp.toPx())
                 )
             }
         }
@@ -189,15 +217,33 @@ fun GlassButton(
         label = "buttonScale"
     )
 
+    // In light theme, the primary action button background should be deep/rich
+    val resolvedGlowColor = if (!darkTheme && glowColor == NeonCyan) {
+        Color(0xFF0369A1) // Sky 700 for beautiful high-contrast text contrast in light theme
+    } else {
+        glowColor
+    }
+
     val bgBrush = if (outlineMode) {
         Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
     } else {
         Brush.linearGradient(
             colors = listOf(
-                glowColor.copy(alpha = 0.85f),
-                glowColor.mix(Color.Black, 0.2f).copy(alpha = 0.85f)
+                resolvedGlowColor.copy(alpha = 0.92f),
+                resolvedGlowColor.mix(Color.Black, 0.15f).copy(alpha = 0.92f)
             )
         )
+    }
+
+    // High contrast premium text selection over solid button surfaces
+    val resolvedTextColor = if (outlineMode) {
+        resolvedGlowColor
+    } else {
+        if (resolvedGlowColor == NeonCyan || resolvedGlowColor == NeonAmber || resolvedGlowColor == Color(0xFFFCD34D) || resolvedGlowColor == Color(0xFFF59E0B)) {
+            Color(0xFF0F172A) // Slate 900 for lighter yellow/amber backgrounds
+        } else {
+            Color.White // Pristine crisp white for solid indigo/purple buttons
+        }
     }
 
     Box(
@@ -209,7 +255,7 @@ fun GlassButton(
             .drawBehind {
                 if (darkTheme && !outlineMode && enabled) {
                     drawCircle(
-                        color = glowColor.copy(alpha = if (isPressed) 0.4f else 0.22f),
+                        color = resolvedGlowColor.copy(alpha = if (isPressed) 0.4f else 0.22f),
                         radius = size.width * 0.55f,
                         center = center
                     )
@@ -224,7 +270,7 @@ fun GlassButton(
             )
             .then(
                 if (outlineMode) Modifier.border(
-                    BorderStroke(1.5.dp, if (enabled) glowColor.copy(alpha = 0.8f) else Color(0x4D9CA3AF)),
+                    BorderStroke(1.5.dp, if (enabled) resolvedGlowColor.copy(alpha = 0.8f) else Color(0x4D9CA3AF)),
                     RoundedCornerShape(99.dp)
                 ) else Modifier
             )
@@ -247,12 +293,12 @@ fun GlassButton(
                     imageVector = icon,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
-                    tint = if (outlineMode) glowColor else Color.Black
+                    tint = resolvedTextColor
                 )
                 Spacer(modifier = Modifier.width(8.dp))
             }
             CompositionLocalProvider(
-                LocalContentColor provides if (outlineMode) glowColor else Color.Black
+                LocalContentColor provides resolvedTextColor
             ) {
                 Row(content = content)
             }
@@ -331,20 +377,37 @@ fun GlassChip(
     darkTheme: Boolean = true,
     activeColor: Color = NeonCyan
 ) {
-    val bg = if (selected) {
-        activeColor.copy(alpha = 0.25f)
+    // Resolve vibrant contrast active colors for light theme to meet premium standards
+    val resolvedActiveColor = if (!darkTheme) {
+        if (activeColor == NeonCyan) {
+            Color(0xFF0284C7) // Professional light ocean blue
+        } else if (activeColor == NeonPurple) {
+            Color(0xFF6D28D9) // Luxury Royal purple
+        } else if (activeColor == NeonGreen) {
+            Color(0xFF047857) // Deep jade green
+        } else if (activeColor == NeonPink) {
+            Color(0xFFBE123C) // Rich crimson rose
+        } else {
+            activeColor
+        }
     } else {
-        if (darkTheme) Color(0x1FFFFFFF) else Color(0x1C111827)
+        activeColor
+    }
+
+    val bg = if (selected) {
+        resolvedActiveColor.copy(alpha = if (darkTheme) 0.25f else 0.15f)
+    } else {
+        if (darkTheme) Color(0x1FFFFFFF) else Color(0x0F111827)
     }
 
     val borderC = if (selected) {
-        activeColor
+        resolvedActiveColor
     } else {
-        if (darkTheme) Color(0x1F9CA3AF) else Color(0x1F4B5563)
+        if (darkTheme) Color(0x1F9CA3AF) else Color(0x14111827)
     }
 
     val textC = if (selected) {
-        activeColor
+        resolvedActiveColor
     } else {
         if (darkTheme) TextSecondary else TextSecondaryLight
     }
@@ -514,272 +577,196 @@ fun BuildOnSiteLogo(
     modifier: Modifier = Modifier.size(120.dp),
     darkTheme: Boolean = true
 ) {
-    BoxWithConstraints(
-        modifier = modifier
-            .defaultMinSize(minWidth = 50.dp, minHeight = 50.dp),
+    Box(
+        modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        val rawWidth = maxWidth.value
-        val safeWidth = if (rawWidth.isNaN() || !rawWidth.isFinite() || rawWidth <= 0f) 120f else rawWidth
-        val scale = (safeWidth / 120f).coerceIn(0.1f, 10f)
-        
-        // Circular emblem badge background
-        Box(
-            modifier = Modifier
-                .size(maxWidth)
-                .clip(CircleShape)
-                .background(
-                    Brush.radialGradient(
-                        colors = if (darkTheme) {
-                            listOf(Color(0xFF1E293B), Color(0xFF0F172A))
-                        } else {
-                            listOf(Color(0xFFF8FAFC), Color(0xFFE2E8F0))
-                        }
-                    )
-                )
-                .border(
-                    (3 * scale).dp.coerceAtLeast(1.dp),
-                    Brush.sweepGradient(
-                        colors = listOf(
-                            Color(0xFFFCD34D), // Golden Yellow
-                            Color(0xFFF59E0B), // Secondary Gold
-                            Color(0xFFD97706), // Rich Amber
-                            Color(0xFFFCD34D)
-                        )
-                    ),
-                    CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            // Procedural drawings of the active skyline crane machinery & safety gear
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val w = size.width
-                val h = size.height
-                
-                if (w <= 0f || h <= 0f) return@Canvas
-                
-                // Architectural grid overlay
-                val gridAlpha = if (darkTheme) 0.08f else 0.15f
-                val gridColor = if (darkTheme) NeonCyan else Color(0xFF0284C7)
-                for (i in 1..4) {
-                    val x = w * (i * 0.2f)
-                    drawLine(gridColor.copy(alpha = gridAlpha), Offset(x, 0f), Offset(x, h), strokeWidth = 1f)
-                    val y = h * (i * 0.2f)
-                    drawLine(gridColor.copy(alpha = gridAlpha), Offset(0f, y), Offset(w, y), strokeWidth = 1f)
-                }
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+            if (w <= 0f || h <= 0f) return@Canvas
 
-                // Rising Skyscraper skeleton layout
-                val bLeft = w * 0.44f
-                val bRight = w * 0.72f
-                val bWidth = (bRight - bLeft).coerceAtLeast(0f)
-                val bTop = h * 0.16f
-                val bHeight = (h * 0.64f).coerceAtLeast(0f)
-                
-                // Skyscraper structural blocks
+            val strokeScale = w / 120f
+
+            // Radial background gradient inside the circle
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = if (darkTheme) {
+                        listOf(Color(0xFF1E293B), Color(0xFF0F172A))
+                    } else {
+                        listOf(Color(0xFFF8FAFC), Color(0xFFE2E8F0))
+                    }
+                ),
+                radius = w * 0.5f
+            )
+
+            // Outer sweep gradient border
+            drawCircle(
+                brush = Brush.sweepGradient(
+                    colors = listOf(
+                        Color(0xFFFCD34D), // Golden Yellow
+                        Color(0xFFF59E0B), // Secondary Gold
+                        Color(0xFFD97706), // Rich Amber
+                        Color(0xFFFCD34D)
+                    )
+                ),
+                radius = w * 0.48f,
+                style = Stroke(width = (2.5f * strokeScale).coerceAtLeast(1f))
+            )
+
+            // Architectural blueprint grid overlay (subtle)
+            val gridAlpha = if (darkTheme) 0.08f else 0.15f
+            val gridColor = if (darkTheme) NeonCyan else Color(0xFF0284C7)
+            for (i in 1..4) {
+                val x = w * (i * 0.2f)
+                drawLine(gridColor.copy(alpha = gridAlpha), Offset(x, 0f), Offset(x, h), strokeWidth = 1f)
+                val y = h * (i * 0.2f)
+                drawLine(gridColor.copy(alpha = gridAlpha), Offset(0f, y), Offset(w, y), strokeWidth = 1f)
+            }
+
+            // Rising Skyscraper core layout
+            val bLeft = w * 0.44f
+            val bRight = w * 0.72f
+            val bWidth = (bRight - bLeft).coerceAtLeast(0f)
+            val bTop = h * 0.16f
+            val bHeight = (h * 0.64f).coerceAtLeast(0f)
+            
+            drawRect(
+                color = if (darkTheme) Color(0xFF334155) else Color(0xFF94A3B8),
+                topLeft = Offset(bLeft, bTop),
+                size = Size(bWidth, bHeight * 0.8f)
+            )
+            
+            // Alternating floors glowing blueprint highlights
+            val numFloors = 4
+            val floorHeight = ((bHeight * 0.8f) / numFloors).coerceAtLeast(0f)
+            for (f in 0 until numFloors) {
+                val fTop = bTop + f * floorHeight
+                val isAlt = f % 2 == 0
+                val col = if (isAlt) Color(0xFFD97706).copy(alpha = 0.35f) else Color(0xFF0EA5E9).copy(alpha = 0.3f)
                 drawRect(
-                    color = if (darkTheme) Color(0xFF334155) else Color(0xFF94A3B8),
-                    topLeft = Offset(bLeft, bTop),
-                    size = Size(bWidth, bHeight * 0.8f)
+                    color = col,
+                    topLeft = Offset(bLeft + 2f, fTop + 2f),
+                    size = Size((bWidth - 4f).coerceAtLeast(0f), (floorHeight - 4f).coerceAtLeast(0f))
                 )
                 
-                // Horizontal construction floors highlights
-                val numFloors = 4
-                val floorHeight = ((bHeight * 0.8f) / numFloors).coerceAtLeast(0f)
-                for (f in 0 until numFloors) {
-                    val fTop = bTop + f * floorHeight
-                    val isAlt = f % 2 == 0
-                    val col = if (isAlt) Color(0xFFD97706).copy(alpha = 0.35f) else Color(0xFF0EA5E9).copy(alpha = 0.3f)
-                    drawRect(
-                        color = col,
-                        topLeft = Offset(bLeft + 2f, fTop + 2f),
-                        size = Size((bWidth - 4f).coerceAtLeast(0f), (floorHeight - 4f).coerceAtLeast(0f))
-                    )
-                    
-                    // Windows details
-                    val winW = ((bWidth - 12f) / 3f).coerceAtLeast(0f)
-                    val winH = ((floorHeight - 8f) / 2f).coerceAtLeast(0f)
-                    for (wx in 0..2) {
-                        for (wy in 0..1) {
-                            if (winW > 0f && winH > 0f) {
-                                drawRect(
-                                    color = if (darkTheme) Color(0xFF0F172A) else Color.White,
-                                    topLeft = Offset(
-                                        bLeft + 4f + wx * (winW + 2f),
-                                        fTop + 3f + wy * (winH + 2f)
-                                    ),
-                                    size = Size(winW, winH)
-                                )
-                            }
+                // Translucent windows slots
+                val winW = ((bWidth - 12f) / 3f).coerceAtLeast(0f)
+                val winH = ((floorHeight - 8f) / 2f).coerceAtLeast(0f)
+                for (wx in 0..2) {
+                    for (wy in 0..1) {
+                        if (winW > 0f && winH > 0f) {
+                            drawRect(
+                                color = if (darkTheme) Color(0xFF0F172A) else Color.White,
+                                topLeft = Offset(
+                                    bLeft + 4f + wx * (winW + 2f),
+                                    fTop + 3f + wy * (winH + 2f)
+                                ),
+                                size = Size(winW, winH)
+                            )
                         }
                     }
-                }
-
-                // Scaffolding poles on high floors
-                val sY = bTop - (h * 0.09f)
-                drawLine(
-                    color = Color(0xFFF59E0B),
-                    start = Offset(bLeft + bWidth * 0.2f, bTop),
-                    end = Offset(bLeft + bWidth * 0.2f, sY),
-                    strokeWidth = 1.5f * scale
-                )
-                drawLine(
-                    color = Color(0xFFF59E0B),
-                    start = Offset(bLeft + bWidth * 0.8f, bTop),
-                    end = Offset(bLeft + bWidth * 0.8f, sY),
-                    strokeWidth = 1.5f * scale
-                )
-                drawLine(
-                    color = Color(0xFFD97706),
-                    start = Offset(bLeft + bWidth * 0.2f, bTop),
-                    end = Offset(bLeft + bWidth * 0.8f, sY),
-                    strokeWidth = 1f
-                )
-                drawLine(
-                    color = Color(0xFFD97706),
-                    start = Offset(bLeft + bWidth * 0.8f, bTop),
-                    end = Offset(bLeft + bWidth * 0.2f, sY),
-                    strokeWidth = 1f
-                )
-
-                // High-strength Tower Crane (Yellow)
-                val cX = w * 0.24f
-                val cTopY = h * 0.10f
-                val cLeftArmX = w * 0.08f
-                val cRightArmX = w * 0.86f
-                
-                // Crane core support mast
-                drawLine(
-                    color = Color(0xFFF59E0B),
-                    start = Offset(cX, h * 0.72f),
-                    end = Offset(cX, cTopY),
-                    strokeWidth = 2.5f * scale
-                )
-                // Horizontal work jib
-                drawLine(
-                    color = Color(0xFFF59E0B),
-                    start = Offset(cLeftArmX, cTopY),
-                    end = Offset(cRightArmX, cTopY),
-                    strokeWidth = 2f * scale
-                )
-                // Lattice tension link
-                drawLine(
-                    color = Color(0xFFD97706),
-                    start = Offset(cX, cTopY + h * 0.12f),
-                    end = Offset(cX + w * 0.12f, cTopY),
-                    strokeWidth = 1.2f
-                )
-                // Steel hoist line extending down to the building
-                drawLine(
-                    color = Color(0xFF94A3B8),
-                    start = Offset(w * 0.58f, cTopY),
-                    end = Offset(w * 0.58f, bTop + h * 0.04f),
-                    strokeWidth = 1f
-                )
-                // Crane Hook
-                drawCircle(
-                    color = Color(0xFF475569),
-                    radius = 2f * scale,
-                    center = Offset(w * 0.58f, bTop + h * 0.04f)
-                )
-
-                // Yellow Hardhat safety layout (Bottom-left quadrant)
-                val hatX = w * 0.26f
-                val hatY = h * 0.64f
-                val hatR = (w * 0.13f).coerceAtLeast(0f)
-                // Dome
-                if (hatR > 0f) {
-                    drawArc(
-                        color = Color(0xFFF59E0B),
-                        startAngle = 180f,
-                        sweepAngle = 180f,
-                        useCenter = true,
-                        topLeft = Offset(hatX - hatR, hatY - hatR),
-                        size = Size(hatR * 2f, hatR * 2f)
-                    )
-                    // Front rim brim
-                    drawRoundRect(
-                        color = Color(0xFFD97706),
-                        topLeft = Offset(hatX - hatR * 1.2f, hatY - 1f),
-                        size = Size((hatR * 2.4f).coerceAtLeast(0f), (h * 0.025f).coerceAtLeast(0f)),
-                        cornerRadius = CornerRadius(2f, 2f)
-                    )
-                    // Safety crest badge highlight
-                    drawArc(
-                        color = Color.White,
-                        startAngle = 220f,
-                        sweepAngle = 100f,
-                        useCenter = false,
-                        topLeft = Offset(hatX - hatR * 0.35f, hatY - hatR * 0.96f),
-                        size = Size((hatR * 0.7f).coerceAtLeast(0f), (hatR * 0.45f).coerceAtLeast(0f))
-                    )
                 }
             }
 
-            // Lower centered branding badge & system layout
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth(0.92f)
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = (12 * scale).dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(1.dp)
-            ) {
-                // Metallic obsidian ConstructPro slab
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.96f)
-                        .clip(RoundedCornerShape((8 * scale).dp))
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color(0xFF1E293B), Color(0xFF090D16))
-                            )
-                        )
-                        .border(
-                            (1 * scale).dp.coerceAtLeast(0.5.dp),
-                            Brush.linearGradient(listOf(NeonCyan, Color(0xFFF59E0B))),
-                            RoundedCornerShape((8 * scale).dp)
-                        )
-                        .padding(vertical = (4 * scale).dp, horizontal = (4 * scale).dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "Construct",
-                            fontSize = (11.5f * scale).sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White,
-                            letterSpacing = 0.2.sp
-                        )
-                        Text(
-                            text = "Pro",
-                            fontSize = (12.5f * scale).sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color(0xFFFCD34D),
-                            letterSpacing = 0.5.sp
-                        )
-                    }
-                }
-                
-                // Yellow slogan banner
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.92f)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(Color(0xFFF59E0B))
-                        .padding(vertical = (1 * scale).dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "PAY MANAGEMENT SYSTEM",
-                        fontSize = (5.5f * scale).sp,
-                        fontWeight = FontWeight.Black,
-                        color = Color.Black,
-                        letterSpacing = 0.4.sp
-                    )
-                }
+            // Upper Scaffolding poles under-construction setup
+            val sY = bTop - (h * 0.09f)
+            drawLine(
+                color = Color(0xFFF59E0B),
+                start = Offset(bLeft + bWidth * 0.2f, bTop),
+                end = Offset(bLeft + bWidth * 0.2f, sY),
+                strokeWidth = 1.5f * strokeScale
+            )
+            drawLine(
+                color = Color(0xFFF59E0B),
+                start = Offset(bLeft + bWidth * 0.8f, bTop),
+                end = Offset(bLeft + bWidth * 0.8f, sY),
+                strokeWidth = 1.5f * strokeScale
+            )
+            drawLine(
+                color = Color(0xFFD97706),
+                start = Offset(bLeft + bWidth * 0.2f, bTop),
+                end = Offset(bLeft + bWidth * 0.8f, sY),
+                strokeWidth = 1f
+            )
+            drawLine(
+                color = Color(0xFFD97706),
+                start = Offset(bLeft + bWidth * 0.8f, bTop),
+                end = Offset(bLeft + bWidth * 0.2f, sY),
+                strokeWidth = 1f
+            )
+
+            // High-precision tower crane boom
+            val cX = w * 0.24f
+            val cTopY = h * 0.10f
+            val cLeftArmX = w * 0.08f
+            val cRightArmX = w * 0.86f
+            
+            // Principal vertical mast mast
+            drawLine(
+                color = Color(0xFFF59E0B),
+                start = Offset(cX, h * 0.72f),
+                end = Offset(cX, cTopY),
+                strokeWidth = 2.5f * strokeScale
+            )
+            // Long horizontal boom jib
+            drawLine(
+                color = Color(0xFFF59E0B),
+                start = Offset(cLeftArmX, cTopY),
+                end = Offset(cRightArmX, cTopY),
+                strokeWidth = 2f * strokeScale
+            )
+            // Lattice frame counterweights
+            drawLine(
+                color = Color(0xFFD97706),
+                start = Offset(cX, cTopY + h * 0.12f),
+                end = Offset(cX + w * 0.12f, cTopY),
+                strokeWidth = 1.2f
+            )
+            // Wire rope sling lifting line
+            drawLine(
+                color = Color(0xFF94A3B8),
+                start = Offset(w * 0.58f, cTopY),
+                end = Offset(w * 0.58f, bTop + h * 0.04f),
+                strokeWidth = 1f
+            )
+            // Load block pulley crane hook
+            drawCircle(
+                color = Color(0xFF475569),
+                radius = 2f * strokeScale,
+                center = Offset(w * 0.58f, bTop + h * 0.04f)
+            )
+
+            // Classic safety golden yellow hardhat
+            val hatX = w * 0.26f
+            val hatY = h * 0.64f
+            val hatR = (w * 0.13f).coerceAtLeast(0f)
+            if (hatR > 0f) {
+                // Hardhat shell
+                drawArc(
+                    color = Color(0xFFF59E0B),
+                    startAngle = 180f,
+                    sweepAngle = 180f,
+                    useCenter = true,
+                    topLeft = Offset(hatX - hatR, hatY - hatR),
+                    size = Size(hatR * 2f, hatR * 2f)
+                )
+                // Hardhat protective brim
+                drawRoundRect(
+                    color = Color(0xFFD97706),
+                    topLeft = Offset(hatX - hatR * 1.2f, hatY - 1f),
+                    size = Size((hatR * 2.4f).coerceAtLeast(0f), (h * 0.025f).coerceAtLeast(0f)),
+                    cornerRadius = CornerRadius(2f, 2f)
+                )
+                // Center ridge highlight
+                drawArc(
+                    color = Color.White,
+                    startAngle = 220f,
+                    sweepAngle = 100f,
+                    useCenter = false,
+                    topLeft = Offset(hatX - hatR * 0.35f, hatY - hatR * 0.96f),
+                    size = Size((hatR * 0.7f).coerceAtLeast(0f), (hatR * 0.45f).coerceAtLeast(0f))
+                )
             }
         }
     }

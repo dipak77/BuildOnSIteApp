@@ -34,9 +34,9 @@ private val GlassLightColorScheme = lightColorScheme(
     onBackground = TextPrimaryLight,
     surface = Color.White,
     onSurface = TextPrimaryLight,
-    surfaceVariant = Color(0xFFE5E7EB),
+    surfaceVariant = Color(0xFFF1F5F9), // Luxurious light slate gray
     onSurfaceVariant = TextSecondaryLight,
-    outline = Color(0x28111827)
+    outline = GlassBorderLight // Elegant translucent indigo track outline trace
 )
 
 @Composable
