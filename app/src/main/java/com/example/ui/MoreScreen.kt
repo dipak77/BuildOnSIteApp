@@ -247,6 +247,7 @@ fun MoreScreen(
                             onClick = {
                                 try {
                                     val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                                        .requestIdToken("970298420983-bin5cqqcqgdoi9r256p7a78bvpi6c0hs.apps.googleusercontent.com")
                                         .requestEmail()
                                         .build()
                                     val googleSignInClient = GoogleSignIn.getClient(context, gso)

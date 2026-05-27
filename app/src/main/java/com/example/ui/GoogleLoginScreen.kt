@@ -53,6 +53,7 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
     // Authentic GMS Google Sign In options config
     val gso = remember {
         GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken("970298420983-bin5cqqcqgdoi9r256p7a78bvpi6c0hs.apps.googleusercontent.com")
             .requestEmail()
             .requestProfile()
             .build()
