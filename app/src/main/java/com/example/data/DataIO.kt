@@ -17,9 +17,12 @@ object DataIO {
     // ==========================================
     fun exportTransactionsCSV(context: Context, transactions: List<Transaction>, projectName: String) {
         try {
-            val csvHeader = "ID,Project,Type,Amount,Category,Description,Date\n"
+            val csvHeader = "ID,Project,Type,Amount,Category,Description,Date,Party,Reference,Payment Method\n"
             val csvBody = transactions.joinToString("\n") { t ->
-                "${t.id},\"${projectName.replace("\"", "\"\"")}\",${t.type},${t.amount},\"${t.category.replace("\"", "\"\"")}\",\"${t.description.replace("\"", "\"\"")}\",${t.date}"
+                val pName = t.partyName ?: ""
+                val ref = t.reference
+                val payM = t.paymentMethod
+                "${t.id},\"${projectName.replace("\"", "\"\"")}\",${t.type},${t.amount},\"${t.category.replace("\"", "\"\"")}\",\"${t.description.replace("\"", "\"\"")}\",${t.date},\"${pName.replace("\"", "\"\"")}\",\"${ref.replace("\"", "\"\"")}\",\"${payM.replace("\"", "\"\"")}\""
             }
             val csvContent = csvHeader + csvBody
 
@@ -77,6 +80,15 @@ object DataIO {
                 wObj.put("shift", w.shift)
                 wObj.put("wageRate", w.wageRate)
                 wObj.put("avatarColor", w.avatarColor)
+                wObj.put("phone", w.phone)
+                wObj.put("email", w.email)
+                wObj.put("partyType", w.partyType)
+                wObj.put("address", w.address)
+                wObj.put("partyId", w.partyId)
+                wObj.put("dateOfJoining", w.dateOfJoining)
+                wObj.put("aadhaar", w.aadhaar)
+                wObj.put("pan", w.pan)
+                wObj.put("reference", w.reference)
                 workersArray.put(wObj)
             }
             root.put("workers", workersArray)
@@ -107,6 +119,10 @@ object DataIO {
                 txObj.put("category", tx.category)
                 txObj.put("description", tx.description)
                 txObj.put("date", tx.date)
+                txObj.put("partyId", tx.partyId ?: -1)
+                txObj.put("partyName", tx.partyName ?: "")
+                txObj.put("reference", tx.reference)
+                txObj.put("paymentMethod", tx.paymentMethod)
                 txArray.put(txObj)
             }
             root.put("transactions", txArray)
@@ -239,7 +255,16 @@ object DataIO {
                             role = w.getString("role"),
                             shift = w.getString("shift"),
                             wageRate = w.getDouble("wageRate"),
-                            avatarColor = w.getInt("avatarColor")
+                            avatarColor = w.getInt("avatarColor"),
+                            phone = w.optString("phone", ""),
+                            email = w.optString("email", ""),
+                            partyType = w.optString("partyType", "Worker"),
+                            address = w.optString("address", ""),
+                            partyId = w.optString("partyId", ""),
+                            dateOfJoining = w.optString("dateOfJoining", ""),
+                            aadhaar = w.optString("aadhaar", ""),
+                            pan = w.optString("pan", ""),
+                            reference = w.optString("reference", "")
                         )
                     )
                 }
@@ -277,7 +302,11 @@ object DataIO {
                             amount = tx.getDouble("amount"),
                             category = tx.getString("category"),
                             description = tx.getString("description"),
-                            date = tx.getString("date")
+                            date = tx.getString("date"),
+                            partyId = if (tx.has("partyId") && tx.getInt("partyId") != -1) tx.getInt("partyId") else null,
+                            partyName = tx.optString("partyName", null),
+                            reference = tx.optString("reference", ""),
+                            paymentMethod = tx.optString("paymentMethod", "Cash")
                         )
                     )
                 }
@@ -411,6 +440,10 @@ object DataIO {
                 txObj.put("category", tx.category)
                 txObj.put("description", tx.description)
                 txObj.put("date", tx.date)
+                txObj.put("partyId", tx.partyId ?: -1)
+                txObj.put("partyName", tx.partyName ?: "")
+                txObj.put("reference", tx.reference)
+                txObj.put("paymentMethod", tx.paymentMethod)
                 txArray.put(txObj)
             }
             root.put("transactions", txArray)
@@ -534,7 +567,11 @@ object DataIO {
                             amount = tx.getDouble("amount"),
                             category = tx.getString("category"),
                             description = tx.getString("description"),
-                            date = tx.getString("date")
+                            date = tx.getString("date"),
+                            partyId = if (tx.has("partyId") && tx.getInt("partyId") != -1) tx.getInt("partyId") else null,
+                            partyName = tx.optString("partyName", null),
+                            reference = tx.optString("reference", ""),
+                            paymentMethod = tx.optString("paymentMethod", "Cash")
                         )
                     )
                 }

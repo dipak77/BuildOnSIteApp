@@ -707,10 +707,12 @@ fun MoreScreen(
     // ==========================================
 
     // 1. Workers MODAL (Parties)
+    var expandedWorkerId by remember { mutableStateOf<Int?>(null) }
+
     GlassModalDialog(
         visible = activeSubModal == "Parties",
         onDismiss = { activeSubModal = null },
-        title = "Site Roster (Workers)",
+        title = "Party & Worker list",
         darkTheme = dark,
         glowColor = NeonCyan
     ) {
@@ -719,22 +721,82 @@ fun MoreScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             items(allWorkers) { worker ->
+                val expanded = expandedWorkerId == worker.id
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        expandedWorkerId = if (expanded) null else worker.id
+                    },
                     colors = CardDefaults.cardColors(containerColor = if (dark) Color(0x1F293780) else Color(0x1E000000)),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(10.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(worker.name, color = if (dark) TextPrimary else TextPrimaryLight, fontWeight = FontWeight.Bold)
-                            Text("${worker.role} • ${worker.shift} shift", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp)
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(worker.avatarColor))
+                                        .padding(4.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = if (worker.name.isNotEmpty()) worker.name.take(2).uppercase() else "P",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(worker.name, color = if (dark) TextPrimary else TextPrimaryLight, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    Text("${worker.partyType} • ID: ${worker.partyId.ifBlank { "N/A" }}", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp)
+                                }
+                            }
+                            
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                IconButton(
+                                    onClick = { viewModel.deleteWorker(worker, context) },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(Icons.Default.DeleteOutline, null, tint = NeonPink, modifier = Modifier.size(18.dp))
+                                }
+                            }
                         }
-                        IconButton(onClick = { viewModel.deleteWorker(worker, context) }) {
-                            Icon(Icons.Default.DeleteOutline, null, tint = NeonPink, modifier = Modifier.size(18.dp))
+                        
+                        if (expanded) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            HorizontalDivider(color = if (dark) GlassBorderDark else GlassBorderLight)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            val details = listOf(
+                                "Party Type" to worker.partyType,
+                                "Phone No." to worker.phone.ifBlank { "Not provided" },
+                                "Email ID" to worker.email.ifBlank { "Not provided" },
+                                "Address" to worker.address.ifBlank { "Not provided" },
+                                "Joining Date" to worker.dateOfJoining.ifBlank { "Not provided" },
+                                "Referred By" to worker.reference.ifBlank { "Not provided" },
+                                "Aadhaar No." to worker.aadhaar.ifBlank { "Not provided" },
+                                "PAN Card No." to worker.pan.ifBlank { "Not provided" },
+                                "Role / Duty" to worker.role,
+                                "Shift Duty" to "${worker.shift} Shift",
+                                "Daily Wage / Unit Rate" to "$${worker.wageRate}"
+                            )
+                            
+                            details.forEach { (label, value) ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(label, color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                    Text(value, color = if (dark) TextPrimary else TextPrimaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     }
                 }

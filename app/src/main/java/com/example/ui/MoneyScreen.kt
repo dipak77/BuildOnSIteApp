@@ -1,10 +1,13 @@
 package com.example.ui
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -61,7 +64,10 @@ fun MoneyScreen(
             val matchesCategory = (catFilter == "All") || (tx.category == catFilter)
             val matchesQuery = (query.isBlank()) || 
                     tx.description.contains(query, ignoreCase = true) || 
-                    tx.category.contains(query, ignoreCase = true)
+                    tx.category.contains(query, ignoreCase = true) ||
+                    (tx.partyName?.contains(query, ignoreCase = true) == true) ||
+                    tx.reference.contains(query, ignoreCase = true) ||
+                    tx.paymentMethod.contains(query, ignoreCase = true)
             matchesType && matchesCategory && matchesQuery
         }
     }
@@ -317,8 +323,32 @@ fun MoneyScreen(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
+                                if (!tx.partyName.isNullOrEmpty()) {
+                                    Row(
+                                        modifier = Modifier.padding(vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(if (dark) Color(0x3310B981) else Color(0x2210B981))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = tx.partyName,
+                                                color = if (dark) NeonGreen else Color(0xFF047857),
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+                                val extraDetails = mutableListOf<String>()
+                                if (tx.paymentMethod.isNotEmpty()) extraDetails.add(tx.paymentMethod)
+                                if (tx.reference.isNotEmpty()) extraDetails.add("Ref: ${tx.reference}")
+                                val extraStr = if (extraDetails.isNotEmpty()) " • " + extraDetails.joinToString(" • ") else ""
                                 Text(
-                                    text = "${tx.category} • ${tx.date}",
+                                    text = "${tx.category} • ${tx.date}$extraStr",
                                     color = if (dark) TextSecondary else TextSecondaryLight,
                                     fontSize = 11.sp
                                 )

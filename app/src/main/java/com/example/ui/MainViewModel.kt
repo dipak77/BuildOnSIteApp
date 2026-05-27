@@ -138,9 +138,41 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
     }
 
     // Workers
-    fun addWorker(name: String, role: String, shift: String, wageRate: Double, color: Int) {
+    fun addWorker(
+        name: String,
+        role: String,
+        shift: String,
+        wageRate: Double,
+        color: Int,
+        phone: String = "",
+        email: String = "",
+        partyType: String = "Worker",
+        address: String = "",
+        partyId: String = "",
+        dateOfJoining: String = "",
+        aadhaar: String = "",
+        pan: String = "",
+        reference: String = ""
+    ) {
         viewModelScope.launch {
-            repository.insertWorker(Worker(name = name, role = role, shift = shift, wageRate = wageRate, avatarColor = color))
+            repository.insertWorker(
+                Worker(
+                    name = name,
+                    role = role,
+                    shift = shift,
+                    wageRate = wageRate,
+                    avatarColor = color,
+                    phone = phone,
+                    email = email,
+                    partyType = partyType,
+                    address = address,
+                    partyId = partyId,
+                    dateOfJoining = dateOfJoining,
+                    aadhaar = aadhaar,
+                    pan = pan,
+                    reference = reference
+                )
+            )
         }
     }
 
@@ -216,7 +248,18 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
     }
 
     // Transactions
-    fun addTransaction(projectId: Int, type: String, amount: Double, category: String, description: String, date: String) {
+    fun addTransaction(
+        projectId: Int,
+        type: String,
+        amount: Double,
+        category: String,
+        description: String,
+        date: String,
+        partyId: Int? = null,
+        partyName: String? = null,
+        reference: String = "",
+        paymentMethod: String = "Cash"
+    ) {
         viewModelScope.launch {
             repository.insertTransaction(
                 Transaction(
@@ -225,7 +268,11 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
                     amount = amount,
                     category = category,
                     description = description,
-                    date = date
+                    date = date,
+                    partyId = partyId,
+                    partyName = partyName,
+                    reference = reference,
+                    paymentMethod = paymentMethod
                 )
             )
         }

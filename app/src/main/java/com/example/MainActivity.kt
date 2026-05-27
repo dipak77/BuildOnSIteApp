@@ -7,8 +7,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -86,6 +89,9 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
     var txAmount by remember { mutableStateOf("") }
     var txCategory by remember { mutableStateOf("Material") }
     var txDesc by remember { mutableStateOf("") }
+    var txSelectedParty by remember { mutableStateOf<Worker?>(null) }
+    var txReference by remember { mutableStateOf("") }
+    var txPaymentMethod by remember { mutableStateOf("Cash") } // "Cash", "Bank Transfer", "Cheque"
 
     // 3. Task Input States
     var taskTitle by remember { mutableStateOf("") }
@@ -98,6 +104,15 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
     var workerRole by remember { mutableStateOf("Mason Foreman") }
     var workerShift by remember { mutableStateOf("Day") }
     var workerWage by remember { mutableStateOf("") }
+    var workerPhone by remember { mutableStateOf("") }
+    var workerEmail by remember { mutableStateOf("") }
+    var workerPartyType by remember { mutableStateOf("Worker") } // Client, Staff, Vendor, Worker, Investor, etc.
+    var workerAddress by remember { mutableStateOf("") }
+    var workerPartyId by remember { mutableStateOf("") }
+    var workerDateOfJoining by remember { mutableStateOf("27/05/2026") }
+    var workerAadhaar by remember { mutableStateOf("") }
+    var workerPan by remember { mutableStateOf("") }
+    var workerReference by remember { mutableStateOf("") }
 
     BoxWithConstraints(
         modifier = Modifier
@@ -408,7 +423,9 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
         glowColor = if (txType == "Money In") NeonGreen else NeonPink
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
@@ -442,10 +459,157 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
                 }
             }
 
-            GlassTextField(value = txAmount, onValueChange = { txAmount = it }, label = "Transaction Amount ($)", isNumeric = true, placeholder = "45000.0", darkTheme = dark)
-            GlassTextField(value = txDesc, onValueChange = { txDesc = it }, label = "Brief Expenditure Memo", placeholder = "Weekly worker payout session", darkTheme = dark)
+            // Party Name Mapping Dropdown Lookup Look!
+            Text("Party Name Mapping / Account", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            
+            var partySearchQuery by remember { mutableStateOf("") }
+            var isSearchingParty by remember { mutableStateOf(false) }
 
-            // Category Selection Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    GlassTextField(
+                        value = txSelectedParty?.name ?: partySearchQuery,
+                        onValueChange = {
+                            if (txSelectedParty != null) {
+                                txSelectedParty = null
+                            }
+                            partySearchQuery = it
+                            isSearchingParty = true
+                        },
+                        label = "Search or Select Party",
+                        placeholder = "Type to search party...",
+                        darkTheme = dark,
+                        icon = Icons.Default.Search
+                    )
+                }
+                
+                if (txSelectedParty != null) {
+                    IconButton(
+                        onClick = {
+                            txSelectedParty = null
+                            partySearchQuery = ""
+                        }
+                    ) {
+                        Icon(Icons.Default.Clear, "Clear mapping", tint = NeonPink)
+                    }
+                }
+            }
+
+            // Suggestions List
+            if (isSearchingParty || (partySearchQuery.isNotEmpty() && txSelectedParty == null)) {
+                val matched = allWorkers.filter {
+                    it.name.contains(partySearchQuery, ignoreCase = true) ||
+                    it.partyType.contains(partySearchQuery, ignoreCase = true)
+                }
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = if (dark) Color(0xFF1E293B) else Color(0xFFF1F5F9)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Column(modifier = Modifier.padding(6.dp)) {
+                        if (matched.isEmpty()) {
+                            Text(
+                                text = "No matching parties found.",
+                                color = if (dark) TextSecondary else TextSecondaryLight,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(8.dp)
+                            )
+                        } else {
+                            matched.take(5).forEach { party ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            txSelectedParty = party
+                                            partySearchQuery = party.name
+                                            isSearchingParty = false
+                                        }
+                                        .padding(8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(party.name, color = if (dark) TextPrimary else TextPrimaryLight, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                        Text(party.partyType + (if (party.phone.isNotEmpty()) " • ${party.phone}" else ""), color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp)
+                                    }
+                                    Text("Select", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                        
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = if (dark) Color(0x33FFFFFF) else Color(0x33000000))
+                        
+                        // Create Party Link
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    isSearchingParty = false
+                                    showTransactionDialog = false
+                                    showWorkerDialog = true
+                                }
+                                .padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(Icons.Default.AddCircleOutline, null, tint = NeonCyan, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("+ Create New Party", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            } else if (txSelectedParty != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (dark) Color(0x3310B981) else Color(0x2210B981))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.CheckCircle, null, tint = NeonGreen, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Mapped to: ${txSelectedParty?.name} [${txSelectedParty?.partyType}]",
+                        color = if (dark) NeonGreen else Color(0xFF047857),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            GlassTextField(value = txAmount, onValueChange = { txAmount = it }, label = "Transaction Amount ($)", isNumeric = true, placeholder = "45000.0", darkTheme = dark)
+
+            Text("Payment Method", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("Cash", "Bank Transfer", "Cheque").forEach { method ->
+                    val selected = txPaymentMethod == method
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (selected) NeonGreen.copy(alpha = 0.2f) else Color.Transparent)
+                            .border(1.dp, if (selected) NeonGreen else if (dark) GlassBorderLight.copy(alpha = 0.2f) else GlassBorderLight, RoundedCornerShape(8.dp))
+                            .clickable { txPaymentMethod = method }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(method, color = if (selected) NeonGreen else if (dark) TextSecondary else TextSecondaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            GlassTextField(value = txReference, onValueChange = { txReference = it }, label = "Reference No. / Cheque / TxRef", placeholder = "REF-987293", darkTheme = dark)
+
+            // Category Selection Row (Cost Code)
+            Text("Add Cost Code / Segment", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("Material", "Labor", "Equipment", "Other").forEach { cat ->
                     Box(
@@ -462,14 +626,29 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
                 }
             }
 
+            GlassTextField(value = txDesc, onValueChange = { txDesc = it }, label = "Brief Expenditure Memo / More Details", placeholder = "Weekly worker payout session", darkTheme = dark)
+
             GlassButton(
                 onClick = {
                     val amt = txAmount.toDoubleOrNull() ?: 0.0
                     val proj = currentProject
                     if (amt > 0 && txDesc.isNotBlank() && proj != null) {
-                        viewModel.addTransaction(proj.id, txType, amt, txCategory, txDesc, "2026-05-26")
+                        viewModel.addTransaction(
+                            projectId = proj.id,
+                            type = txType,
+                            amount = amt,
+                            category = txCategory,
+                            description = txDesc,
+                            date = "2026-05-27",
+                            partyId = txSelectedParty?.id,
+                            partyName = txSelectedParty?.name,
+                            reference = txReference,
+                            paymentMethod = txPaymentMethod
+                        )
                         txAmount = ""
                         txDesc = ""
+                        txReference = ""
+                        txSelectedParty = null
                         showTransactionDialog = false
                     }
                 },
@@ -538,57 +717,169 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
     }
 
     // 4. ADD WORKER DIALOG
+    LaunchedEffect(showWorkerDialog) {
+        if (showWorkerDialog && workerPartyId.isBlank()) {
+            workerPartyId = "PID-${allWorkers.size + 1}"
+        }
+    }
+
     GlassModalDialog(
         visible = showWorkerDialog,
         onDismiss = { showWorkerDialog = false },
-        title = "Add Worker Crew Profile",
+        title = "Add New Party / Worker Profile",
         darkTheme = dark,
         glowColor = NeonGreen
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            GlassTextField(value = workerName, onValueChange = { workerName = it }, label = "Worker Full Name", placeholder = "John Doe", darkTheme = dark)
-            GlassTextField(value = workerRole, onValueChange = { workerRole = it }, label = "Crew Role / Class Designation", placeholder = "Brick Mason Foreman", darkTheme = dark)
-            GlassTextField(value = workerWage, onValueChange = { workerWage = it }, label = "Daily Standard Wage Rate ($)", isNumeric = true, placeholder = "350.0", darkTheme = dark)
+            GlassTextField(value = workerPartyId, onValueChange = { workerPartyId = it }, label = "Party ID", placeholder = "PID-1", darkTheme = dark)
+            
+            GlassTextField(value = workerName, onValueChange = { workerName = it }, label = "Party / Worker Full Name", placeholder = "e.g. John Doe / Tejas Contractors", darkTheme = dark)
+            
+            GlassTextField(value = workerPhone, onValueChange = { workerPhone = it }, label = "Phone Number (+91)", placeholder = "e.g. 9876543210", darkTheme = dark)
+            
+            GlassTextField(value = workerEmail, onValueChange = { workerEmail = it }, label = "Email Address", placeholder = "e.g. client@example.com", darkTheme = dark)
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Day", "Night").forEach { sh ->
+            Text("Party Type Category", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                listOf("Client", "Staff", "Vendor", "Worker").forEach { type ->
+                    val selected = workerPartyType == type
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (workerShift == sh) NeonGreen.copy(alpha = 0.2f) else Color.Transparent)
-                            .clickable { workerShift = sh }
-                            .padding(vertical = 10.dp),
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (selected) NeonGreen.copy(alpha = 0.2f) else Color.Transparent)
+                            .border(1.dp, if (selected) NeonGreen else if (dark) GlassBorderLight.copy(alpha = 0.2f) else GlassBorderLight, RoundedCornerShape(8.dp))
+                            .clickable { workerPartyType = type }
+                            .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("$sh Shift", color = if (workerShift == sh) NeonGreen else if (dark) TextSecondary else TextSecondaryLight, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text(type, color = if (selected) NeonGreen else if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (workerPartyType == "Investor") NeonGreen.copy(alpha = 0.2f) else Color.Transparent)
+                        .border(1.dp, if (workerPartyType == "Investor") NeonGreen else if (dark) GlassBorderLight.copy(alpha = 0.2f) else GlassBorderLight, RoundedCornerShape(8.dp))
+                        .clickable { workerPartyType = "Investor" }
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Investor", color = if (workerPartyType == "Investor") NeonGreen else if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            GlassTextField(value = workerAddress, onValueChange = { workerAddress = it }, label = "Your Address / Location", placeholder = "Enter home or office address...", darkTheme = dark)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    GlassTextField(value = workerDateOfJoining, onValueChange = { workerDateOfJoining = it }, label = "Date of Joining", placeholder = "27/05/2026", darkTheme = dark)
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    GlassTextField(value = workerRole, onValueChange = { workerRole = it }, label = "Designation/Role", placeholder = "e.g. Foreman", darkTheme = dark)
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    GlassTextField(value = workerAadhaar, onValueChange = { workerAadhaar = it }, label = "Aadhaar Card No.", placeholder = "12-digit number", darkTheme = dark)
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    GlassTextField(value = workerPan, onValueChange = { workerPan = it }, label = "PAN Card No.", placeholder = "10-character code", darkTheme = dark)
+                }
+            }
+
+            GlassTextField(value = workerReference, onValueChange = { workerReference = it }, label = "Referred By / Given Reference", placeholder = "Given reference, e.g. Partner X", darkTheme = dark)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.weight(1.2f)) {
+                    GlassTextField(value = workerWage, onValueChange = { workerWage = it }, label = "Daily Wage / Rate Rate ($)", isNumeric = true, placeholder = "350.0", darkTheme = dark)
+                }
+                
+                Column(modifier = Modifier.weight(0.8f)) {
+                    Text("Standard Shift", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 2.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf("Day", "Night").forEach { sh ->
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (workerShift == sh) NeonGreen.copy(alpha = 0.2f) else Color.Transparent)
+                                    .clickable { workerShift = sh }
+                                    .padding(vertical = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(sh, color = if (workerShift == sh) NeonGreen else if (dark) TextSecondary else TextSecondaryLight, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            }
+                        }
                     }
                 }
             }
 
             GlassButton(
                 onClick = {
-                    val rate = workerWage.toDoubleOrNull() ?: 250.0
-                    if (workerName.isNotBlank() && workerRole.isNotBlank()) {
-                        // Dynamically choose random vivid neon color for avatar bubble
+                    val rate = workerWage.toDoubleOrNull() ?: 0.0
+                    if (workerName.isNotBlank()) {
                         val colors = listOf(0xFF3B82F6.toInt(), 0xFFEC4899.toInt(), 0xFF10B981.toInt(), 0xFFF59E0B.toInt(), 0xFF8B5CF6.toInt())
                         val avatarC = colors.random()
 
-                        viewModel.addWorker(workerName, workerRole, workerShift, rate, avatarC)
+                        viewModel.addWorker(
+                            name = workerName,
+                            role = if (workerRole.isNotBlank()) workerRole else workerPartyType,
+                            shift = workerShift,
+                            wageRate = rate,
+                            color = avatarC,
+                            phone = workerPhone,
+                            email = workerEmail,
+                            partyType = workerPartyType,
+                            address = workerAddress,
+                            partyId = workerPartyId,
+                            dateOfJoining = workerDateOfJoining,
+                            aadhaar = workerAadhaar,
+                            pan = workerPan,
+                            reference = workerReference
+                        )
+                        
+                        // Clear states
                         workerName = ""
+                        workerRole = "Mason Foreman"
                         workerWage = ""
+                        workerPhone = ""
+                        workerEmail = ""
+                        workerPartyType = "Worker"
+                        workerAddress = ""
+                        workerPartyId = ""
+                        workerAadhaar = ""
+                        workerPan = ""
+                        workerReference = ""
                         showWorkerDialog = false
                     }
                 },
-                enabled = workerName.isNotBlank() && workerRole.isNotBlank(),
+                enabled = workerName.isNotBlank(),
                 glowColor = NeonGreen,
                 darkTheme = dark,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("APPREND CROW PROFILE", fontWeight = FontWeight.Bold)
+                Text("PROCESS PARTY PROFILE", fontWeight = FontWeight.Bold)
             }
         }
     }

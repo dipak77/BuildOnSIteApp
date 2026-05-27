@@ -29,7 +29,16 @@ data class Worker(
     val role: String,
     val shift: String, // "Day", "Night"
     val wageRate: Double,
-    val avatarColor: Int // Color packed Int
+    val avatarColor: Int, // Color packed Int
+    val phone: String = "",
+    val email: String = "",
+    val partyType: String = "Worker", // "Client", "Staff", "Vendor", "Worker", "Investor", etc.
+    val address: String = "",
+    val partyId: String = "",
+    val dateOfJoining: String = "",
+    val aadhaar: String = "",
+    val pan: String = "",
+    val reference: String = "" // given reference field
 )
 
 @Entity(tableName = "attendance")
@@ -61,7 +70,11 @@ data class Transaction(
     val amount: Double,
     val category: String, // "Material", "Labor", "Equipment", "Client Advance", "Other"
     val description: String,
-    val date: String // YYYY-MM-DD
+    val date: String, // YYYY-MM-DD
+    val partyId: Int? = null,
+    val partyName: String? = null,
+    val reference: String = "", // transaction reference
+    val paymentMethod: String = "Cash" // "Cash", "Bank Transfer", "Cheque"
 )
 
 @Entity(tableName = "mom")
@@ -229,7 +242,7 @@ interface ConstructionDao {
         Payroll::class,
         Estimate::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
