@@ -36,12 +36,13 @@ fun MoneyScreen(
     val typeFilter = viewModel.transactionTypeFilter
     val catFilter = viewModel.transactionCategoryFilter
 
-    val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale.US) }
+    val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale("en", "IN")) }
 
     // Aggregate lists filtered for current selected project
     val projectTransactions = remember(allTransactions, currentProject) {
-        if (currentProject == null) emptyList()
-        else allTransactions.filter { it.projectId == currentProject!!.id }
+        val projId = currentProject?.id
+        if (projId == null) emptyList()
+        else allTransactions.filter { it.projectId == projId }
     }
 
     // Calculations of unfiltered numbers

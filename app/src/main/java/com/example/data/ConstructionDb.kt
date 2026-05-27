@@ -18,7 +18,8 @@ data class Project(
     val name: String,
     val location: String,
     val budget: Double,
-    val status: String // "Active", "Completed", "On Hold"
+    val status: String, // "Active", "Completed", "On Hold"
+    val customBackground: String? = null
 )
 
 @Entity(tableName = "workers")
@@ -228,7 +229,7 @@ interface ConstructionDao {
         Payroll::class,
         Estimate::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -245,6 +246,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "construction_database"
                 )
+                .fallbackToDestructiveMigration()
                 .addCallback(DatabaseCallback(context))
                 .build()
                 INSTANCE = instance
@@ -266,9 +268,9 @@ abstract class AppDatabase : RoomDatabase() {
 
         suspend fun seedDatabase(dao: ConstructionDao) {
             // Seed Projects
-            val p1Id = dao.insertProject(Project(name = "Skyline Corporate Tower", location = "Sector 62, City Center", budget = 1250000.0, status = "Active")).toInt()
-            val p2Id = dao.insertProject(Project(name = "Emerald Heights Villa", location = "Hilltop Greens", budget = 450000.0, status = "Active")).toInt()
-            dao.insertProject(Project(name = "Metro Line Transit", location = "Subway Segment 4", budget = 3200000.0, status = "On Hold"))
+            val p1Id = dao.insertProject(Project(name = "Skyline Corporate Tower", location = "Sector 62, City Center", budget = 1250000.0, status = "Active", customBackground = "preset_cyber_blueprint")).toInt()
+            val p2Id = dao.insertProject(Project(name = "Emerald Heights Villa", location = "Hilltop Greens", budget = 450000.0, status = "Active", customBackground = "preset_sunset_construct")).toInt()
+            dao.insertProject(Project(name = "Metro Line Transit", location = "Subway Segment 4", budget = 3200000.0, status = "On Hold", customBackground = "preset_golden_truss"))
 
             // Seed Workers (Colors packed as ABGR Ints representing beautiful neon shades)
             val w1Id = dao.insertWorker(Worker(name = "John Carter", role = "Mason Foreman", shift = "Day", wageRate = 350.0, avatarColor = 0xFF3B82F6.toInt())).toInt()

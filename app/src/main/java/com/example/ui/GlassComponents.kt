@@ -3,6 +3,7 @@ package com.example.ui
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,10 +12,12 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Construction
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -496,3 +499,108 @@ fun GlassModalDialog(
         }
     }
 }
+
+// ==========================================
+// 8. PROCEDURAL BRANDING LOGO COMPONENT
+// ==========================================
+
+@Composable
+fun BuildOnSiteLogo(
+    modifier: Modifier = Modifier,
+    darkTheme: Boolean = true
+) {
+    Box(
+        modifier = modifier
+            .size(120.dp)
+            .clip(CircleShape)
+            .background(
+                Brush.radialGradient(
+                    colors = if (darkTheme) listOf(Color(0xFF1E1E38), Color(0xFF0D0D1A)) else listOf(Color(0xFFE0F2FE), Color(0xFFBAE6FD))
+                )
+            )
+            .border(
+                3.dp,
+                Brush.sweepGradient(
+                    colors = listOf(NeonCyan, NeonPurple, NeonPink, NeonGreen, NeonCyan)
+                ),
+                CircleShape
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+            
+            // Subtle golden background sun/gear
+            drawCircle(
+                color = if (darkTheme) Color(0x22FCD34D) else Color(0x33F59E0B),
+                radius = w * 0.35f,
+                center = Offset(w * 0.5f, h * 0.45f)
+            )
+            
+            // Stylized concrete skyscraper shapes
+            val buildingColor = if (darkTheme) Color(0x33818CF8) else Color(0x334F46E5)
+            drawRect(
+                color = buildingColor,
+                topLeft = Offset(w * 0.38f, h * 0.32f),
+                size = androidx.compose.ui.geometry.Size(w * 0.24f, h * 0.4f)
+            )
+            drawRect(
+                color = buildingColor.copy(alpha = 0.6f),
+                topLeft = Offset(w * 0.58f, h * 0.40f),
+                size = androidx.compose.ui.geometry.Size(w * 0.16f, h * 0.32f)
+            )
+            
+            // Crane Tower lines
+            val craneColor = if (darkTheme) NeonCyan else Color(0xFF0284C7)
+            drawLine(
+                color = craneColor,
+                start = Offset(w * 0.32f, h * 0.72f),
+                end = Offset(w * 0.32f, h * 0.28f),
+                strokeWidth = 5f
+            )
+            drawLine(
+                color = craneColor,
+                start = Offset(w * 0.20f, h * 0.28f),
+                end = Offset(w * 0.72f, h * 0.28f),
+                strokeWidth = 5f
+            )
+            drawLine(
+                color = if (darkTheme) Color(0xFFFCD34D) else Color(0xFFD97706),
+                start = Offset(w * 0.55f, h * 0.28f),
+                end = Offset(w * 0.55f, h * 0.48f),
+                strokeWidth = 3f
+            )
+        }
+        
+        // Inner phone-shield
+        Box(
+            modifier = Modifier
+                .size(68.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(if (darkTheme) Color(0xEE0B0F19) else Color(0xEEF8FAFC))
+                .border(2.dp, if (darkTheme) NeonCyan else Color(0xFF0284C7), RoundedCornerShape(14.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Construction,
+                    contentDescription = null,
+                    tint = NeonPurple,
+                    modifier = Modifier.size(26.dp)
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "B.O.S APP",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black,
+                    color = if (darkTheme) Color.White else Color.Black
+                )
+            }
+        }
+    }
+}
+

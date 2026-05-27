@@ -45,7 +45,7 @@ fun SiteScreen(
 
     val formatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.US) }
     val displayFormat = remember { SimpleDateFormat("EEEE, d MMMM yyyy", Locale.US) }
-    val cFormatter = remember { NumberFormat.getCurrencyInstance(Locale.US) }
+    val cFormatter = remember { NumberFormat.getCurrencyInstance(Locale("en", "IN")) }
 
     // Navigation trigger functions
     val navigateDay = { days: Int ->
@@ -66,8 +66,9 @@ fun SiteScreen(
 
     // Filter attendance events for active date and active project
     val activeDateAttendance = remember(allAttendance, activeDate, currentProject) {
-        if (currentProject == null) emptyList()
-        else allAttendance.filter { it.date == activeDate && it.projectId == currentProject!!.id }
+        val projId = currentProject?.id
+        if (projId == null) emptyList()
+        else allAttendance.filter { it.date == activeDate && it.projectId == projId }
     }
 
     // Compute stats
@@ -349,14 +350,15 @@ fun SiteScreen(
     }
 
     // Interactive Attendance Overtime Logger Dialog Sheet
-    if (selectedWorkerForAttendance != null && currentProject != null) {
-        val worker = selectedWorkerForAttendance!!
-        val record = activeDateAttendance.find { it.workerId == worker.id }
+    val activeProj = currentProject
+    val selectedWorker = selectedWorkerForAttendance
+    if (selectedWorker != null && activeProj != null) {
+        val record = activeDateAttendance.find { it.workerId == selectedWorker.id }
 
         GlassModalDialog(
             visible = true,
             onDismiss = { selectedWorkerForAttendance = null },
-            title = "Mark Attendance: ${worker.name}",
+            title = "Mark Attendance: ${selectedWorker.name}",
             darkTheme = dark,
             glowColor = NeonPurple
         ) {
@@ -365,7 +367,7 @@ fun SiteScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "Logging status for ${parsedDateString} in ${currentProject!!.name}",
+                    text = "Logging status for ${parsedDateString} in ${activeProj.name}",
                     fontSize = 12.sp,
                     color = if (dark) TextSecondary else TextSecondaryLight
                 )
@@ -389,7 +391,7 @@ fun SiteScreen(
                                 CircleShape
                             )
                             .clickable {
-                                viewModel.recordAttendance(worker.id, currentProject!!.id, activeDate, "Present")
+                                viewModel.recordAttendance(selectedWorker.id, activeProj.id, activeDate, "Present")
                                 selectedWorkerForAttendance = null
                             }
                             .padding(vertical = 12.dp),
@@ -412,7 +414,7 @@ fun SiteScreen(
                                 CircleShape
                             )
                             .clickable {
-                                viewModel.recordAttendance(worker.id, currentProject!!.id, activeDate, "Absent")
+                                viewModel.recordAttendance(selectedWorker.id, activeProj.id, activeDate, "Absent")
                                 selectedWorkerForAttendance = null
                             }
                             .padding(vertical = 12.dp),
@@ -452,8 +454,8 @@ fun SiteScreen(
                             onClick = {
                                 val hrs = inputOvertimeHours.toDoubleOrNull() ?: 0.0
                                 viewModel.recordAttendance(
-                                    worker.id,
-                                    currentProject!!.id,
+                                    selectedWorker.id,
+                                    activeProj.id,
                                     activeDate,
                                     if (hrs > 0) "Overtime" else "Present",
                                     hrs
@@ -476,7 +478,7 @@ fun SiteScreen(
                             .clip(CircleShape)
                             .background(Color(0x1AFF0000))
                             .clickable {
-                                viewModel.recordAttendance(worker.id, currentProject!!.id, activeDate, "Clear")
+                                viewModel.recordAttendance(selectedWorker.id, activeProj.id, activeDate, "Clear")
                                 selectedWorkerForAttendance = null
                             }
                             .padding(vertical = 10.dp),

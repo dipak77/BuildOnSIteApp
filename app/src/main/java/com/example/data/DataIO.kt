@@ -62,6 +62,7 @@ object DataIO {
                 pObj.put("location", p.location)
                 pObj.put("budget", p.budget)
                 pObj.put("status", p.status)
+                pObj.put("customBackground", p.customBackground)
                 projectsArray.put(pObj)
             }
             root.put("projects", projectsArray)
@@ -219,7 +220,8 @@ object DataIO {
                             name = p.getString("name"),
                             location = p.getString("location"),
                             budget = p.getDouble("budget"),
-                            status = p.getString("status")
+                            status = p.getString("status"),
+                            customBackground = p.optString("customBackground", null)
                         )
                     )
                 }
@@ -353,6 +355,258 @@ object DataIO {
                 }
             }
 
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    // ==========================================
+    // 5. EXPORT SINGLE PROJECT BACKUP TO JSON
+    // ==========================================
+    fun exportProjectBackupJSON(
+        context: Context,
+        project: Project,
+        tasks: List<Task>,
+        transactions: List<Transaction>,
+        attendance: List<Attendance>,
+        moms: List<MOM>,
+        payroll: List<Payroll>,
+        estimates: List<Estimate>
+    ) {
+        try {
+            val root = JSONObject()
+            
+            val pObj = JSONObject()
+            pObj.put("id", project.id)
+            pObj.put("name", project.name)
+            pObj.put("location", project.location)
+            pObj.put("budget", project.budget)
+            pObj.put("status", project.status)
+            pObj.put("customBackground", project.customBackground)
+            root.put("project", pObj)
+            
+            // Tasks
+            val tasksArray = JSONArray()
+            tasks.filter { it.projectId == project.id }.forEach { t ->
+                val tObj = JSONObject()
+                tObj.put("id", t.id)
+                tObj.put("title", t.title)
+                tObj.put("priority", t.priority)
+                tObj.put("status", t.status)
+                tObj.put("dueDate", t.dueDate)
+                tObj.put("assignee", t.assignee)
+                tasksArray.put(tObj)
+            }
+            root.put("tasks", tasksArray)
+
+            // Transactions
+            val txArray = JSONArray()
+            transactions.filter { it.projectId == project.id }.forEach { tx ->
+                val txObj = JSONObject()
+                txObj.put("id", tx.id)
+                txObj.put("type", tx.type)
+                txObj.put("amount", tx.amount)
+                txObj.put("category", tx.category)
+                txObj.put("description", tx.description)
+                txObj.put("date", tx.date)
+                txArray.put(txObj)
+            }
+            root.put("transactions", txArray)
+
+            // Attendance
+            val attArray = JSONArray()
+            attendance.filter { it.projectId == project.id }.forEach { a ->
+                val aObj = JSONObject()
+                aObj.put("id", a.id)
+                aObj.put("workerId", a.workerId)
+                aObj.put("date", a.date)
+                aObj.put("status", a.status)
+                aObj.put("overtimeHours", a.overtimeHours)
+                attArray.put(aObj)
+            }
+            root.put("attendance", attArray)
+
+            // MOMs
+            val mArray = JSONArray()
+            moms.filter { it.projectId == project.id }.forEach { m ->
+                val mObj = JSONObject()
+                mObj.put("id", m.id)
+                mObj.put("title", m.title)
+                mObj.put("content", m.content)
+                mObj.put("date", m.date)
+                mArray.put(mObj)
+            }
+            root.put("moms", mArray)
+
+            // Payroll
+            val pyArray = JSONArray()
+            payroll.filter { it.projectId == project.id }.forEach { py ->
+                val pyObj = JSONObject()
+                pyObj.put("id", py.id)
+                pyObj.put("workerId", py.workerId)
+                pyObj.put("date", py.date)
+                pyObj.put("wagesPaid", py.wagesPaid)
+                pyObj.put("status", py.status)
+                pyObj.put("overtimeHours", 0.0)
+                pyArray.put(pyObj)
+            }
+            root.put("payroll", pyArray)
+
+            // Estimates
+            val estArray = JSONArray()
+            estimates.filter { it.projectId == project.id }.forEach { est ->
+                val estObj = JSONObject()
+                estObj.put("id", est.id)
+                estObj.put("itemName", est.itemName)
+                estObj.put("quantity", est.quantity)
+                estObj.put("unit", est.unit)
+                estObj.put("rate", est.rate)
+                estObj.put("totalCost", est.totalCost)
+                estArray.put(estObj)
+            }
+            root.put("estimates", estArray)
+
+            val jsonString = root.toString(2)
+            val fileName = "Project_${project.name.replace(" ", "_")}_Backup_${System.currentTimeMillis()}.json"
+            val cacheFile = File(context.cacheDir, fileName)
+            FileOutputStream(cacheFile).use { out ->
+                out.write(jsonString.toByteArray())
+            }
+
+            shareFile(context, cacheFile, "application/json", "Export Project Database Backup")
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(context, "Error exporting database project backup: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // ==========================================
+    // 6. IMPORT SINGLE PROJECT BACKUP FROM JSON
+    // ==========================================
+    suspend fun importProjectBackupJSON(
+        jsonString: String,
+        dao: ConstructionDao
+    ): Boolean {
+        return try {
+            val root = JSONObject(jsonString)
+            if (!root.has("project")) return false
+            
+            val p = root.getJSONObject("project")
+            val pId = dao.insertProject(
+                Project(
+                    name = p.getString("name"),
+                    location = p.getString("location"),
+                    budget = p.getDouble("budget"),
+                    status = p.getString("status"),
+                    customBackground = p.optString("customBackground", null)
+                )
+            ).toInt()
+
+            // Import Tasks
+            if (root.has("tasks")) {
+                val array = root.getJSONArray("tasks")
+                for (i in 0 until array.length()) {
+                    val t = array.getJSONObject(i)
+                    dao.insertTask(
+                        Task(
+                            projectId = pId,
+                            title = t.getString("title"),
+                            priority = t.getString("priority"),
+                            status = t.getString("status"),
+                            dueDate = t.getString("dueDate"),
+                            assignee = t.getString("assignee")
+                        )
+                    )
+                }
+            }
+
+            // Import Transactions
+            if (root.has("transactions")) {
+                val array = root.getJSONArray("transactions")
+                for (i in 0 until array.length()) {
+                    val tx = array.getJSONObject(i)
+                    dao.insertTransaction(
+                        Transaction(
+                            projectId = pId,
+                            type = tx.getString("type"),
+                            amount = tx.getDouble("amount"),
+                            category = tx.getString("category"),
+                            description = tx.getString("description"),
+                            date = tx.getString("date")
+                        )
+                    )
+                }
+            }
+
+            // Import Attendance
+            if (root.has("attendance")) {
+                val array = root.getJSONArray("attendance")
+                for (i in 0 until array.length()) {
+                    val a = array.getJSONObject(i)
+                    dao.insertAttendance(
+                        Attendance(
+                            workerId = a.getInt("workerId"),
+                            projectId = pId,
+                            date = a.getString("date"),
+                            status = a.getString("status"),
+                            overtimeHours = a.optDouble("overtimeHours", 0.0)
+                        )
+                    )
+                }
+            }
+
+            // Import MOMs
+            if (root.has("moms")) {
+                val array = root.getJSONArray("moms")
+                for (i in 0 until array.length()) {
+                    val m = array.getJSONObject(i)
+                    dao.insertMOM(
+                        MOM(
+                            projectId = pId,
+                            title = m.getString("title"),
+                            content = m.getString("content"),
+                            date = m.getString("date")
+                        )
+                    )
+                }
+            }
+
+            // Import Payroll
+            if (root.has("payroll")) {
+                val array = root.getJSONArray("payroll")
+                for (i in 0 until array.length()) {
+                    val py = array.getJSONObject(i)
+                    dao.insertPayroll(
+                        Payroll(
+                            workerId = py.getInt("workerId"),
+                            projectId = pId,
+                            date = py.getString("date"),
+                            wagesPaid = py.getDouble("wagesPaid"),
+                            status = py.getString("status")
+                        )
+                    )
+                }
+            }
+
+            // Import Estimates
+            if (root.has("estimates")) {
+                val array = root.getJSONArray("estimates")
+                for (i in 0 until array.length()) {
+                    val est = array.getJSONObject(i)
+                    dao.insertEstimate(
+                        Estimate(
+                            projectId = pId,
+                            itemName = est.getString("itemName"),
+                            quantity = est.getDouble("quantity"),
+                            unit = est.getString("unit"),
+                            rate = est.getDouble("rate"),
+                            totalCost = est.getDouble("totalCost")
+                        )
+                    )
+                }
+            }
             true
         } catch (e: Exception) {
             e.printStackTrace()

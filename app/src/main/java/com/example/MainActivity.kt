@@ -41,9 +41,19 @@ class MainActivity : ComponentActivity() {
             val viewModel: MainViewModel by viewModels { MainViewModel.Factory(repository) }
             val dark = viewModel.darkThemeEnabled
 
+            // Load user session from shared preferences on launch
+            LaunchedEffect(Unit) {
+                viewModel.loadUserSessionFromPrefs(applicationContext)
+            }
+
             MyApplicationTheme(darkTheme = dark) {
                 GlassAtmosphereBox(darkTheme = dark) {
-                    ScaffoldFrame(viewModel = viewModel)
+                    val userSession by viewModel.userSession.collectAsState()
+                    if (userSession == null) {
+                        GoogleLoginScreen(viewModel = viewModel)
+                    } else {
+                        ScaffoldFrame(viewModel = viewModel)
+                    }
                 }
             }
         }
@@ -232,7 +242,7 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
                             icon = Icons.Default.Dashboard,
                             active = currentTab == AppScreen.Dashboard,
                             darkTheme = dark,
-                            label = "Dash",
+                            label = "Dashboard",
                             onClick = { viewModel.currentScreen = AppScreen.Dashboard }
                         )
 
@@ -455,8 +465,9 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
             GlassButton(
                 onClick = {
                     val amt = txAmount.toDoubleOrNull() ?: 0.0
-                    if (amt > 0 && txDesc.isNotBlank() && currentProject != null) {
-                        viewModel.addTransaction(currentProject!!.id, txType, amt, txCategory, txDesc, "2026-05-26")
+                    val proj = currentProject
+                    if (amt > 0 && txDesc.isNotBlank() && proj != null) {
+                        viewModel.addTransaction(proj.id, txType, amt, txCategory, txDesc, "2026-05-26")
                         txAmount = ""
                         txDesc = ""
                         showTransactionDialog = false
@@ -508,8 +519,9 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
 
             GlassButton(
                 onClick = {
-                    if (taskTitle.isNotBlank() && currentProject != null) {
-                        viewModel.addTask(currentProject!!.id, taskTitle, taskPriority, if (taskAssigneeName.isBlank()) "Crew" else taskAssigneeName, taskDueDate)
+                    val proj = currentProject
+                    if (taskTitle.isNotBlank() && proj != null) {
+                        viewModel.addTask(proj.id, taskTitle, taskPriority, if (taskAssigneeName.isBlank()) "Crew" else taskAssigneeName, taskDueDate)
                         taskTitle = ""
                         taskAssigneeName = ""
                         showTaskDialog = false

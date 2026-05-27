@@ -18,7 +18,57 @@ enum class AppScreen {
     Dashboard, Money, Tasks, Site, More
 }
 
+data class GoogleUser(
+    val displayName: String,
+    val email: String,
+    val photoUrl: String? = null,
+    val idToken: String? = null,
+    val isGuest: Boolean = false
+)
+
 class MainViewModel(private val repository: ConstructionRepository) : ViewModel() {
+
+    // Google User Session
+    private val _userSession = MutableStateFlow<GoogleUser?>(null)
+    val userSession: StateFlow<GoogleUser?> = _userSession.asStateFlow()
+
+    fun handleGoogleSignIn(user: GoogleUser, context: Context) {
+        _userSession.value = user
+        // Persist session
+        val prefs = context.getSharedPreferences("constructpro_prefs", Context.MODE_PRIVATE)
+        prefs.edit().apply {
+            putString("auth_name", user.displayName)
+            putString("auth_email", user.email)
+            putString("auth_photo", user.photoUrl ?: "")
+            putString("auth_token", user.idToken ?: "")
+            putBoolean("auth_guest", user.isGuest)
+            apply()
+        }
+    }
+
+    fun handleGoogleSignOut(context: Context) {
+        _userSession.value = null
+        val prefs = context.getSharedPreferences("constructpro_prefs", Context.MODE_PRIVATE)
+        prefs.edit().clear().apply()
+    }
+
+    fun loadUserSessionFromPrefs(context: Context) {
+        val prefs = context.getSharedPreferences("constructpro_prefs", Context.MODE_PRIVATE)
+        val name = prefs.getString("auth_name", null)
+        val email = prefs.getString("auth_email", null)
+        if (name != null && email != null) {
+            val photo = prefs.getString("auth_photo", "") ?: ""
+            val token = prefs.getString("auth_token", "") ?: ""
+            val isGuest = prefs.getBoolean("auth_guest", false)
+            _userSession.value = GoogleUser(
+                displayName = name,
+                email = email,
+                photoUrl = if (photo.isEmpty()) null else photo,
+                idToken = if (token.isEmpty()) null else token,
+                isGuest = isGuest
+            )
+        }
+    }
 
     // UI States
     var currentScreen by mutableStateOf(AppScreen.Dashboard)
@@ -277,6 +327,40 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
             } else {
                 Toast.makeText(context, "Failed to restore backup. Please verify file integrity.", Toast.LENGTH_LONG).show()
             }
+        }
+    }
+
+    // Project-wise backup & background mutators
+    fun exportProjectBackup(context: Context, project: Project) {
+        viewModelScope.launch {
+            DataIO.exportProjectBackupJSON(
+                context,
+                project,
+                tasks.value,
+                transactions.value,
+                attendance.value,
+                moms.value,
+                payroll.value,
+                estimates.value
+            )
+        }
+    }
+
+    fun importProjectBackup(context: Context, jsonString: String) {
+        viewModelScope.launch {
+            val success = DataIO.importProjectBackupJSON(jsonString, AppDatabase.getDatabase(context).constructionDao())
+            if (success) {
+                Toast.makeText(context, "Project restored successfully!", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(context, "Failed to restore project backup. Check file integrity.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    fun updateProjectBackground(project: Project, backgroundStyle: String) {
+        viewModelScope.launch {
+            val updated = project.copy(customBackground = backgroundStyle)
+            repository.updateProject(updated)
         }
     }
 

@@ -33,8 +33,9 @@ fun TasksScreen(
 
     // Filtered lists for active project
     val projectTasks = remember(allTasks, currentProject) {
-        if (currentProject == null) emptyList()
-        else allTasks.filter { it.projectId == currentProject!!.id }
+        val projId = currentProject?.id
+        if (projId == null) emptyList()
+        else allTasks.filter { it.projectId == projId }
     }
 
     // Calculations
