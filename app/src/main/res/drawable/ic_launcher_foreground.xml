@@ -4,31 +4,29 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Glowing outer polygon frame representing precision engineering -->
-    <path
-        android:pathData="M54,18 L84,33 L84,69 L54,84 L24,69 L24,33 Z"
-        android:strokeWidth="1.8"
-        android:strokeColor="#00FFFF"
-        android:fillColor="#1500FFFF" />
     
-    <!-- Isometric high-tech structure block inside -->
+    <!-- Premium Golden Architectural Shield (Main Motif) -->
     <path
-        android:pathData="M54,26 L78,38 L54,50 L30,38 Z"
-        android:fillColor="#FF007F" />
+        android:pathData="M54,22 C67,22 76,27 78,34 C78,54 64,72 54,80 C44,72 30,54 30,34 C32,27 41,22 54,22 Z"
+        android:strokeWidth="2.5"
+        android:strokeColor="#FCD34D"
+        android:fillColor="#151E293B" />
     
+    <!-- Central Modernized ConstructPro Logo Girders (Prism) -->
     <path
-        android:pathData="M30,38 L54,50 L54,72 L30,60 Z"
-        android:fillColor="#8A2BE2" />
+        android:pathData="M54,30 L70,38 L54,46 L38,38 Z"
+        android:fillColor="#06B6D4" />
         
     <path
-        android:pathData="M54,50 L78,38 L78,60 L54,72 Z"
-        android:fillColor="#4D00FF" />
+        android:pathData="M38,38 L54,46 L54,64 L38,56 Z"
+        android:fillColor="#0284C7" />
+        
+    <path
+        android:pathData="M54,46 L70,38 L70,56 L54,64 Z"
+        android:fillColor="#0369A1" />
 
-    <!-- Hard hat silhouette overlay at the bottom center to denote builder crew -->
+    <!-- Sleek Golden Construction Tool Cross-bar Accent -->
     <path
-        android:pathData="M40,56 C40,50 46,46 54,46 C62,46 68,50 68,56 L70,56 C71,56 72,57 72,58 L72,60 C72,61 71,62 70,62 L38,62 C37,62 36,61 36,60 L36,58 C36,57 37,56 38,56 Z"
-        android:fillColor="#FFD700" />
-    <path
-        android:pathData="M51,43 L57,43 L55,46 L53,46 Z"
-        android:fillColor="#FFA500" />
+        android:pathData="M44,66 L64,66 L54,58 Z"
+        android:fillColor="#FCD34D" />
 </vector>

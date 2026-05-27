@@ -192,18 +192,12 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
                             onClick = {
                                 isConnecting = true
                                 try {
-                                    googleSignInClient.signOut().addOnCompleteListener {
-                                        try {
-                                            val intent = googleSignInClient.signInIntent
-                                            signInLauncher.launch(intent)
-                                        } catch (e: Exception) {
-                                            isConnecting = false
-                                            showAccountChooser = true
-                                            Toast.makeText(context, "No local Play services: opening account list", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
+                                    val intent = googleSignInClient.signInIntent
+                                    signInLauncher.launch(intent)
                                 } catch (e: Exception) {
                                     try {
+                                        // Graceful fallback attempt with signout first
+                                        googleSignInClient.signOut()
                                         val intent = googleSignInClient.signInIntent
                                         signInLauncher.launch(intent)
                                     } catch (ex: Exception) {
@@ -317,10 +311,86 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
             },
             containerColor = if (dark) Color(0xFF0F172A) else Color.White,
             text = {
+                val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    // Help Guide Card
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (dark) Color(0xFF1E293B) else Color(0xFFEFF6FF)
+                            ),
+                            border = BorderStroke(1.5.dp, if (dark) Color(0xFFF59E0B) else Color(0xFF3B82F6)),
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 6.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    text = "🔒 Google Identity & API Guide",
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 12.sp,
+                                    color = if (dark) Color(0xFFFCD34D) else Color(0xFF1D4ED8)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "To sign in with real accounts on physical devices, register this app's credentials in your Google Cloud / Firebase console under APIs & Services:",
+                                    fontSize = 10.sp,
+                                    color = if (dark) Color(0xFFCBD5E1) else Color(0xFF334155),
+                                    lineHeight = 14.sp
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                
+                                // Package Name
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text("Package Name:", fontSize = 8.sp, color = Color.Gray)
+                                        Text("com.aistudio.constructpro.kgrmqd", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (dark) Color.White else Color.Black)
+                                    }
+                                    TextButton(onClick = {
+                                        clipboard.setText(androidx.compose.ui.text.AnnotatedString("com.aistudio.constructpro.kgrmqd"))
+                                        Toast.makeText(context, "Copied Package Name!", Toast.LENGTH_SHORT).show()
+                                    }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)) {
+                                        Text("Copy", fontSize = 10.sp, color = NeonCyan)
+                                    }
+                                }
+                                
+                                // SHA-1 Fingerprint
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("Debug SHA-1:", fontSize = 8.sp, color = Color.Gray)
+                                        Text("16:32:70:61:0E:4D:E9:9B:C8:3D:22:C3:8E:38:45:D3:10:37:15:49", fontSize = 9.sp, fontWeight = FontWeight.SemiBold, color = if (dark) Color.White else Color.Black)
+                                    }
+                                    TextButton(onClick = {
+                                        clipboard.setText(androidx.compose.ui.text.AnnotatedString("16:32:70:61:0E:4D:E9:9B:C8:3D:22:C3:8E:38:45:D3:10:37:15:49"))
+                                        Toast.makeText(context, "Copied SHA-1 Certificate!", Toast.LENGTH_SHORT).show()
+                                    }) {
+                                        Text("Copy", fontSize = 10.sp, color = NeonCyan)
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "💡 Tip: Bypass GMS remote signature errors instantly by tapping \"Dipak Harane\" or typing custom email below!",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (dark) NeonGreen else Color(0xFF047857),
+                                    lineHeight = 13.sp
+                                )
+                            }
+                        }
+                    }
                     
                     // Account Option 1: The current developer user (Dipak Harane)
                     item {

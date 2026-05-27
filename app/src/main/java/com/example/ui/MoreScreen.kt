@@ -375,6 +375,14 @@ fun MoreScreen(
                             color = if (dark) TextMuted else TextSecondaryLight,
                             fontSize = 9.sp
                         )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "💡 Guide: Tap SYNC below, then select \"Drive\" or \"Save to Drive\" from the Android pop-up sheet to write records directly to any of your real Google accounts securely.",
+                            color = if (dark) NeonGreen.copy(alpha = 0.9f) else Color(0xFF047857),
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 9.sp,
+                            lineHeight = 12.sp
+                        )
                     }
                 }
 
