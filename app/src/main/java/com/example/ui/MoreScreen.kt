@@ -3,12 +3,15 @@ package com.example.ui
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -73,6 +76,32 @@ fun MoreScreen(
     // Google Drive Sync Indicator
     var googleDriveSyncing by remember { mutableStateOf(false) }
     var driveSyncSuccess by remember { mutableStateOf(false) }
+
+    // Project Admin States
+    var showProjectModal by remember { mutableStateOf(false) }
+    var editingProject by remember { mutableStateOf<Project?>(null) }
+    var projName by remember { mutableStateOf("") }
+    var projLocation by remember { mutableStateOf("") }
+    var projBudget by remember { mutableStateOf("") }
+    var projStatus by remember { mutableStateOf("Active") }
+    var showDeleteProjectConfirmForObj by remember { mutableStateOf<Project?>(null) }
+
+    // Parties Form States
+    var showingPartyForm by remember { mutableStateOf(false) }
+    var editingWorker by remember { mutableStateOf<Worker?>(null) }
+    var pName by remember { mutableStateOf("") }
+    var pRole by remember { mutableStateOf("") }
+    var pShift by remember { mutableStateOf("Day") }
+    var pWage by remember { mutableStateOf("") }
+    var pPhone by remember { mutableStateOf("") }
+    var pEmail by remember { mutableStateOf("") }
+    var pPartyType by remember { mutableStateOf("Worker") }
+    var pAddress by remember { mutableStateOf("") }
+    var pPartyId by remember { mutableStateOf("") }
+    var pDateOfJoining by remember { mutableStateOf("27/05/2026") }
+    var pAadhaar by remember { mutableStateOf("") }
+    var pPan by remember { mutableStateOf("") }
+    var pReference by remember { mutableStateOf("") }
 
     LazyColumn(
         modifier = modifier
@@ -568,13 +597,36 @@ fun MoreScreen(
 
         // Active Project list with Dot Status indicators
         item {
-            Text(
-                text = "Construction Projects",
-                color = if (dark) TextPrimary else TextPrimaryLight,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 8.dp)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Construction Projects",
+                    color = if (dark) TextPrimary else TextPrimaryLight,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                GlassButton(
+                    onClick = {
+                        editingProject = null
+                        projName = ""
+                        projLocation = ""
+                        projBudget = ""
+                        projStatus = "Active"
+                        showProjectModal = true
+                    },
+                    darkTheme = dark,
+                    glowColor = NeonPurple,
+                    modifier = Modifier.height(34.dp)
+                ) {
+                    Icon(Icons.Default.Add, null, tint = Color.Black, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("ADD PROJECT", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                }
+            }
         }
 
         items(allProjects) { proj ->
@@ -598,7 +650,7 @@ fun MoreScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(modifier = Modifier.weight(1f).padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         // Dot project status indicator
                         Box(
                             modifier = Modifier
@@ -622,13 +674,33 @@ fun MoreScreen(
                         }
                     }
 
-                    // Delete options
-                    IconButton(onClick = { viewModel.deleteProject(proj, context) }) {
-                        Icon(
-                            imageVector = Icons.Default.DeleteOutline,
-                            contentDescription = "Remove Project",
-                            tint = if (dark) TextMuted else TextSecondaryLight
-                        )
+                    // Edit and Delete options
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = {
+                            editingProject = proj
+                            projName = proj.name
+                            projLocation = proj.location
+                            projBudget = proj.budget.toString()
+                            projStatus = proj.status
+                            showProjectModal = true
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit Project",
+                                tint = NeonCyan,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        IconButton(onClick = {
+                            showDeleteProjectConfirmForObj = proj
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.DeleteOutline,
+                                contentDescription = "Remove Project",
+                                tint = NeonPink,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -711,90 +783,345 @@ fun MoreScreen(
 
     GlassModalDialog(
         visible = activeSubModal == "Parties",
-        onDismiss = { activeSubModal = null },
+        onDismiss = {
+            activeSubModal = null
+            showingPartyForm = false
+            editingWorker = null
+        },
         title = "Party & Worker list",
         darkTheme = dark,
         glowColor = NeonCyan
     ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            items(allWorkers) { worker ->
-                val expanded = expandedWorkerId == worker.id
-                Card(
-                    modifier = Modifier.fillMaxWidth().clickable {
-                        expandedWorkerId = if (expanded) null else worker.id
-                    },
-                    colors = CardDefaults.cardColors(containerColor = if (dark) Color(0x1F293780) else Color(0x1E000000)),
-                    shape = RoundedCornerShape(10.dp)
+        if (showingPartyForm) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = if (editingWorker == null) "Add New Party / Worker" else "Edit Party / Worker Profile",
+                    color = if (dark) TextPrimary else TextPrimaryLight,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+
+                GlassTextField(value = pPartyId, onValueChange = { pPartyId = it }, label = "Party ID", placeholder = "PID-1", darkTheme = dark)
+                GlassTextField(value = pName, onValueChange = { pName = it }, label = "Party / Worker Full Name", placeholder = "John Doe / Tejas Contractors", darkTheme = dark)
+                GlassTextField(value = pPhone, onValueChange = { pPhone = it }, label = "Phone Number (+91)", placeholder = "9876543210", darkTheme = dark)
+                GlassTextField(value = pEmail, onValueChange = { pEmail = it }, label = "Email Address", placeholder = "client@example.com", darkTheme = dark)
+
+                Text("Party Type Category", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                    listOf("Client", "Staff", "Vendor", "Worker").forEach { type ->
+                        val selected = pPartyType == type
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (selected) NeonCyan.copy(alpha = 0.2f) else Color.Transparent)
+                                .border(1.dp, if (selected) NeonCyan else if (dark) GlassBorderLight.copy(alpha = 0.2f) else GlassBorderLight, RoundedCornerShape(8.dp))
+                                .clickable { pPartyType = type }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(type, color = if (selected) NeonCyan else if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .weight(1.2f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (pPartyType == "Investor") NeonCyan.copy(alpha = 0.2f) else Color.Transparent)
+                            .border(1.dp, if (pPartyType == "Investor") NeonCyan else if (dark) GlassBorderLight.copy(alpha = 0.2f) else GlassBorderLight, RoundedCornerShape(8.dp))
+                            .clickable { pPartyType = "Investor" }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Investor", color = if (pPartyType == "Investor") NeonCyan else if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                GlassTextField(value = pAddress, onValueChange = { pAddress = it }, label = "Address / Location", placeholder = "Enter home or office address...", darkTheme = dark)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        GlassTextField(value = pDateOfJoining, onValueChange = { pDateOfJoining = it }, label = "Date of Joining", placeholder = "27/05/2026", darkTheme = dark)
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        GlassTextField(value = pRole, onValueChange = { pRole = it }, label = "Designation/Role", placeholder = "e.g. Mason Foreman", darkTheme = dark)
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        GlassTextField(value = pAadhaar, onValueChange = { pAadhaar = it }, label = "Aadhaar Card No.", placeholder = "12-digit number", darkTheme = dark)
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        GlassTextField(value = pPan, onValueChange = { pPan = it }, label = "PAN Card No.", placeholder = "10-character code", darkTheme = dark)
+                    }
+                }
+
+                GlassTextField(value = pReference, onValueChange = { pReference = it }, label = "Referred By / Given Reference", placeholder = "Partner X", darkTheme = dark)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(modifier = Modifier.weight(1.2f)) {
+                        GlassTextField(value = pWage, onValueChange = { pWage = it }, label = "Daily Wage / Rate Rate ($)", isNumeric = true, placeholder = "350.0", darkTheme = dark)
+                    }
+
+                    Column(modifier = Modifier.weight(0.8f)) {
+                        Text("Standard Shift", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 2.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            listOf("Day", "Night").forEach { sh ->
                                 Box(
                                     modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(worker.avatarColor))
-                                        .padding(4.dp),
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (pShift == sh) NeonCyan.copy(alpha = 0.2f) else Color.Transparent)
+                                        .clickable { pShift = sh }
+                                        .padding(vertical = 6.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        text = if (worker.name.isNotEmpty()) worker.name.take(2).uppercase() else "P",
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
-                                    Text(worker.name, color = if (dark) TextPrimary else TextPrimaryLight, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                    Text("${worker.partyType} • ID: ${worker.partyId.ifBlank { "N/A" }}", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp)
-                                }
-                            }
-                            
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                IconButton(
-                                    onClick = { viewModel.deleteWorker(worker, context) },
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(Icons.Default.DeleteOutline, null, tint = NeonPink, modifier = Modifier.size(18.dp))
+                                    Text(sh, color = if (pShift == sh) NeonCyan else if (dark) TextSecondary else TextSecondaryLight, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                                 }
                             }
                         }
-                        
-                        if (expanded) {
-                            Spacer(modifier = Modifier.height(10.dp))
-                            HorizontalDivider(color = if (dark) GlassBorderDark else GlassBorderLight)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            val details = listOf(
-                                "Party Type" to worker.partyType,
-                                "Phone No." to worker.phone.ifBlank { "Not provided" },
-                                "Email ID" to worker.email.ifBlank { "Not provided" },
-                                "Address" to worker.address.ifBlank { "Not provided" },
-                                "Joining Date" to worker.dateOfJoining.ifBlank { "Not provided" },
-                                "Referred By" to worker.reference.ifBlank { "Not provided" },
-                                "Aadhaar No." to worker.aadhaar.ifBlank { "Not provided" },
-                                "PAN Card No." to worker.pan.ifBlank { "Not provided" },
-                                "Role / Duty" to worker.role,
-                                "Shift Duty" to "${worker.shift} Shift",
-                                "Daily Wage / Unit Rate" to "$${worker.wageRate}"
-                            )
-                            
-                            details.forEach { (label, value) ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(label, color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                                    Text(value, color = if (dark) TextPrimary else TextPrimaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    GlassButton(
+                        onClick = {
+                            showingPartyForm = false
+                            editingWorker = null
+                        },
+                        darkTheme = dark,
+                        glowColor = NeonPink,
+                        outlineMode = true,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("CANCEL", fontWeight = FontWeight.Bold)
+                    }
+
+                    GlassButton(
+                        onClick = {
+                            val rate = pWage.toDoubleOrNull() ?: 0.0
+                            if (pName.isNotBlank()) {
+                                if (editingWorker == null) {
+                                    val colors = listOf(0xFF3B82F6.toInt(), 0xFFEC4899.toInt(), 0xFF10B981.toInt(), 0xFFF59E0B.toInt(), 0xFF8B5CF6.toInt())
+                                    val avatarC = colors.random()
+
+                                    viewModel.addWorker(
+                                        name = pName,
+                                        role = if (pRole.isNotBlank()) pRole else pPartyType,
+                                        shift = pShift,
+                                        wageRate = rate,
+                                        color = avatarC,
+                                        phone = pPhone,
+                                        email = pEmail,
+                                        partyType = pPartyType,
+                                        address = pAddress,
+                                        partyId = pPartyId,
+                                        dateOfJoining = pDateOfJoining,
+                                        aadhaar = pAadhaar,
+                                        pan = pPan,
+                                        reference = pReference
+                                    )
+                                } else {
+                                    val updated = editingWorker!!.copy(
+                                        name = pName,
+                                        role = if (pRole.isNotBlank()) pRole else pPartyType,
+                                        shift = pShift,
+                                        wageRate = rate,
+                                        phone = pPhone,
+                                        email = pEmail,
+                                        partyType = pPartyType,
+                                        address = pAddress,
+                                        partyId = pPartyId,
+                                        dateOfJoining = pDateOfJoining,
+                                        aadhaar = pAadhaar,
+                                        pan = pPan,
+                                        reference = pReference
+                                    )
+                                    viewModel.updateWorker(updated)
+                                }
+                                showingPartyForm = false
+                                editingWorker = null
+                            }
+                        },
+                        enabled = pName.isNotBlank(),
+                        darkTheme = dark,
+                        glowColor = NeonCyan,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(if (editingWorker == null) "SAVE PROFILE" else "APPLY CHANGES", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Active Registered Parties",
+                    color = if (dark) TextSecondary else TextSecondaryLight,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                GlassButton(
+                    onClick = {
+                        editingWorker = null
+                        pName = ""
+                        pRole = ""
+                        pShift = "Day"
+                        pWage = ""
+                        pPhone = ""
+                        pEmail = ""
+                        pPartyType = "Worker"
+                        pAddress = ""
+                        pPartyId = "PID-${allWorkers.size + 1}"
+                        pDateOfJoining = "27/05/2026"
+                        pAadhaar = ""
+                        pPan = ""
+                        pReference = ""
+                        showingPartyForm = true
+                    },
+                    darkTheme = dark,
+                    glowColor = NeonCyan,
+                    modifier = Modifier.height(34.dp)
+                ) {
+                    Icon(Icons.Default.Add, null, tint = Color.Black, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("ADD PARTY", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                }
+            }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth().weight(1f, fill = false),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(allWorkers) { worker ->
+                    val expanded = expandedWorkerId == worker.id
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                expandedWorkerId = if (expanded) null else worker.id
+                            },
+                        colors = CardDefaults.cardColors(containerColor = if (dark) Color(0x1F293780) else Color(0x1E000000)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(worker.avatarColor))
+                                            .padding(4.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = if (worker.name.isNotEmpty()) worker.name.take(2).uppercase() else "P",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(worker.name, color = if (dark) TextPrimary else TextPrimaryLight, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                        Text("${worker.partyType} • ID: ${worker.partyId.ifBlank { "N/A" }}", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp)
+                                    }
+                                }
+
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    IconButton(
+                                        onClick = {
+                                            editingWorker = worker
+                                            pName = worker.name
+                                            pRole = worker.role
+                                            pShift = worker.shift
+                                            pWage = worker.wageRate.toString()
+                                            pPhone = worker.phone
+                                            pEmail = worker.email
+                                            pPartyType = worker.partyType
+                                            pAddress = worker.address
+                                            pPartyId = worker.partyId
+                                            pDateOfJoining = worker.dateOfJoining
+                                            pAadhaar = worker.aadhaar
+                                            pPan = worker.pan
+                                            pReference = worker.reference
+                                            showingPartyForm = true
+                                        },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(Icons.Default.Edit, null, tint = NeonCyan, modifier = Modifier.size(18.dp))
+                                    }
+                                    IconButton(
+                                        onClick = { viewModel.deleteWorker(worker, context) },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(Icons.Default.DeleteOutline, null, tint = NeonPink, modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                            }
+
+                            if (expanded) {
+                                Spacer(modifier = Modifier.height(10.dp))
+                                HorizontalDivider(color = if (dark) GlassBorderDark else GlassBorderLight)
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                val details = listOf(
+                                    "Party Type" to worker.partyType,
+                                    "Phone No." to worker.phone.ifBlank { "Not provided" },
+                                    "Email ID" to worker.email.ifBlank { "Not provided" },
+                                    "Address" to worker.address.ifBlank { "Not provided" },
+                                    "Joining Date" to worker.dateOfJoining.ifBlank { "Not provided" },
+                                    "Referred By" to worker.reference.ifBlank { "Not provided" },
+                                    "Aadhaar No." to worker.aadhaar.ifBlank { "Not provided" },
+                                    "PAN Card No." to worker.pan.ifBlank { "Not provided" },
+                                    "Role / Duty" to worker.role,
+                                    "Shift Duty" to "${worker.shift} Shift",
+                                    "Daily Wage / Unit Rate" to "$${worker.wageRate}"
+                                )
+
+                                details.forEach { (label, value) ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(label, color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                        Text(value, color = if (dark) TextPrimary else TextPrimaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             }
                         }
@@ -1156,6 +1483,160 @@ fun MoreScreen(
                         Icon(imageVector = Icons.Default.Send, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("SUBMIT COMMENTS (VIA EMAIL)", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+
+    if (showProjectModal) {
+        GlassModalDialog(
+            visible = showProjectModal,
+            onDismiss = { showProjectModal = false; editingProject = null },
+            title = if (editingProject == null) "Create Construction Project" else "Edit Project Settings",
+            darkTheme = dark,
+            glowColor = NeonPurple
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                GlassTextField(value = projName, onValueChange = { projName = it }, label = "Project Site Name", placeholder = "Emerald Plaza Block C", darkTheme = dark)
+                GlassTextField(value = projLocation, onValueChange = { projLocation = it }, label = "Site Location / Address", placeholder = "Metro Sector 15, Pune", darkTheme = dark)
+                GlassTextField(value = projBudget, onValueChange = { projBudget = it }, label = "Estimations Base Budget ($)", isNumeric = true, placeholder = "1250000.0", darkTheme = dark)
+
+                Text("Project Live Status", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("Active", "On Hold", "Completed").forEach { status ->
+                        val selected = projStatus == status
+                        val col = when (status) {
+                            "Active" -> NeonGreen
+                            "On Hold" -> NeonAmber
+                            else -> NeonCyan
+                        }
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (selected) col.copy(alpha = 0.2f) else Color.Transparent)
+                                .border(1.dp, if (selected) col else if (dark) GlassBorderLight.copy(alpha = 0.2f) else GlassBorderLight, RoundedCornerShape(8.dp))
+                                .clickable { projStatus = status }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(status, color = if (selected) col else if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    GlassButton(
+                        onClick = {
+                            showProjectModal = false
+                            editingProject = null
+                        },
+                        darkTheme = dark,
+                        glowColor = NeonPink,
+                        outlineMode = true,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("CANCEL", fontWeight = FontWeight.Bold)
+                    }
+
+                    GlassButton(
+                        onClick = {
+                            val bud = projBudget.toDoubleOrNull() ?: 0.0
+                            if (projName.isNotBlank() && projLocation.isNotBlank()) {
+                                if (editingProject == null) {
+                                    viewModel.addProject(projName, projLocation, bud)
+                                } else {
+                                    val updated = editingProject!!.copy(
+                                        name = projName,
+                                        location = projLocation,
+                                        budget = bud,
+                                        status = projStatus
+                                    )
+                                    viewModel.updateProject(updated)
+                                }
+                                showProjectModal = false
+                                editingProject = null
+                            }
+                        },
+                        enabled = projName.isNotBlank() && projLocation.isNotBlank(),
+                        darkTheme = dark,
+                        glowColor = NeonPurple,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(if (editingProject == null) "CREATE PROJECT" else "APPLY CHANGES", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+
+    if (showDeleteProjectConfirmForObj != null) {
+        val projToDelete = showDeleteProjectConfirmForObj!!
+        GlassModalDialog(
+            visible = true,
+            onDismiss = { showDeleteProjectConfirmForObj = null },
+            title = "Warning: Permission Required",
+            darkTheme = dark,
+            glowColor = NeonPink
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    text = "Are you absolutely sure you want to delete project \"${projToDelete.name}\"?",
+                    color = if (dark) TextPrimary else TextPrimaryLight,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
+                )
+
+                Text(
+                    text = "This action is highly destructive and irreversible! Deleting this project will wipe out all corresponding tasks, expenditures ledger, estimates, meeting records, and local timesheets associated with \"${projToDelete.name}\" permanently.",
+                    color = if (dark) TextSecondary else TextSecondaryLight,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    GlassButton(
+                        onClick = { showDeleteProjectConfirmForObj = null },
+                        darkTheme = dark,
+                        glowColor = NeonCyan,
+                        outlineMode = true,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("CANCEL", fontWeight = FontWeight.Bold)
+                    }
+
+                    GlassButton(
+                        onClick = {
+                            viewModel.deleteProject(projToDelete, context)
+                            showDeleteProjectConfirmForObj = null
+                        },
+                        darkTheme = dark,
+                        glowColor = NeonPink,
+                        modifier = Modifier.weight(1.2f)
+                    ) {
+                        Text("CONFIRM DELETE", fontWeight = FontWeight.Bold)
                     }
                 }
             }
