@@ -137,12 +137,18 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // Corporate Branding / Logo
-                    Text(
-                        text = "ConstructPro",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Black,
-                        color = if (dark) NeonCyan else Color(0xFF0284C7)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        BuildOnSiteLogo(modifier = Modifier.size(36.dp), darkTheme = dark)
+                        Text(
+                            text = "ConstructPro",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Black,
+                            color = if (dark) NeonCyan else Color(0xFF0284C7)
+                        )
+                    }
 
                     Divider(color = if (dark) GlassBorderDark else GlassBorderLight)
 

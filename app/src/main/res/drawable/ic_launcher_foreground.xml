@@ -5,28 +5,92 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     
-    <!-- Premium Golden Architectural Shield (Main Motif) -->
+    <!-- Premium Golden Architectural Shield (Main Contour Frame) -->
     <path
-        android:pathData="M54,22 C67,22 76,27 78,34 C78,54 64,72 54,80 C44,72 30,54 30,34 C32,27 41,22 54,22 Z"
+        android:pathData="M54,21 C67,21 77,26 79,33 C79,53 64,72 54,80 C44,72 29,53 29,33 C31,26 41,21 54,21 Z"
         android:strokeWidth="2.5"
         android:strokeColor="#FCD34D"
-        android:fillColor="#151E293B" />
+        android:fillColor="#CD0A111F" />
     
-    <!-- Central Modernized ConstructPro Logo Girders (Prism) -->
+    <!-- Skyscraper Structural Frame under progress -->
+    <!-- Base structural dark block -->
     <path
-        android:pathData="M54,30 L70,38 L54,46 L38,38 Z"
-        android:fillColor="#06B6D4" />
+        android:pathData="M51,40 L71,40 L71,68 L51,68 Z"
+        android:fillColor="#334155" />
         
+    <!-- Skyline glowing highlights inside core center of structural unit -->
     <path
-        android:pathData="M38,38 L54,46 L54,64 L38,56 Z"
-        android:fillColor="#0284C7" />
+        android:pathData="M54,42 L68,42 L68,66 L54,66 Z"
+        android:fillColor="#900EA5E9" />
         
+    <!-- Horizontal blueprint floor dividers -->
     <path
-        android:pathData="M54,46 L70,38 L70,56 L54,64 Z"
-        android:fillColor="#0369A1" />
+        android:pathData="M51,45 L71,45 M51,50 L71,50 M51,55 L71,55 M51,60 L71,60 M51,65 L71,65"
+        android:strokeWidth="1.2"
+        android:strokeColor="#0F172A" />
+        
+    <!-- Vertical structural windows partitions -->
+    <path
+        android:pathData="M56,40 L56,68 M61,40 L61,68 M66,40 L66,68"
+        android:strokeWidth="1.0"
+        android:strokeColor="#0F172A" />
 
-    <!-- Sleek Golden Construction Tool Cross-bar Accent -->
+    <!-- Yellow Tower Crane (Mechanical Mast & Jib Boom) -->
+    <!-- Vertical core support lattice mast -->
     <path
-        android:pathData="M44,66 L64,66 L54,58 Z"
+        android:pathData="M37,28 L37,70"
+        android:strokeWidth="2.8"
+        android:strokeColor="#F59E0B" />
+        
+    <!-- Tower Pinnacle Pin peak -->
+    <path
+        android:pathData="M37,28 L37,22 L41,28"
+        android:fillColor="#D97706" />
+        
+    <!-- Crane Work Jib horizontals -->
+    <path
+        android:pathData="M24,28 L84,28"
+        android:strokeWidth="2.2"
+        android:strokeColor="#F59E0B" />
+        
+    <!-- Counter jib weight balance box -->
+    <path
+        android:pathData="M24,28 L24,33 L30,33 L30,28 Z"
         android:fillColor="#FCD34D" />
+        
+    <!-- High-tensile cable sling -->
+    <path
+        android:pathData="M61,28 L61,43"
+        android:strokeWidth="0.8"
+        android:strokeColor="#94A3B8" />
+        
+    <!-- Lifting crane hook tag -->
+    <path
+        android:pathData="M61,43 A2,2 0 1,1 59,43"
+        android:strokeWidth="1.2"
+        android:strokeColor="#E2E8F0" />
+
+    <!-- Yellow Safety Helmet (Left bottom overlay) -->
+    <!-- Curved Hardhat Dome -->
+    <path
+        android:pathData="M28,60 C28,52 44,52 44,60 Z"
+        android:fillColor="#F59E0B" />
+        
+    <!-- Reinforced protective brim wrap -->
+    <path
+        android:pathData="M25,60 C25,60 47,60 47,60 C47,61.2 45,62 45,62 L27,62 C27,62 25,61.2 25,60 Z"
+        android:fillColor="#D97706" />
+
+    <!-- Central Metallic Ribbon Plate Header -->
+    <path
+        android:pathData="M31,70 L77,70 L73,76 L35,76 Z"
+        android:fillColor="#1E293B"
+        android:strokeWidth="1.0"
+        android:strokeColor="#FCD34D" />
+        
+    <!-- Minimal internal symbol mapping representing currency pay exchange cashflow -->
+    <path
+        android:pathData="M51,73 L57,73 M54,71 L54,75"
+        android:strokeWidth="1.4"
+        android:strokeColor="#FCD34D" />
 </vector>

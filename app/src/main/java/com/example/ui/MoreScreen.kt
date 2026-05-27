@@ -892,7 +892,7 @@ fun MoreScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(modifier = Modifier.weight(1.2f)) {
-                        GlassTextField(value = pWage, onValueChange = { pWage = it }, label = "Daily Wage / Rate Rate ($)", isNumeric = true, placeholder = "350.0", darkTheme = dark)
+                        GlassTextField(value = pWage, onValueChange = { pWage = it }, label = "Daily Wage / Unit Rate (₹)", isNumeric = true, placeholder = "e.g. 500", darkTheme = dark)
                     }
 
                     Column(modifier = Modifier.weight(0.8f)) {
@@ -1022,11 +1022,23 @@ fun MoreScreen(
                     },
                     darkTheme = dark,
                     glowColor = NeonCyan,
-                    modifier = Modifier.height(34.dp)
+                    horizontalPadding = 12.dp,
+                    verticalPadding = 6.dp,
+                    minHeight = 32.dp
                 ) {
-                    Icon(Icons.Default.Add, null, tint = Color.Black, modifier = Modifier.size(14.dp))
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Party",
+                        tint = Color.Black,
+                        modifier = Modifier.size(14.dp)
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("ADD PARTY", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(
+                        text = "ADD PARTY",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.Black
+                    )
                 }
             }
 
@@ -1036,103 +1048,120 @@ fun MoreScreen(
             ) {
                 items(allWorkers) { worker ->
                     val expanded = expandedWorkerId == worker.id
+                    val partyAccent = when (worker.partyType) {
+                        "Client" -> NeonCyan
+                        "Investor" -> NeonPurple
+                        "Vendor" -> NeonAmber
+                        "Staff" -> NeonGreen
+                        else -> NeonPink
+                    }
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
                                 expandedWorkerId = if (expanded) null else worker.id
                             },
-                        colors = CardDefaults.cardColors(containerColor = if (dark) Color(0x1F293780) else Color(0x1E000000)),
-                        shape = RoundedCornerShape(10.dp)
+                        colors = CardDefaults.cardColors(containerColor = if (dark) Color(0x11FFFFFF) else Color(0x0A000000)),
+                        border = BorderStroke(1.dp, if (dark) GlassBorderDark.copy(alpha = 0.4f) else GlassBorderLight.copy(alpha = 0.6f)),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(36.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(worker.avatarColor))
-                                            .padding(4.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = if (worker.name.isNotEmpty()) worker.name.take(2).uppercase() else "P",
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 12.sp
-                                        )
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            // High contrast left accent indicator
+                            Box(
+                                modifier = Modifier
+                                    .width(4.dp)
+                                    .matchParentSize()
+                                    .background(partyAccent)
+                            )
+                            Column(modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 12.dp, bottom = 12.dp).fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(worker.avatarColor))
+                                                .padding(4.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = if (worker.name.isNotEmpty()) worker.name.take(2).uppercase() else "P",
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column {
+                                            Text(worker.name, color = if (dark) TextPrimary else TextPrimaryLight, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                            Text("${worker.partyType} • ID: ${worker.partyId.ifBlank { "N/A" }}", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp)
+                                        }
                                     }
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Column {
-                                        Text(worker.name, color = if (dark) TextPrimary else TextPrimaryLight, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                        Text("${worker.partyType} • ID: ${worker.partyId.ifBlank { "N/A" }}", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp)
+
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        IconButton(
+                                            onClick = {
+                                                editingWorker = worker
+                                                pName = worker.name
+                                                pRole = worker.role
+                                                pShift = worker.shift
+                                                pWage = worker.wageRate.toString()
+                                                pPhone = worker.phone
+                                                pEmail = worker.email
+                                                pPartyType = worker.partyType
+                                                pAddress = worker.address
+                                                pPartyId = worker.partyId
+                                                pDateOfJoining = worker.dateOfJoining
+                                                pAadhaar = worker.aadhaar
+                                                pPan = worker.pan
+                                                pReference = worker.reference
+                                                showingPartyForm = true
+                                            },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(Icons.Default.Edit, null, tint = NeonCyan, modifier = Modifier.size(18.dp))
+                                        }
+                                        IconButton(
+                                            onClick = { viewModel.deleteWorker(worker, context) },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(Icons.Default.DeleteOutline, null, tint = NeonPink, modifier = Modifier.size(18.dp))
+                                        }
                                     }
                                 }
 
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    IconButton(
-                                        onClick = {
-                                            editingWorker = worker
-                                            pName = worker.name
-                                            pRole = worker.role
-                                            pShift = worker.shift
-                                            pWage = worker.wageRate.toString()
-                                            pPhone = worker.phone
-                                            pEmail = worker.email
-                                            pPartyType = worker.partyType
-                                            pAddress = worker.address
-                                            pPartyId = worker.partyId
-                                            pDateOfJoining = worker.dateOfJoining
-                                            pAadhaar = worker.aadhaar
-                                            pPan = worker.pan
-                                            pReference = worker.reference
-                                            showingPartyForm = true
-                                        },
-                                        modifier = Modifier.size(28.dp)
-                                    ) {
-                                        Icon(Icons.Default.Edit, null, tint = NeonCyan, modifier = Modifier.size(18.dp))
-                                    }
-                                    IconButton(
-                                        onClick = { viewModel.deleteWorker(worker, context) },
-                                        modifier = Modifier.size(28.dp)
-                                    ) {
-                                        Icon(Icons.Default.DeleteOutline, null, tint = NeonPink, modifier = Modifier.size(18.dp))
-                                    }
-                                }
-                            }
+                                if (expanded) {
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    HorizontalDivider(color = if (dark) GlassBorderDark else GlassBorderLight)
+                                    Spacer(modifier = Modifier.height(8.dp))
 
-                            if (expanded) {
-                                Spacer(modifier = Modifier.height(10.dp))
-                                HorizontalDivider(color = if (dark) GlassBorderDark else GlassBorderLight)
-                                Spacer(modifier = Modifier.height(8.dp))
+                                    val details = listOf(
+                                        "Party Type" to worker.partyType,
+                                        "Phone No." to worker.phone.ifBlank { "Not provided" },
+                                        "Email ID" to worker.email.ifBlank { "Not provided" },
+                                        "Address" to worker.address.ifBlank { "Not provided" },
+                                        "Joining Date" to worker.dateOfJoining.ifBlank { "Not provided" },
+                                        "Referred By" to worker.reference.ifBlank { "Not provided" },
+                                        "Aadhaar No." to worker.aadhaar.ifBlank { "Not provided" },
+                                        "PAN Card No." to worker.pan.ifBlank { "Not provided" },
+                                        "Role / Duty" to worker.role,
+                                        "Shift Duty" to "${worker.shift} Shift",
+                                        "Daily Wage / Unit Rate" to formatIndianRupees(worker.wageRate)
+                                    )
 
-                                val details = listOf(
-                                    "Party Type" to worker.partyType,
-                                    "Phone No." to worker.phone.ifBlank { "Not provided" },
-                                    "Email ID" to worker.email.ifBlank { "Not provided" },
-                                    "Address" to worker.address.ifBlank { "Not provided" },
-                                    "Joining Date" to worker.dateOfJoining.ifBlank { "Not provided" },
-                                    "Referred By" to worker.reference.ifBlank { "Not provided" },
-                                    "Aadhaar No." to worker.aadhaar.ifBlank { "Not provided" },
-                                    "PAN Card No." to worker.pan.ifBlank { "Not provided" },
-                                    "Role / Duty" to worker.role,
-                                    "Shift Duty" to "${worker.shift} Shift",
-                                    "Daily Wage / Unit Rate" to "$${worker.wageRate}"
-                                )
-
-                                details.forEach { (label, value) ->
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(label, color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                                        Text(value, color = if (dark) TextPrimary else TextPrimaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    details.forEach { (label, value) ->
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(label, color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                            Text(value, color = if (dark) TextPrimary else TextPrimaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        }
                                     }
                                 }
                             }
@@ -1194,7 +1223,7 @@ fun MoreScreen(
                     ) {
                         Column {
                             Text(est.itemName, color = if (dark) TextPrimary else TextPrimaryLight, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                            Text("${est.quantity} bags at $${est.rate}/bag", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp)
+                            Text("${est.quantity} ${est.unit} at ${formatIndianRupees(est.rate)}/${est.unit}", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp)
                         }
                         Text(cFormatter.format(est.totalCost), color = NeonGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }

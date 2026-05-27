@@ -775,6 +775,8 @@ fun CurvedPolygonBackdrop(
         val width = size.width
         val height = size.height
 
+        if (width <= 0f || height <= 0f) return@Canvas
+
         when (style) {
             "preset_cyber_blueprint" -> {
                 // Background gradient
