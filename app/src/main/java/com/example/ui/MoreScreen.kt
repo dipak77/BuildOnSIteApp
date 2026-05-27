@@ -29,6 +29,8 @@ import android.net.Uri
 import android.widget.Toast
 import com.example.data.*
 import com.example.ui.theme.*
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import java.text.NumberFormat
 import java.util.*
 
@@ -243,6 +245,15 @@ fun MoreScreen(
 
                         Button(
                             onClick = {
+                                try {
+                                    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                                        .requestEmail()
+                                        .build()
+                                    val googleSignInClient = GoogleSignIn.getClient(context, gso)
+                                    googleSignInClient.signOut()
+                                } catch (e: Exception) {
+                                    // Handle cases where Play Services might be missing
+                                }
                                 viewModel.handleGoogleSignOut(context)
                                 Toast.makeText(context, "Signed out of Workspace", Toast.LENGTH_SHORT).show()
                             },
@@ -641,7 +652,7 @@ fun MoreScreen(
                     Spacer(modifier = Modifier.width(14.dp))
                     Column {
                         Text(
-                            text = "DipTech AI Pune",
+                            text = "DipTech Pune",
                             color = if (dark) TextPrimary else TextPrimaryLight,
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 15.sp
@@ -1018,7 +1029,7 @@ fun MoreScreen(
             // Professional description message for the user
             item {
                 Text(
-                    text = "Welcome to the Unified ConstructPro Workspace! This app is meticulously crafted to empower site engineers, project managers, and contractors with real-time financial audits, robust digital wage-registers, seamless item estimations, and secure cloud backups. Thank you for choosing DipTech AI products to build the physical world.",
+                    text = "Welcome to the Unified ConstructPro Workspace! This app is meticulously crafted to empower site engineers, project managers, and contractors with real-time financial audits, robust digital wage-registers, seamless item estimations, and secure cloud backups. Thank you for choosing DipTech Pune products to build the physical world.",
                     color = if (dark) TextSecondary else TextSecondaryLight,
                     fontSize = 11.sp,
                     lineHeight = 16.sp

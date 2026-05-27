@@ -192,12 +192,25 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
                             onClick = {
                                 isConnecting = true
                                 try {
-                                    val intent = googleSignInClient.signInIntent
-                                    signInLauncher.launch(intent)
+                                    googleSignInClient.signOut().addOnCompleteListener {
+                                        try {
+                                            val intent = googleSignInClient.signInIntent
+                                            signInLauncher.launch(intent)
+                                        } catch (e: Exception) {
+                                            isConnecting = false
+                                            showAccountChooser = true
+                                            Toast.makeText(context, "No local Play services: opening account list", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
                                 } catch (e: Exception) {
-                                    isConnecting = false
-                                    showAccountChooser = true
-                                    Toast.makeText(context, "No local Play services: opening account list", Toast.LENGTH_SHORT).show()
+                                    try {
+                                        val intent = googleSignInClient.signInIntent
+                                        signInLauncher.launch(intent)
+                                    } catch (ex: Exception) {
+                                        isConnecting = false
+                                        showAccountChooser = true
+                                        Toast.makeText(context, "No local Play services: opening account list", Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                             },
                             modifier = Modifier

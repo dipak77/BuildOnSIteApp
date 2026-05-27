@@ -515,13 +515,13 @@ fun BuildOnSiteLogo(
             .clip(CircleShape)
             .background(
                 Brush.radialGradient(
-                    colors = if (darkTheme) listOf(Color(0xFF1E1E38), Color(0xFF0D0D1A)) else listOf(Color(0xFFE0F2FE), Color(0xFFBAE6FD))
+                    colors = if (darkTheme) listOf(Color(0xFF1B1F38), Color(0xFF0F0F1A)) else listOf(Color(0xFFF0F9FF), Color(0xFFE0F2FE))
                 )
             )
             .border(
                 3.dp,
                 Brush.sweepGradient(
-                    colors = listOf(NeonCyan, NeonPurple, NeonPink, NeonGreen, NeonCyan)
+                    colors = listOf(Color(0xFFFCD34D), Color(0xFFD97706), Color(0xFFF59E0B), Color(0xFFFCD34D))
                 ),
                 CircleShape
             ),
@@ -531,73 +531,58 @@ fun BuildOnSiteLogo(
             val w = size.width
             val h = size.height
             
-            // Subtle golden background sun/gear
+            // Draw luxury golden geometric rings representing architectural blueprint loops
             drawCircle(
-                color = if (darkTheme) Color(0x22FCD34D) else Color(0x33F59E0B),
-                radius = w * 0.35f,
-                center = Offset(w * 0.5f, h * 0.45f)
+                color = if (darkTheme) Color(0x1AFCD34D) else Color(0x22FCD34D),
+                radius = w * 0.42f,
+                center = Offset(w * 0.5f, h * 0.5f)
             )
             
-            // Stylized concrete skyscraper shapes
-            val buildingColor = if (darkTheme) Color(0x33818CF8) else Color(0x334F46E5)
-            drawRect(
-                color = buildingColor,
-                topLeft = Offset(w * 0.38f, h * 0.32f),
-                size = androidx.compose.ui.geometry.Size(w * 0.24f, h * 0.4f)
-            )
-            drawRect(
-                color = buildingColor.copy(alpha = 0.6f),
-                topLeft = Offset(w * 0.58f, h * 0.40f),
-                size = androidx.compose.ui.geometry.Size(w * 0.16f, h * 0.32f)
-            )
-            
-            // Crane Tower lines
-            val craneColor = if (darkTheme) NeonCyan else Color(0xFF0284C7)
-            drawLine(
-                color = craneColor,
-                start = Offset(w * 0.32f, h * 0.72f),
-                end = Offset(w * 0.32f, h * 0.28f),
-                strokeWidth = 5f
-            )
-            drawLine(
-                color = craneColor,
-                start = Offset(w * 0.20f, h * 0.28f),
-                end = Offset(w * 0.72f, h * 0.28f),
-                strokeWidth = 5f
-            )
-            drawLine(
-                color = if (darkTheme) Color(0xFFFCD34D) else Color(0xFFD97706),
-                start = Offset(w * 0.55f, h * 0.28f),
-                end = Offset(w * 0.55f, h * 0.48f),
-                strokeWidth = 3f
+            drawCircle(
+                color = if (darkTheme) Color(0x2206B6D4) else Color(0x220284C7),
+                radius = w * 0.32f,
+                center = Offset(w * 0.5f, h * 0.5f)
             )
         }
         
-        // Inner phone-shield
+        // Premium Monogram / Shield logo emblem inside
         Box(
             modifier = Modifier
-                .size(68.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(if (darkTheme) Color(0xEE0B0F19) else Color(0xEEF8FAFC))
-                .border(2.dp, if (darkTheme) NeonCyan else Color(0xFF0284C7), RoundedCornerShape(14.dp)),
+                .size(76.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = if (darkTheme) listOf(Color(0xFF111827), Color(0xFF1F2937)) else listOf(Color(0xFFFFFFFF), Color(0xFFF3F4F6))
+                    )
+                )
+                .border(2.dp, Brush.linearGradient(listOf(NeonCyan, NeonPurple)), RoundedCornerShape(20.dp)),
             contentAlignment = Alignment.Center
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
+                // Crown or construction helmet / building icon in sleek gold/neon layout
                 Icon(
                     imageVector = Icons.Default.Construction,
                     contentDescription = null,
-                    tint = NeonPurple,
-                    modifier = Modifier.size(26.dp)
+                    tint = Color(0xFFF59E0B), // Majestic Gold construction tool
+                    modifier = Modifier.size(30.dp)
                 )
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(3.dp))
                 Text(
-                    text = "B.O.S APP",
+                    text = "CONSTRUCT",
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = if (darkTheme) Color.White else Color.Black,
+                    letterSpacing = 0.5.sp
+                )
+                Text(
+                    text = "PRO",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Black,
-                    color = if (darkTheme) Color.White else Color.Black
+                    color = NeonCyan,
+                    letterSpacing = 1.sp
                 )
             }
         }
