@@ -598,15 +598,15 @@ fun MoreScreen(
         // Active Project list with Dot Status indicators
         item {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "Construction Projects",
                     color = if (dark) TextPrimary else TextPrimaryLight,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.ExtraBold
                 )
 
                 GlassButton(
@@ -620,11 +620,23 @@ fun MoreScreen(
                     },
                     darkTheme = dark,
                     glowColor = NeonPurple,
-                    modifier = Modifier.height(34.dp)
+                    horizontalPadding = 12.dp,
+                    verticalPadding = 6.dp,
+                    minHeight = 32.dp
                 ) {
-                    Icon(Icons.Default.Add, null, tint = Color.Black, modifier = Modifier.size(14.dp))
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Project",
+                        tint = Color.Black,
+                        modifier = Modifier.size(14.dp)
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("ADD PROJECT", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(
+                        text = "ADD PROJECT",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.Black
+                    )
                 }
             }
         }
@@ -667,7 +679,7 @@ fun MoreScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "${proj.location} • Budget: ${cFormatter.format(proj.budget)}",
+                                text = "${proj.location} • Budget: ${formatIndianRupeesWithLakhCr(proj.budget)}",
                                 color = if (dark) TextSecondary else TextSecondaryLight,
                                 fontSize = 12.sp
                             )
@@ -1505,7 +1517,27 @@ fun MoreScreen(
             ) {
                 GlassTextField(value = projName, onValueChange = { projName = it }, label = "Project Site Name", placeholder = "Emerald Plaza Block C", darkTheme = dark)
                 GlassTextField(value = projLocation, onValueChange = { projLocation = it }, label = "Site Location / Address", placeholder = "Metro Sector 15, Pune", darkTheme = dark)
-                GlassTextField(value = projBudget, onValueChange = { projBudget = it }, label = "Estimations Base Budget ($)", isNumeric = true, placeholder = "1250000.0", darkTheme = dark)
+                GlassTextField(value = projBudget, onValueChange = { projBudget = it }, label = "Estimations Base Budget (₹ - Rupees)", isNumeric = true, placeholder = "e.g. 15000000 (1.5 Cr)", darkTheme = dark)
+
+                // Show Lakhs/Crore live preview dynamically!
+                val parsedBudget = projBudget.toDoubleOrNull() ?: 0.0
+                if (parsedBudget > 0.0) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (dark) Color(0x3310B981) else Color(0x1F10B981))
+                            .border(1.dp, if (dark) NeonGreen.copy(alpha = 0.5f) else Color(0xFF10B981), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "Live Value: ${formatIndianRupeesWithLakhCr(parsedBudget)}",
+                            color = if (dark) NeonGreen else Color(0xFF047857),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
 
                 Text("Project Live Status", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Row(

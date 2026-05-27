@@ -2,6 +2,8 @@ package com.example.ui
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,6 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.example.data.*
 import com.example.ui.theme.*
 import java.text.NumberFormat
@@ -33,6 +37,8 @@ fun MoneyScreen(
     val dark = viewModel.darkThemeEnabled
     val currentProject by viewModel.activeProject.collectAsState()
     val allTransactions by viewModel.transactions.collectAsState()
+
+    var selectedTxForDetails by remember { mutableStateOf<Transaction?>(null) }
 
     // Filters & search state
     val query = viewModel.transactionSearchQuery
@@ -296,7 +302,8 @@ fun MoneyScreen(
                     modifier = Modifier.fillMaxWidth(),
                     darkTheme = dark,
                     borderColor = accentBorder.copy(alpha = 0.40f),
-                    padding = 12.dp
+                    padding = 12.dp,
+                    onClick = { selectedTxForDetails = tx }
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -376,6 +383,144 @@ fun MoneyScreen(
                                 )
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    if (selectedTxForDetails != null) {
+        val tx = selectedTxForDetails!!
+        val isMoneyIn = tx.type == "Money In"
+        val tintColor = if (isMoneyIn) NeonGreen else NeonPink
+        val formattedFullAmount = formatIndianRupeesWithLakhCr(tx.amount)
+
+        GlassModalDialog(
+            visible = true,
+            onDismiss = { selectedTxForDetails = null },
+            title = "Receipt / Transaction Details",
+            darkTheme = dark,
+            glowColor = tintColor
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Header Amount Badge
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(tintColor.copy(alpha = 0.12f))
+                        .border(BorderStroke(1.dp, tintColor.copy(alpha = 0.35f)), RoundedCornerShape(12.dp))
+                        .padding(vertical = 16.dp, horizontal = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = tx.type.uppercase(),
+                            color = tintColor,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 1.2.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (isMoneyIn) "+$formattedFullAmount" else "-$formattedFullAmount",
+                            color = tintColor,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+
+                // Grid of Details
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Item Detail Row Helper
+                    @Composable
+                    fun DetailItem(label: String, value: String, isValueHighlight: Boolean = false) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = label,
+                                color = if (dark) TextSecondary else TextSecondaryLight,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = value.ifBlank { "N/A" },
+                                color = if (isValueHighlight) tintColor else if (dark) TextPrimary else TextPrimaryLight,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(start = 16.dp),
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        HorizontalDivider(color = if (dark) GlassBorderDark else GlassBorderLight)
+                    }
+
+                    DetailItem(label = "Date of Payment:", value = tx.date)
+                    DetailItem(label = "Category:", value = tx.category, isValueHighlight = true)
+                    DetailItem(label = "Payment Method:", value = tx.paymentMethod)
+                    DetailItem(label = "Reference / Bill No:", value = tx.reference)
+                    DetailItem(label = "Mapped Party / Payee:", value = tx.partyName ?: "No mapped party")
+                    DetailItem(label = "Project Associated:", value = currentProject?.name ?: "Main Site")
+                    
+                    // Full Description Card
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                    ) {
+                        Text(
+                            text = "Description / Memo:",
+                            color = if (dark) TextSecondary else TextSecondaryLight,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 6.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (dark) Color(0x1F293780) else Color(0x12000000))
+                                .padding(10.dp)
+                        ) {
+                            Text(
+                                text = tx.description.ifBlank { "No description details provided for this transaction." },
+                                color = if (dark) TextPrimary else TextPrimaryLight,
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Action buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    GlassButton(
+                        onClick = { selectedTxForDetails = null },
+                        darkTheme = dark,
+                        glowColor = tintColor,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("CLOSE DETAILS", fontWeight = FontWeight.Bold, color = Color.Black)
                     }
                 }
             }

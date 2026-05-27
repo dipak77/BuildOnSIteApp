@@ -173,6 +173,9 @@ fun GlassButton(
     enabled: Boolean = true,
     icon: ImageVector? = null,
     outlineMode: Boolean = false,
+    horizontalPadding: Dp = 20.dp,
+    verticalPadding: Dp = 12.dp,
+    minHeight: Dp = 48.dp,
     content: @Composable RowScope.() -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -229,8 +232,8 @@ fun GlassButton(
                 indication = LocalIndication.current,
                 onClick = onClick
             )
-            .padding(horizontal = 20.dp, vertical = 12.dp)
-            .defaultMinSize(minHeight = 48.dp),
+            .padding(horizontal = horizontalPadding, vertical = verticalPadding)
+            .defaultMinSize(minHeight = minHeight),
         contentAlignment = Alignment.Center
     ) {
         Row(
