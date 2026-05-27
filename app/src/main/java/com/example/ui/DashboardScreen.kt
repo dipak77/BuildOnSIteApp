@@ -54,6 +54,7 @@ fun DashboardScreen(
     var selectedFilter by remember { mutableStateOf("This Month") }
     var showFilterDropdown by remember { mutableStateOf(false) }
     var showProjectSwitcher by remember { mutableStateOf(false) }
+    var showProfileDetailsDialog by remember { mutableStateOf(false) }
 
     // Filtered lists for active project
     val projectTransactions = remember(allTransactions, currentProject) {
@@ -202,13 +203,7 @@ fun DashboardScreen(
                             .clip(CircleShape)
                             .border(1.5.dp, if (dark) NeonCyan else Color(0xFF4F46E5), CircleShape)
                             .clickable {
-                                // Cycle projects
-                                if (allProjects.isNotEmpty()) {
-                                    val currentIndex = allProjects.indexOfFirst { it.id == currentProject?.id }
-                                    val nextIndex = (currentIndex + 1) % allProjects.size
-                                    viewModel.selectedProjectId = allProjects[nextIndex].id
-                                    scaffoldStateToast(context, "Switched project: ${allProjects[nextIndex].name}")
-                                }
+                                showProfileDetailsDialog = true
                             },
                         contentAlignment = Alignment.Center
                     ) {
@@ -384,46 +379,81 @@ fun DashboardScreen(
                                 }
                             }
 
-                            // Analytics small chart icon button
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0x28FFFFFF))
-                                    .clickable { showBackgroundPicker = true },
-                                contentAlignment = Alignment.Center
+                            // Top Right Action Buttons (Theme Settings / Customizer)
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.TrendingUp,
-                                    contentDescription = "Background Settings",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                // Backdrop Theme/Background customizer button
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0x28FFFFFF))
+                                        .clickable { showBackgroundPicker = true },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.TrendingUp,
+                                        contentDescription = "Background Settings",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
                         }
 
                         Spacer(modifier = Modifier.height(18.dp))
 
-                        // Middle: Available site balance
-                        Column {
-                            Text(
-                                text = "AVAILABLE SITE BALANCE",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White.copy(alpha = 0.75f),
-                                letterSpacing = 1.sp
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            // Format strictly according to Indian Rupee standard format (+₹6,85,000.00)
-                            val balancePrefix = if (netBalance >= 0) "+" else ""
-                            // Display the formatted rupees
-                            val formattedRupee = formatIndianRupees(netBalance)
-                            Text(
-                                text = "$balancePrefix$formattedRupee.00",
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Black,
-                                color = Color.White
-                            )
+                        // Middle: Available site balance & Switch Project (right aligned/center)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "AVAILABLE SITE BALANCE",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White.copy(alpha = 0.75f),
+                                    letterSpacing = 1.sp
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                // Format strictly according to Indian Rupee standard format (+₹6,85,000.00)
+                                val balancePrefix = if (netBalance >= 0) "+" else ""
+                                // Display the formatted rupees
+                                val formattedRupee = formatIndianRupees(netBalance)
+                                Text(
+                                    text = "$balancePrefix$formattedRupee.00",
+                                    fontSize = 28.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White
+                                )
+                            }                            // Sleek circular glass-styled shortcut button containing only the switch icon
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0x33FFFFFF))
+                                    .border(1.dp, Color(0x4DFFFFFF), CircleShape)
+                                    .clickable {
+                                        if (allProjects.isNotEmpty()) {
+                                            val currentIndex = allProjects.indexOfFirst { it.id == currentProject?.id }
+                                            val nextIndex = (currentIndex + 1) % allProjects.size
+                                            viewModel.selectedProjectId = allProjects[nextIndex].id
+                                            scaffoldStateToast(context, "Switched project: ${allProjects[nextIndex].name}")
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SwapHoriz,
+                                    contentDescription = "Switch Project",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(18.dp))
@@ -1107,6 +1137,184 @@ fun DashboardScreen(
                 }
             }
         )
+    }
+
+    // ==========================================
+    // USER PROFILE DETAILS MODAL DIALOG
+    // ==========================================
+    if (showProfileDetailsDialog) {
+        val session by viewModel.userSession.collectAsState()
+        val userName = session?.displayName ?: "Dipak Harane"
+        val userEmail = session?.email ?: "haranedipak@gmail.com"
+        val activeLocation = currentProject?.location ?: "Mumbai Sector 7, MH"
+
+        GlassModalDialog(
+            visible = showProfileDetailsDialog,
+            onDismiss = { showProfileDetailsDialog = false },
+            title = "Site Operations Profile",
+            darkTheme = dark,
+            glowColor = if (dark) NeonCyan else Color(0xFF4F46E5)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Circular Avatar
+                Box(
+                    modifier = Modifier
+                        .size(90.dp)
+                        .clip(CircleShape)
+                        .border(
+                            2.dp,
+                            Brush.linearGradient(
+                                listOf(
+                                    if (dark) NeonCyan else Color(0xFF4F46E5),
+                                    if (dark) NeonPurple else Color(0xFF8B5CF6)
+                                )
+                            ),
+                            CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (session?.photoUrl != null) {
+                        AsyncImage(
+                            model = session?.photoUrl,
+                            contentDescription = "User Avatar",
+                            modifier = Modifier.matchParentSize().clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        // Initials placeholder with gradient background
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(
+                                            if (dark) Color(0xFF1E293B) else Color(0xFFE2E8F0),
+                                            if (dark) Color(0xFF0F172A) else Color(0xFFCBD5E1)
+                                        )
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = userName.take(2).uppercase(),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 32.sp,
+                                color = if (dark) Color.White else Color(0xFF0F172A)
+                            )
+                        }
+                    }
+                }
+
+                // Details Fields
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ProfileDetailCard(
+                        icon = Icons.Default.Person,
+                        label = "User Name",
+                        value = userName,
+                        darkTheme = dark
+                    )
+
+                    ProfileDetailCard(
+                        icon = Icons.Default.Email,
+                        label = "Email Address",
+                        value = userEmail,
+                        darkTheme = dark
+                    )
+
+                    ProfileDetailCard(
+                        icon = Icons.Default.Place,
+                        label = "Operational Site / Location",
+                        value = activeLocation,
+                        darkTheme = dark
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Navigation button to settings page
+                Button(
+                    onClick = {
+                        showProfileDetailsDialog = false
+                        viewModel.currentScreen = AppScreen.More
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (dark) NeonCyan else Color(0xFF4F46E5),
+                        contentColor = if (dark) Color.Black else Color.White
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Go to Workspace Settings",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ProfileDetailCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String,
+    darkTheme: Boolean
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (darkTheme) Color(0x1F1E293B) else Color(0x33CBD5E1))
+            .border(0.5.dp, if (darkTheme) Color(0x33FFFFFF) else Color(0x1F000000), RoundedCornerShape(12.dp))
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(if (darkTheme) Color(0x1A6366F1) else Color(0x1A4F46E5)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = if (darkTheme) NeonCyan else Color(0xFF4F46E5),
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = if (darkTheme) TextSecondary else TextSecondaryLight
+            )
+            Text(
+                text = value,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (darkTheme) Color.White else Color.Black
+            )
+        }
     }
 }
 
