@@ -33,16 +33,17 @@ import com.example.ui.*
 import com.example.ui.theme.*
 
 class MainActivity : ComponentActivity() {
+    private val viewModel: MainViewModel by viewModels {
+        val database = AppDatabase.getDatabase(applicationContext)
+        val repository = ConstructionRepository(database.constructionDao())
+        MainViewModel.Factory(repository)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Room database repositories init
-        val database = AppDatabase.getDatabase(applicationContext)
-        val repository = ConstructionRepository(database.constructionDao())
-
         setContent {
-            val viewModel: MainViewModel by viewModels { MainViewModel.Factory(repository) }
             val dark = viewModel.darkThemeEnabled
 
             // Load user session from shared preferences on launch
@@ -114,6 +115,39 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
     var workerAadhaar by remember { mutableStateOf("") }
     var workerPan by remember { mutableStateOf("") }
     var workerReference by remember { mutableStateOf("") }
+
+    // Synchronize UI modal sheets with global triggers
+    LaunchedEffect(viewModel.showQuickDialog) {
+        if (viewModel.showQuickDialog) {
+            showQuickDialog = true
+            viewModel.showQuickDialog = false
+        }
+    }
+    LaunchedEffect(viewModel.showProjectDialog) {
+        if (viewModel.showProjectDialog) {
+            showProjectDialog = true
+            viewModel.showProjectDialog = false
+        }
+    }
+    LaunchedEffect(viewModel.showTransactionDialog) {
+        if (viewModel.showTransactionDialog) {
+            showTransactionDialog = true
+            txType = viewModel.transactionTypePreset
+            viewModel.showTransactionDialog = false
+        }
+    }
+    LaunchedEffect(viewModel.showTaskDialog) {
+        if (viewModel.showTaskDialog) {
+            showTaskDialog = true
+            viewModel.showTaskDialog = false
+        }
+    }
+    LaunchedEffect(viewModel.showWorkerDialog) {
+        if (viewModel.showWorkerDialog) {
+            showWorkerDialog = true
+            viewModel.showWorkerDialog = false
+        }
+    }
 
     BoxWithConstraints(
         modifier = Modifier

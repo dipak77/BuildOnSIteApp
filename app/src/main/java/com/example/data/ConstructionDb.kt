@@ -260,22 +260,9 @@ abstract class AppDatabase : RoomDatabase() {
                     "construction_database"
                 )
                 .fallbackToDestructiveMigration()
-                .addCallback(DatabaseCallback(context))
                 .build()
                 INSTANCE = instance
                 instance
-            }
-        }
-
-        private class DatabaseCallback(private val context: Context) : RoomDatabase.Callback() {
-            override fun onCreate(db: SupportSQLiteDatabase) {
-                super.onCreate(db)
-                // Seed database on creation
-                INSTANCE?.let { database ->
-                    CoroutineScope(Dispatchers.IO).launch {
-                        seedDatabase(database.constructionDao())
-                    }
-                }
             }
         }
 
@@ -344,6 +331,10 @@ class ConstructionRepository(private val dao: ConstructionDao) {
     val allMOMs: Flow<List<MOM>> = dao.getAllMOMs()
     val allPayroll: Flow<List<Payroll>> = dao.getAllPayroll()
     val allEstimates: Flow<List<Estimate>> = dao.getAllEstimates()
+
+    suspend fun seedDatabase() {
+        AppDatabase.seedDatabase(dao)
+    }
 
     suspend fun insertProject(project: Project) = dao.insertProject(project)
     suspend fun deleteProject(project: Project) = dao.deleteProject(project)

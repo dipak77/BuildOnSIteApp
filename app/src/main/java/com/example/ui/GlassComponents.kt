@@ -129,15 +129,15 @@ fun GlassCard(
         label = "clickScale"
     )
 
-    // Frosted colors - Ultra-clean satin white with rich contrast for light theme
+    // Frosted colors - Ultra-clean crystal glass with high contrast backdrop visibility
     val bg = if (darkTheme) {
-        Color(0x2E111827) // Slate 900 tint 18% alpha
+        Color(0x400B101E) // Premium obsidian slate tint (25% opacity)
     } else {
-        Color(0xF0FAFAFC) // Translucent light alabaster/white
+        Color(0x99FFFFFF) // Breathtaking luxury white crystal glass (60% opacity)
     }
 
     // Pro-level elegant borders
-    val defaultBorder = if (darkTheme) GlassBorderDark else Color(0x2E6366F1) // Translucent luxury indigo stroke
+    val defaultBorder = if (darkTheme) GlassBorderDark else Color(0x264F46E5) // Deluxe fine Indigo trace stroke
     val borderStroke = BorderStroke(1.dp, borderColor ?: defaultBorder)
 
     val contentModifier = modifier

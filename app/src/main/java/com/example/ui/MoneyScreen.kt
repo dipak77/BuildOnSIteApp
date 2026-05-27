@@ -38,7 +38,7 @@ fun MoneyScreen(
     val currentProject by viewModel.activeProject.collectAsState()
     val allTransactions by viewModel.transactions.collectAsState()
 
-    var selectedTxForDetails by remember { mutableStateOf<Transaction?>(null) }
+    val selectedTxForDetails = viewModel.sharedSelectedTxDetails
 
     // Filters & search state
     val query = viewModel.transactionSearchQuery
@@ -303,7 +303,7 @@ fun MoneyScreen(
                     darkTheme = dark,
                     borderColor = accentBorder.copy(alpha = 0.40f),
                     padding = 12.dp,
-                    onClick = { selectedTxForDetails = tx }
+                    onClick = { viewModel.sharedSelectedTxDetails = tx }
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -321,13 +321,15 @@ fun MoneyScreen(
                                 modifier = Modifier.size(26.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Column {
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
                                 Text(
                                     text = tx.description,
                                     color = if (dark) TextPrimary else TextPrimaryLight,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
+                                    maxLines = 2,
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 if (!tx.partyName.isNullOrEmpty()) {
@@ -345,7 +347,9 @@ fun MoneyScreen(
                                                 text = tx.partyName,
                                                 color = if (dark) NeonGreen else Color(0xFF047857),
                                                 fontSize = 10.sp,
-                                                fontWeight = FontWeight.Bold
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                         }
                                     }
@@ -397,7 +401,7 @@ fun MoneyScreen(
 
         GlassModalDialog(
             visible = true,
-            onDismiss = { selectedTxForDetails = null },
+            onDismiss = { viewModel.sharedSelectedTxDetails = null },
             title = "Receipt / Transaction Details",
             darkTheme = dark,
             glowColor = tintColor
@@ -515,7 +519,7 @@ fun MoneyScreen(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     GlassButton(
-                        onClick = { selectedTxForDetails = null },
+                        onClick = { viewModel.sharedSelectedTxDetails = null },
                         darkTheme = dark,
                         glowColor = tintColor,
                         modifier = Modifier.fillMaxWidth()

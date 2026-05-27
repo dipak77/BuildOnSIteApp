@@ -52,13 +52,29 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
 
     // Authentic GMS Google Sign In options config
     val gso = remember {
-        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken("970298420983-bin5cqqcqgdoi9r256p7a78bvpi6c0hs.apps.googleusercontent.com")
-            .requestEmail()
-            .requestProfile()
-            .build()
+        try {
+            GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken("970298420983-bin5cqqcqgdoi9r256p7a78bvpi6c0hs.apps.googleusercontent.com")
+                .requestEmail()
+                .requestProfile()
+                .build()
+        } catch (t: Throwable) {
+            t.printStackTrace()
+            null
+        }
     }
-    val googleSignInClient = remember { GoogleSignIn.getClient(context, gso) }
+    val googleSignInClient = remember {
+        try {
+            if (gso != null) {
+                GoogleSignIn.getClient(context, gso)
+            } else {
+                null
+            }
+        } catch (t: Throwable) {
+            t.printStackTrace()
+            null
+        }
+    }
 
     // Launcher for standard Google Sign In Intent activity
     val signInLauncher = rememberLauncherForActivityResult(
@@ -192,20 +208,27 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
                         Button(
                             onClick = {
                                 isConnecting = true
-                                try {
-                                    val intent = googleSignInClient.signInIntent
-                                    signInLauncher.launch(intent)
-                                } catch (e: Exception) {
+                                val client = googleSignInClient
+                                if (client != null) {
                                     try {
-                                        // Graceful fallback attempt with signout first
-                                        googleSignInClient.signOut()
-                                        val intent = googleSignInClient.signInIntent
+                                        val intent = client.signInIntent
                                         signInLauncher.launch(intent)
-                                    } catch (ex: Exception) {
-                                        isConnecting = false
-                                        showAccountChooser = true
-                                        Toast.makeText(context, "No local Play services: opening account list", Toast.LENGTH_SHORT).show()
+                                    } catch (e: Exception) {
+                                        try {
+                                            // Graceful fallback attempt with signout first
+                                            client.signOut()
+                                            val intent = client.signInIntent
+                                            signInLauncher.launch(intent)
+                                        } catch (ex: Exception) {
+                                            isConnecting = false
+                                            showAccountChooser = true
+                                            Toast.makeText(context, "No local Play services: opening account list", Toast.LENGTH_SHORT).show()
+                                        }
                                     }
+                                } else {
+                                    isConnecting = false
+                                    showAccountChooser = true
+                                    Toast.makeText(context, "Google Play Services unavailable: opening account list", Toast.LENGTH_SHORT).show()
                                 }
                             },
                             modifier = Modifier

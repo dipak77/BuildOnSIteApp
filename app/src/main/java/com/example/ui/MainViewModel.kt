@@ -67,14 +67,30 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
                 idToken = if (token.isEmpty()) null else token,
                 isGuest = isGuest
             )
+        } else {
+            // Auto sign in with a default profile for friction-free developer/demo experience in the streaming emulator!
+            _userSession.value = GoogleUser(
+                displayName = "Dipak Harane",
+                email = "haranedipak@gmail.com",
+                photoUrl = null,
+                isGuest = true
+            )
         }
     }
 
     // UI States
     var currentScreen by mutableStateOf(AppScreen.Dashboard)
-    var selectedProjectId by mutableStateOf<Int?>(1) // Default to first project
+    var selectedProjectId by mutableStateOf<Int?>(null) // Dynamic first project selector
     var attendanceDate by mutableStateOf("2026-05-26") // Date navigator
     var darkThemeEnabled by mutableStateOf(true) // Premium dark glassmorphism mode toggle
+
+    // Dialogue triggers accessible globally across composing widgets
+    var showQuickDialog by mutableStateOf(false)
+    var showProjectDialog by mutableStateOf(false)
+    var showTransactionDialog by mutableStateOf(false)
+    var showTaskDialog by mutableStateOf(false)
+    var showWorkerDialog by mutableStateOf(false)
+    var transactionTypePreset by mutableStateOf("Money Out") // "Money In" or "Money Out"
 
     // Filtering/Search States
     var transactionSearchQuery by mutableStateOf("")
@@ -82,6 +98,9 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
     var transactionCategoryFilter by mutableStateOf("All") // "All", "Material", "Labor", "Equipment", etc.
 
     var taskStatusFilter by mutableStateOf("All") // "All", "To Do", "In Progress", "Done"
+
+    // Selected transaction state globally shared for beautiful click details navigation
+    var sharedSelectedTxDetails by mutableStateOf<Transaction?>(null)
 
     // Base Database Flows
     val projects = repository.allProjects.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -102,6 +121,15 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
     // Set selected project automatically if first project loads and selected is null
     init {
         viewModelScope.launch {
+            try {
+                val initialDbProjects = repository.allProjects.first()
+                if (initialDbProjects.isEmpty()) {
+                    repository.seedDatabase()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
             projects.collectLatest { projectList ->
                 if (selectedProjectId == null && projectList.isNotEmpty()) {
                     selectedProjectId = projectList.first().id

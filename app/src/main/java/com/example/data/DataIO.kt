@@ -237,7 +237,7 @@ object DataIO {
                             location = p.getString("location"),
                             budget = p.getDouble("budget"),
                             status = p.getString("status"),
-                            customBackground = p.optString("customBackground", null)
+                            customBackground = p.optString("customBackground", null as String?)
                         )
                     )
                 }
@@ -304,7 +304,7 @@ object DataIO {
                             description = tx.getString("description"),
                             date = tx.getString("date"),
                             partyId = if (tx.has("partyId") && tx.getInt("partyId") != -1) tx.getInt("partyId") else null,
-                            partyName = tx.optString("partyName", null),
+                            partyName = tx.optString("partyName", null as String?),
                             reference = tx.optString("reference", ""),
                             paymentMethod = tx.optString("paymentMethod", "Cash")
                         )
@@ -533,7 +533,7 @@ object DataIO {
                     location = p.getString("location"),
                     budget = p.getDouble("budget"),
                     status = p.getString("status"),
-                    customBackground = p.optString("customBackground", null)
+                    customBackground = p.optString("customBackground", null as String?)
                 )
             ).toInt()
 
@@ -569,7 +569,7 @@ object DataIO {
                             description = tx.getString("description"),
                             date = tx.getString("date"),
                             partyId = if (tx.has("partyId") && tx.getInt("partyId") != -1) tx.getInt("partyId") else null,
-                            partyName = tx.optString("partyName", null),
+                            partyName = tx.optString("partyName", null as String?),
                             reference = tx.optString("reference", ""),
                             paymentMethod = tx.optString("paymentMethod", "Cash")
                         )

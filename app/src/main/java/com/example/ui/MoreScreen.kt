@@ -281,8 +281,8 @@ fun MoreScreen(
                                         .build()
                                     val googleSignInClient = GoogleSignIn.getClient(context, gso)
                                     googleSignInClient.signOut()
-                                } catch (e: Exception) {
-                                    // Handle cases where Play Services might be missing
+                                } catch (t: Throwable) {
+                                    t.printStackTrace()
                                 }
                                 viewModel.handleGoogleSignOut(context)
                                 Toast.makeText(context, "Signed out of Workspace", Toast.LENGTH_SHORT).show()

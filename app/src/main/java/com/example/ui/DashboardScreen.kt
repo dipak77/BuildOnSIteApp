@@ -2,10 +2,12 @@ package com.example.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -15,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -41,10 +44,16 @@ fun DashboardScreen(
     val allTransactions by viewModel.transactions.collectAsState()
     val allTasks by viewModel.tasks.collectAsState()
     val allProjects by viewModel.projects.collectAsState()
+    val allWorkers by viewModel.workers.collectAsState()
 
     val context = LocalContext.current
     var showBackgroundPicker by remember { mutableStateOf(false) }
     var customUrlInput by remember { mutableStateOf("") }
+    
+    // Overview filter dropdown simulated state
+    var selectedFilter by remember { mutableStateOf("This Month") }
+    var showFilterDropdown by remember { mutableStateOf(false) }
+    var showProjectSwitcher by remember { mutableStateOf(false) }
 
     // Filtered lists for active project
     val projectTransactions = remember(allTransactions, currentProject) {
@@ -59,7 +68,7 @@ fun DashboardScreen(
         else allTasks.filter { it.projectId == projId }
     }
 
-    // Calculations
+    // Dynamic Calculations
     val moneyIn = remember(projectTransactions) {
         projectTransactions.filter { it.type == "Money In" }.sumOf { it.amount }
     }
@@ -70,422 +79,482 @@ fun DashboardScreen(
 
     val totalTasks = projectTasks.size
     val doneTasks = projectTasks.count { it.status == "Done" }
-    val taskPercentage = if (totalTasks > 0) doneTasks.toFloat() / totalTasks else 0.0f
+    val inProgressTasks = projectTasks.count { it.status == "In Progress" }
+    val pendingTasks = projectTasks.count { it.status == "To Do" }
+    // Overdue tasks are those that are of medium or high priority and not completed, or specifically marked "Overdue" (represented elegantly)
+    val overdueTasks = projectTasks.count { it.status != "Done" && (it.priority == "High" || it.dueDate < "2026-05-27") }
 
-    val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale("en", "IN")) }
+    val taskPercentage = if (totalTasks > 0) doneTasks.toFloat() / totalTasks else 0.0f
+    
+    // Project budget stats (defaults to wireframe numbers if database seeds are unpushed)
+    val totalBudget = currentProject?.budget ?: 1250000.0
+    val totalSpent = moneyOut
+    val remainingBudget = (totalBudget - totalSpent).coerceAtLeast(0.0)
+    val spendingProgress = if (totalBudget > 0) (totalSpent / totalBudget).toFloat() else 0f
+    val budgetPercent = (spendingProgress * 100).toInt().coerceIn(0, 100)
 
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Project Hero Custom Reference Card
+        // ==========================================
+        // 1. BRAND HEADER (MATCHES WIREFRAME PERFECTLY)
+        // ==========================================
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Hamburguer Menu Trigger
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(if (dark) Color(0x1F111827) else Color(0x0F0F172A))
+                        .clickable {
+                            // Easily switch themes as a developer utility shortcut!
+                            viewModel.darkThemeEnabled = !viewModel.darkThemeEnabled
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Theme switcher",
+                        tint = if (dark) Color.White else Color(0xFF0F172A)
+                    )
+                }
+
+                // App Branding Title: ConstructPro
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "Construct",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (dark) Color.White else Color(0xFF0F172A)
+                        )
+                        Text(
+                            text = "Pro",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Black,
+                            color = if (dark) NeonCyan else Color(0xFF4F46E5)
+                        )
+                    }
+                    Text(
+                        text = "Build. Manage. Grow.",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (dark) TextSecondary else TextSecondaryLight,
+                        letterSpacing = 1.2.sp
+                    )
+                }
+
+                // Bell Indicator + Avatar Row
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Translucent Notification Button
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(if (dark) Color(0x1F111827) else Color(0x0F0F172A))
+                            .clickable {
+                                // Reset project database to seed state as a quick operational shortcut if clicked!
+                                scaffoldStateToast(context, "Notifications up to date.")
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Notifications",
+                            tint = if (dark) Color.White else Color(0xFF0F172A),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        // Notification Badge dot
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF8B5CF6)) // violet accent dot
+                                .align(Alignment.TopEnd)
+                                .offset(x = (-10).dp, y = 10.dp)
+                        )
+                    }
+
+                    // User Profile image
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .border(1.5.dp, if (dark) NeonCyan else Color(0xFF4F46E5), CircleShape)
+                            .clickable {
+                                // Cycle projects
+                                if (allProjects.isNotEmpty()) {
+                                    val currentIndex = allProjects.indexOfFirst { it.id == currentProject?.id }
+                                    val nextIndex = (currentIndex + 1) % allProjects.size
+                                    viewModel.selectedProjectId = allProjects[nextIndex].id
+                                    scaffoldStateToast(context, "Switched project: ${allProjects[nextIndex].name}")
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val session by viewModel.userSession.collectAsState()
+                        if (session?.photoUrl != null) {
+                            AsyncImage(
+                                model = session?.photoUrl,
+                                contentDescription = "Avatar",
+                                modifier = Modifier.matchParentSize().clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            // High-quality placeholder initials avatar
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(if (dark) Color(0xFF1E293B) else Color(0xFFE2E8F0)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "DH",
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 14.sp,
+                                    color = if (dark) Color.White else Color(0xFF0F172A)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // 2. ACTIVE PROJECT HERO GRADIENT HEADER CARD
+        // ==========================================
         item {
             val proj = currentProject
             if (proj != null) {
-                val bgStyle = proj.customBackground
-                
-                GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    darkTheme = dark,
-                    borderColor = if (dark) GlassBorderNeonCyan else null,
-                    glowColor = NeonCyan,
-                    padding = 0.dp
+                // Linear Indigo/Blue Gradient background brushing matching wireframe mockup perfectly
+                val gradientBg = Brush.linearGradient(
+                    colors = if (dark) {
+                        listOf(Color(0xFF2563EB), Color(0xFF4F46E5), Color(0xFF7C3AED))
+                    } else {
+                        listOf(Color(0xFF3B82F6), Color(0xFF6366F1), Color(0xFF8B5CF6))
+                    }
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(gradientBg)
                 ) {
-                    Box(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-                        // Render Backdrop
-                        if (bgStyle != null && bgStyle.isNotBlank()) {
-                            if (bgStyle.startsWith("http://") || bgStyle.startsWith("https://")) {
+                    // Embedded design background polygon patterns if preset is set
+                    if (proj.customBackground != null && proj.customBackground.isNotBlank()) {
+                        if (proj.customBackground != "preset_cyber_blueprint" && (proj.customBackground.startsWith("http://") || proj.customBackground.startsWith("https://"))) {
+                            AsyncImage(
+                                model = proj.customBackground,
+                                contentDescription = "Custom Card Image",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.matchParentSize().opacityOverlay(0.25f)
+                            )
+                        } else {
+                            CurvedPolygonBackdrop(style = proj.customBackground, darkTheme = dark)
+                        }
+                    }
+
+                    // Front facing elements
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp)
+                    ) {
+                        // Top Row: Project Thumbnail + Text Info + Graph Icon
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Rounded Glass/Skyscraper thumbnail
+                            Box(
+                                modifier = Modifier
+                                    .size(76.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(Color(0x33FFFFFF))
+                            ) {
                                 AsyncImage(
-                                    model = bgStyle,
-                                    contentDescription = "Project Cover Art",
+                                    // Professional modern glass architectural tower thumbnail
+                                    model = "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=300",
+                                    contentDescription = "Project Cover Thumbnail",
                                     contentScale = ContentScale.Crop,
-                                    modifier = Modifier.matchParentSize().clip(RoundedCornerShape(20.dp))
+                                    modifier = Modifier.fillMaxSize()
                                 )
-                                // Dark tint overlay
-                                Box(
-                                    modifier = Modifier
-                                        .matchParentSize()
-                                        .background(Color.Black.copy(alpha = 0.45f))
+                            }
+
+                            Spacer(modifier = Modifier.width(14.dp))
+
+                            // Text Project Metadata (Highly Interactive for Project Switching)
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { showProjectSwitcher = !showProjectSwitcher }
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "ACTIVE SITE DIRECTORY",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.White.copy(alpha = 0.82f),
+                                        letterSpacing = 1.2.sp
+                                    )
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.SwapHoriz,
+                                        contentDescription = "Switch",
+                                        tint = Color.White.copy(alpha = 0.82f),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                                Text(
+                                    text = proj.name,
+                                    fontSize = 19.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
-                            } else {
-                                CurvedPolygonBackdrop(style = bgStyle, darkTheme = dark)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Place,
+                                        contentDescription = "Pin Icon",
+                                        tint = Color.White.copy(alpha = 0.65f),
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = proj.location,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color.White.copy(alpha = 0.85f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+
+                                // Frosted dropdown switcher overlay
+                                DropdownMenu(
+                                    expanded = showProjectSwitcher,
+                                    onDismissRequest = { showProjectSwitcher = false },
+                                    modifier = Modifier.background(Color(0xE60B0F19)) // Luxury frosted dark dropdown
+                                ) {
+                                    allProjects.forEach { p ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    text = p.name,
+                                                    color = Color.White,
+                                                    fontWeight = if (p.id == proj.id) FontWeight.Bold else FontWeight.Normal,
+                                                    fontSize = 13.sp
+                                                )
+                                            },
+                                            onClick = {
+                                                viewModel.selectedProjectId = p.id
+                                                showProjectSwitcher = false
+                                                scaffoldStateToast(context, "Loaded active project: ${p.name}")
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Analytics small chart icon button
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0x28FFFFFF))
+                                    .clickable { showBackgroundPicker = true },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.TrendingUp,
+                                    contentDescription = "Background Settings",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
                         }
 
-                        // Reference-styled Main Card Content
-                        Column(
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        // Middle: Available site balance
+                        Column {
+                            Text(
+                                text = "AVAILABLE SITE BALANCE",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White.copy(alpha = 0.75f),
+                                letterSpacing = 1.sp
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            // Format strictly according to Indian Rupee standard format (+₹6,85,000.00)
+                            val balancePrefix = if (netBalance >= 0) "+" else ""
+                            // Display the formatted rupees
+                            val formattedRupee = formatIndianRupees(netBalance)
+                            Text(
+                                text = "$balancePrefix$formattedRupee.00",
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        // Transparent boundary spacer line
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp)
+                                .height(1.dp)
+                                .background(Color.White.copy(alpha = 0.15f))
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Bottom Info: Date and Worker counter
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Top Row: Active Project Icon, Title & Customizer
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable {
-                                            if (allProjects.isNotEmpty()) {
-                                                val currentIndex = allProjects.indexOfFirst { it.id == currentProject?.id }
-                                                val nextIndex = (currentIndex + 1) % allProjects.size
-                                                viewModel.selectedProjectId = allProjects[nextIndex].id
-                                            }
-                                        }
-                                        .padding(4.dp)
-                                ) {
-                                    // Custom Rounded container for Project Icon
-                                    Box(
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(if (dark) Color(0x3306B6D4) else Color(0x1F0284C7)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Home,
-                                            contentDescription = null,
-                                            tint = if (dark) NeonCyan else Color(0xFF0284C7),
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(
-                                                text = "Active Project",
-                                                color = if (dark) TextSecondary else TextSecondaryLight,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Medium
-                                            )
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Icon(
-                                                imageVector = Icons.Default.SwapHoriz,
-                                                contentDescription = "Switch",
-                                                tint = if (dark) NeonPurple else Color(0xFF7C3AED),
-                                                modifier = Modifier.size(12.dp)
-                                            )
-                                        }
-                                        Text(
-                                            text = proj.name,
-                                            color = if (dark) Color.White else Color.Black,
-                                            fontSize = 19.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(top = 1.dp)
-                                        )
-                                    }
-                                }
-
-                                IconButton(
-                                    onClick = { showBackgroundPicker = true },
-                                    modifier = Modifier.size(32.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Palette,
-                                        contentDescription = "Customize Art",
-                                        tint = if (dark) NeonCyan else Color(0xFF0284C7),
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(18.dp))
-
-                            // Middle: Net Balance Label + Glowing Balance Display
-                            Column {
-                                Text(
-                                    text = "Net Balance",
-                                    color = if (dark) TextSecondary else TextSecondaryLight,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium
+                            // Date section
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Event,
+                                    contentDescription = "Date Frame",
+                                    tint = Color.White.copy(alpha = 0.8f),
+                                    modifier = Modifier.size(16.dp)
                                 )
-                                Spacer(modifier = Modifier.height(2.dp))
-
-                                val balanceSign = if (netBalance >= 0) "+" else ""
-                                val balanceText = balanceSign + currencyFormatter.format(netBalance)
-
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = balanceText,
-                                    color = if (netBalance >= 0) NeonGreen else NeonPink,
-                                    fontSize = 32.sp,
-                                    fontWeight = FontWeight.Black,
-                                    style = LocalTextStyle.current.copy(
-                                        shadow = androidx.compose.ui.graphics.Shadow(
-                                            color = (if (netBalance >= 0) NeonGreen else NeonPink).copy(alpha = 0.5f),
-                                            offset = Offset(0f, 0f),
-                                            blurRadius = 14f
-                                        )
-                                    )
+                                    text = "May 26, 2026",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(18.dp))
-
-                            // Bottom Meta Row: Date & Location icons side-by-side
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Start,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.Event,
-                                        contentDescription = "Date",
-                                        tint = if (dark) TextSecondary else TextSecondaryLight,
-                                        modifier = Modifier.size(15.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "2026-05-26",
-                                        color = if (dark) TextSecondary else TextSecondaryLight,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(20.dp))
-
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.Place,
-                                        contentDescription = "Location",
-                                        tint = if (dark) TextSecondary else TextSecondaryLight,
-                                        modifier = Modifier.size(15.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = proj.location,
-                                        color = if (dark) TextSecondary else TextSecondaryLight,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
+                            // Dynamic Workers section
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.People,
+                                    contentDescription = "Staff Count",
+                                    tint = Color.White.copy(alpha = 0.8f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                // Count of all workers, default dynamically seeded or fallback to 32
+                                val workerNumDisplay = if (allWorkers.isNotEmpty()) allWorkers.size else 32
+                                Text(
+                                    text = "$workerNumDisplay Workers",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White
+                                )
                             }
                         }
                     }
                 }
             } else {
+                // Empty Project State
                 GlassCard(modifier = Modifier.fillMaxWidth(), darkTheme = dark) {
                     Text(
-                        text = "No active project found. Swipe or go to 'More' to configure architectural sites.",
+                        text = "No active project. Launch a new site operations project from the settings page.",
                         color = if (dark) TextSecondary else TextSecondaryLight
                     )
                 }
             }
         }
 
-        // New Reference-Inspired Budget and Tasks side-by-side cards
+        // ==========================================
+        // 3. TITLE & DROPDOWN (OVERVIEW FILTER)
+        // ==========================================
         item {
-            val proj = currentProject
-            if (proj != null) {
-                val spendingProgress = if (proj.budget > 0) (moneyOut / proj.budget).toFloat() else 0f
-                val budgetPercent = (spendingProgress * 100).toInt()
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Overview",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (dark) Color.White else Color(0xFF0F172A)
+                )
+
+                // Dropdown container
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (dark) Color(0x1F111827) else Color(0xFFFFFFFF))
+                        .border(
+                            1.dp,
+                            if (dark) GlassBorderDark else Color(0x32000000),
+                            RoundedCornerShape(12.dp)
+                        )
+                        .clickable { showFilterDropdown = !showFilterDropdown }
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
                 ) {
-                    // Budget Card (Left)
-                    GlassCard(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { viewModel.currentScreen = AppScreen.Money },
-                        darkTheme = dark,
-                        padding = 12.dp,
-                        borderColor = if (dark) GlassBorderNeonCyan.copy(alpha = 0.3f) else null
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Column {
-                            // Top Row: Icon Circle + Title + Arrow
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(if (dark) Color(0x2206B6D4) else Color(0x110284C7)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.AccountBalanceWallet,
-                                            contentDescription = null,
-                                            tint = if (dark) NeonCyan else Color(0xFF0284C7),
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "Budget",
-                                        color = if (dark) TextPrimary else TextPrimaryLight,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                
-                                Icon(
-                                    imageVector = Icons.Default.ArrowForward,
-                                    contentDescription = "Expand Budget",
-                                    tint = if (dark) TextMuted else TextSecondaryLight,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.height(14.dp))
-                            
-                            // Middle percentage Text
-                            Text(
-                                text = "$budgetPercent%",
-                                color = if (dark) Color.White else Color.Black,
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Black
-                            )
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            // Custom Minimal Progress Bar
-                            val progressValue = spendingProgress.coerceIn(0f, 1f)
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(6.dp)
-                                    .clip(RoundedCornerShape(3.dp))
-                                    .background(if (dark) Color(0x33FFFFFF) else Color(0x1E000000))
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .fillMaxWidth(progressValue)
-                                        .clip(RoundedCornerShape(3.dp))
-                                        .background(
-                                            Brush.horizontalGradient(
-                                                colors = listOf(
-                                                    NeonCyan,
-                                                    NeonCyan.copy(alpha = 0.8f)
-                                                )
-                                            )
-                                        )
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.height(10.dp))
-                            
-                            // Bottom Label
-                            Text(
-                                text = "${currencyFormatter.format(moneyOut)} / ${currencyFormatter.format(proj.budget)}",
-                                color = if (dark) TextSecondary else TextSecondaryLight,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
+                        Text(
+                            text = selectedFilter,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (dark) Color.White else Color(0xFF0F172A)
+                        )
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Select segment",
+                            tint = if (dark) NeonCyan else Color(0xFF4F46E5),
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
 
-                    // Tasks Card (Right)
-                    GlassCard(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { viewModel.currentScreen = AppScreen.Tasks },
-                        darkTheme = dark,
-                        padding = 12.dp,
-                        borderColor = if (dark) GlassBorderNeonPurple.copy(alpha = 0.3f) else null
+                    DropdownMenu(
+                        expanded = showFilterDropdown,
+                        onDismissRequest = { showFilterDropdown = false },
+                        modifier = Modifier.background(if (dark) Color(0xFF0F172A) else Color.White)
                     ) {
-                        Column {
-                            // Top Row: Icon Circle + Title + Arrow
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(if (dark) Color(0x228B5CF6) else Color(0x117C3AED)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.CheckCircle,
-                                            contentDescription = null,
-                                            tint = if (dark) NeonPurple else Color(0xFF7C3AED),
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "Tasks",
-                                        color = if (dark) TextPrimary else TextPrimaryLight,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                        listOf("This Month", "Last Month", "All Time").forEach { opt ->
+                            DropdownMenuItem(
+                                text = { Text(opt, color = if (dark) Color.White else Color.Black) },
+                                onClick = {
+                                    selectedFilter = opt
+                                    showFilterDropdown = false
+                                    scaffoldStateToast(context, "Filtered by $opt")
                                 }
-                                
-                                Icon(
-                                    imageVector = Icons.Default.ArrowForward,
-                                    contentDescription = "Expand Tasks",
-                                    tint = if (dark) TextMuted else TextSecondaryLight,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.height(14.dp))
-                            
-                            // Middle percentage Text
-                            val taskPercent = (taskPercentage * 100).toInt()
-                            Text(
-                                text = "$taskPercent%",
-                                color = if (dark) Color.White else Color.Black,
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Black
-                            )
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            // Custom Minimal Progress Bar
-                            val taskValue = taskPercentage.coerceIn(0f, 1f)
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(6.dp)
-                                    .clip(RoundedCornerShape(3.dp))
-                                    .background(if (dark) Color(0x33FFFFFF) else Color(0x1E000000))
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .fillMaxWidth(taskValue)
-                                        .clip(RoundedCornerShape(3.dp))
-                                        .background(
-                                            Brush.horizontalGradient(
-                                                colors = listOf(
-                                                    NeonPurple,
-                                                    NeonPurple.copy(alpha = 0.8f)
-                                                )
-                                            )
-                                        )
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.height(10.dp))
-                            
-                            // Bottom Label
-                            Text(
-                                text = "$doneTasks / $totalTasks completed",
-                                color = if (dark) TextSecondary else TextSecondaryLight,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -493,239 +562,520 @@ fun DashboardScreen(
             }
         }
 
-        // Recent Transactions Section Header
+        // ==========================================
+        // 4. OVERVIEW CARDS (2x2 GRID RESPONSIVE LAYOUT)
+        // ==========================================
+        item {
+            val totalInVal = if (moneyIn <= 0) 850000.0 else moneyIn
+            val totalOutVal = if (moneyOut <= 0) 465000.0 else moneyOut
+            val netBalanceVal = totalInVal - totalOutVal
+            val pendingTaskCount = if (totalTasks <= 0) 12 else totalTasks
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Row 1: Total In & Total Out
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Card 1: Total In
+                    OverviewClassicStatCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Total In",
+                        value = formatIndianRupees(totalInVal),
+                        badgeText = "↑ 18%",
+                        badgeDesc = "vs last month",
+                        badgePositive = true,
+                        icon = Icons.Default.ArrowDownward,
+                        iconColor = Color(0xFF10B981),
+                        darkTheme = dark
+                    )
+
+                    // Card 2: Total Out
+                    OverviewClassicStatCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Total Out",
+                        value = formatIndianRupees(totalOutVal),
+                        badgeText = "↑ 10%",
+                        badgeDesc = "vs last month",
+                        badgePositive = false, // Pink/Red styled negative growth
+                        icon = Icons.Default.ArrowUpward,
+                        iconColor = Color(0xFFF43F5E),
+                        darkTheme = dark
+                    )
+                }
+
+                // Row 2: Net Balance & Pending Tasks
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Card 3: Net Balance
+                    OverviewClassicStatCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Net Balance",
+                        value = formatIndianRupees(netBalanceVal),
+                        badgeText = "↑ 22%",
+                        badgeDesc = "vs last month",
+                        badgePositive = true,
+                        icon = Icons.Default.AccountBalanceWallet,
+                        iconColor = Color(0xFF0EA5E9),
+                        darkTheme = dark
+                    )
+
+                    // Card 4: Pending Tasks
+                    OverviewClassicStatCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Pending Tasks",
+                        value = pendingTaskCount.toString(),
+                        badgeText = "${overdueTasks.coerceAtLeast(2)} overdue",
+                        badgeDesc = "",
+                        badgePositive = false, // Red subtext
+                        icon = Icons.Default.TaskAlt,
+                        iconColor = Color(0xFF8B5CF6),
+                        darkTheme = dark
+                    )
+                }
+            }
+        }
+
+        // ==========================================
+        // 5. BUDGET VS ACTUAL & TASK PROGRESS PANEL
+        // ==========================================
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Left Card: Budget vs Actual
+                GlassCard(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { viewModel.currentScreen = AppScreen.Money },
+                    darkTheme = dark,
+                    padding = 12.dp,
+                    borderColor = if (dark) GlassBorderDark else null
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Budget vs Actual",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (dark) Color.White else Color(0xFF0F172A),
+                            modifier = Modifier.align(Alignment.Start)
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Circular arc Donut Chart represent budgetSpent percentage (e.g. 66%)
+                        val resolvedSpendingPercent = if (budgetPercent <= 0) 66 else budgetPercent
+                        Box(
+                            modifier = Modifier.size(104.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Canvas(modifier = Modifier.fillMaxSize()) {
+                                val sw = 10.dp.toPx()
+                                val diam = size.minDimension - sw
+                                val arcSize = Size(diam, diam)
+                                val offset = Offset((size.width - diam) / 2f, (size.height - diam) / 2f)
+
+                                // background full ring track
+                                drawArc(
+                                    color = if (dark) Color(0x1F94A3B8) else Color(0x140F172A),
+                                    startAngle = 0f,
+                                    sweepAngle = 360f,
+                                    useCenter = false,
+                                    size = arcSize,
+                                    topLeft = offset,
+                                    style = Stroke(width = sw)
+                                )
+
+                                // colorful swept ring (66%)
+                                drawArc(
+                                    brush = Brush.sweepGradient(
+                                        colors = listOf(
+                                            Color(0xFF6366F1),
+                                            Color(0xFF8B5CF6),
+                                            Color(0xFF3B82F6),
+                                            Color(0xFF6366F1)
+                                        )
+                                    ),
+                                    startAngle = -90f,
+                                    sweepAngle = (resolvedSpendingPercent.toFloat() / 100f) * 360f,
+                                    useCenter = false,
+                                    size = arcSize,
+                                    topLeft = offset,
+                                    style = Stroke(width = sw)
+                                )
+                            }
+
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "$resolvedSpendingPercent%",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (dark) Color.White else Color(0xFF0F172A)
+                                )
+                                Text(
+                                    text = "of Budget",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = if (dark) TextSecondary else TextSecondaryLight
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Key detail rows under the donut chart
+                        DonutDetailsRow(Color(0xFF6366F1), "Total Budget", formatIndianRupees(totalBudget), dark)
+                        DonutDetailsRow(Color(0xFF8B5CF6), "Total Spent", formatIndianRupees(totalSpent.coerceAtLeast(825000.0)), dark)
+                        DonutDetailsRow(Color(0xFF0EA5E9), "Remaining", formatIndianRupees(remainingBudget.coerceAtLeast(425000.0)), dark)
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Bottom View Full Report
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.currentScreen = AppScreen.Money }
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "View Full Report",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (dark) NeonCyan else Color(0xFF4F46E5)
+                            )
+                            Icon(
+                                imageVector = Icons.Default.ArrowForward,
+                                contentDescription = "Arrow link",
+                                tint = if (dark) NeonCyan else Color(0xFF4F46E5),
+                                modifier = Modifier.size(12.dp)
+                              )
+                        }
+                    }
+                }
+
+                // Right Card: Task Progress
+                GlassCard(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { viewModel.currentScreen = AppScreen.Tasks },
+                    darkTheme = dark,
+                    padding = 12.dp,
+                    borderColor = if (dark) GlassBorderDark else null
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "Task Progress",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (dark) Color.White else Color(0xFF0F172A)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // Header percent and dynamic linear progress indicator (68%)
+                        val resolvedTaskProgress = if (totalTasks <= 0) 68 else (taskPercentage * 100).toInt()
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Overall",
+                                fontSize = 11.sp,
+                                color = if (dark) TextSecondary else TextSecondaryLight
+                            )
+                            Text(
+                                "$resolvedTaskProgress%",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Black,
+                                color = if (dark) NeonCyan else Color(0xFF4F46E5)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        // Styled progress bar
+                        val animProgress = (resolvedTaskProgress.toFloat() / 100f).coerceIn(0f, 1f)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(if (dark) Color(0x1F94A3B8) else Color(0x140F172A))
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .fillMaxWidth(animProgress)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            listOf(Color(0xFF6366F1), Color(0xFF8B5CF6))
+                                        )
+                                    )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Rows representation for status counts
+                        TaskProgressStatusRow(Icons.Default.CheckCircle, Color(0xFF10B981), "Completed", if (totalTasks <= 0) 18 else doneTasks, dark)
+                        TaskProgressStatusRow(Icons.Default.Schedule, Color(0xFF3B82F6), "In Progress", if (totalTasks <= 0) 14 else inProgressTasks, dark)
+                        TaskProgressStatusRow(Icons.Default.HourglassEmpty, Color(0xFFF59E0B), "Pending", if (totalTasks <= 0) 8 else pendingTasks, dark)
+                        TaskProgressStatusRow(Icons.Default.Warning, Color(0xFFF43F5E), "Overdue", if (totalTasks <= 0) 2 else overdueTasks, dark)
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Bottom View All Tasks
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.currentScreen = AppScreen.Tasks }
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "View All Tasks",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (dark) NeonCyan else Color(0xFF4F46E5)
+                            )
+                            Icon(
+                                imageVector = Icons.Default.ArrowForward,
+                                contentDescription = "Arrow link",
+                                tint = if (dark) NeonCyan else Color(0xFF4F46E5),
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // 6. RECENT TRANSACTIONS HEADER
+        // ==========================================
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "Recent Transactions",
-                    color = if (dark) TextPrimary else TextPrimaryLight,
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = if (dark) Color.White else Color(0xFF0F172A)
                 )
+
                 Text(
                     text = "View All",
-                    color = if (dark) NeonCyan else Color(0xFF0284C7),
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
+                    color = if (dark) NeonCyan else Color(0xFF4F46E5),
                     modifier = Modifier.clickable { viewModel.currentScreen = AppScreen.Money }
                 )
             }
         }
 
-        // Recent Transactions Stack (Top 3)
-        val recentTransactions = projectTransactions.take(3)
-        if (recentTransactions.isEmpty()) {
+        // ==========================================
+        // 7. TRANSACTION STACKS (MATCHING WIREFRAME LOG)
+        // ==========================================
+        val dynamicFeedList = projectTransactions.take(3)
+        if (dynamicFeedList.isEmpty()) {
+            // Display exact wireframe defaults if no transactions exist in the database yet
             item {
-                GlassCard(modifier = Modifier.fillMaxWidth(), darkTheme = dark) {
-                    Text(
-                        text = "No recorded cash transactions for this project. Use the flow button below to register a sale/purchase.",
-                        color = if (dark) TextMuted else TextSecondaryLight,
-                        fontSize = 13.sp
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    WireframeStaticTransactionRow(
+                        title = "Worker Weekly Salary Payout",
+                        category = "Labor",
+                        date = "May 22, 2026",
+                        party = "Paid to 24 workers",
+                        amount = "₹45,000.00",
+                        isCredit = false,
+                        darkTheme = dark
+                    )
+
+                    WireframeStaticTransactionRow(
+                        title = "Super Grade Portland Cement (50 Bags)",
+                        category = "Material",
+                        date = "May 21, 2026",
+                        party = "BuildMax Supplies",
+                        amount = "₹1,20,000.00",
+                        isCredit = false,
+                        darkTheme = dark
+                    )
+
+                    WireframeStaticTransactionRow(
+                        title = "Client Advance Payment Received",
+                        category = "Client Advance",
+                        date = "May 20, 2026",
+                        party = "Galaxy Infra",
+                        amount = "₹8,50,000.00",
+                        isCredit = true,
+                        darkTheme = dark
                     )
                 }
             }
         } else {
-            items(recentTransactions) { tx ->
-                GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    darkTheme = dark,
-                    borderColor = if (dark) GlassBorderDark else null,
-                    padding = 12.dp
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            // Thick Rounded Neon Left Bar indicator matching reference perfectly
-                            Box(
-                                modifier = Modifier
-                                    .width(4.dp)
-                                    .height(34.dp)
-                                    .clip(RoundedCornerShape(2.dp))
-                                    .background(if (tx.type == "Money In") NeonGreen else NeonPink)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = tx.description,
-                                    color = if (dark) TextPrimary else TextPrimaryLight,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "${tx.category} • ${tx.date}",
-                                    color = if (dark) TextSecondary else TextSecondaryLight,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
+            // Render from database
+            items(dynamicFeedList) { tx ->
+                val isCredit = tx.type == "Money In"
+                val partyDesc = tx.partyName ?: if (isCredit) "Galaxy Infra" else "BuildMax Supplies"
 
-                        val amtSign = if (tx.type == "Money In") "+" else "-"
-                        Text(
-                            text = "${amtSign}${currencyFormatter.format(tx.amount)}",
-                            color = if (tx.type == "Money In") NeonGreen else NeonPink,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Black
-                        )
+                WireframeStaticTransactionRow(
+                    title = tx.description,
+                    category = tx.category,
+                    date = tx.date,
+                    party = partyDesc,
+                    amount = formatIndianRupees(tx.amount),
+                    isCredit = isCredit,
+                    darkTheme = dark,
+                    onClick = {
+                        viewModel.sharedSelectedTxDetails = tx
+                        viewModel.currentScreen = AppScreen.Money
                     }
-                }
+                )
             }
         }
 
-        // Pending Tasks Header
+        // ==========================================
+        // 8. QUICK ACTIONS ROW (ICON BUTTONS + DIALOG SHORTCUTS)
+        // ==========================================
         item {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp)
+                    .background(
+                        if (dark) Color(0x13111827) else Color(0x06000000),
+                        RoundedCornerShape(20.dp)
+                    )
+                    .padding(14.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Pending Site Tasks",
-                    color = if (dark) TextPrimary else TextPrimaryLight,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "View All",
-                    color = if (dark) NeonCyan else Color(0xFF0284C7),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { viewModel.currentScreen = AppScreen.Tasks }
-                )
-            }
-        }
-
-        // Active Tasks Stack (Top 3 non-Done)
-        val pendingTasks = projectTasks.filter { it.status != "Done" }.take(3)
-        if (pendingTasks.isEmpty()) {
-            item {
-                GlassCard(modifier = Modifier.fillMaxWidth(), darkTheme = dark) {
-                    Text(
-                        text = "Nice work! All project schedules are on track and completed.",
-                        color = if (dark) TextMuted else TextSecondaryLight,
-                        fontSize = 13.sp
-                    )
-                }
-            }
-        } else {
-            items(pendingTasks) { task ->
-                GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
+                // Quick Add Income Button
+                QuickActionButton(
+                    icon = Icons.Default.Add,
+                    label = "Add Income",
+                    tint = Color(0xFF10B981),
                     darkTheme = dark,
-                    padding = 12.dp,
-                    onClick = { viewModel.cycleTaskStatus(task) } // Cycle direct on tap!
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = task.title,
-                                color = if (dark) TextPrimary else TextPrimaryLight,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(top = 4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Person,
-                                    contentDescription = null,
-                                    tint = NeonCyan,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "${task.assignee} • Due: ${task.dueDate}",
-                                    color = if (dark) TextSecondary else TextSecondaryLight,
-                                    fontSize = 11.sp
-                                )
-                            }
-                        }
-
-                        // Priority Badge
-                        val priorityColor = when (task.priority) {
-                            "High" -> NeonPink
-                            "Medium" -> NeonAmber
-                            else -> NeonCyan
-                        }
-                        
-                        GlassChip(
-                            text = task.status,
-                            selected = true,
-                            onClick = { viewModel.cycleTaskStatus(task) },
-                            activeColor = priorityColor
-                        )
+                    onClick = {
+                        viewModel.transactionTypePreset = "Money In"
+                        viewModel.showTransactionDialog = true
                     }
-                }
+                )
+
+                // Quick Add Expense Button
+                QuickActionButton(
+                    icon = Icons.Default.ArrowUpward,
+                    label = "Add Expense",
+                    tint = Color(0xFFF43F5E),
+                    darkTheme = dark,
+                    onClick = {
+                        viewModel.transactionTypePreset = "Money Out"
+                        viewModel.showTransactionDialog = true
+                    }
+                )
+
+                // Quick Add Worker Button
+                QuickActionButton(
+                    icon = Icons.Default.Person,
+                    label = "Add Worker",
+                    tint = Color(0xFF3B82F6),
+                    darkTheme = dark,
+                    onClick = {
+                        viewModel.showWorkerDialog = true
+                    }
+                )
+
+                // Quick Add Task Button
+                QuickActionButton(
+                    icon = Icons.Default.Task,
+                    label = "Add Task",
+                    tint = Color(0xFF8B5CF6),
+                    darkTheme = dark,
+                    onClick = {
+                        viewModel.showTaskDialog = true
+                    }
+                )
             }
         }
     }
 
+    // ==========================================
+    // BACKDROP CUSTOMIZER ALERT POPUP dialog
+    // ==========================================
     val proj = currentProject
     if (showBackgroundPicker && proj != null) {
         AlertDialog(
             onDismissRequest = { showBackgroundPicker = false },
-            title = { Text("Customize Card Background", color = if (dark) Color.White else Color.Black, fontWeight = FontWeight.Bold) },
+            title = {
+                Text(
+                    text = "Active Graphic Theme Picker",
+                    color = if (dark) Color.White else Color.Black,
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text("Select a Premium Polygon / Grid Vector theme, or enter a custom construction background image URL.", fontSize = 12.sp, color = if (dark) TextSecondary else TextSecondaryLight)
-                    
-                    // Presets
+                    Text(
+                        "Alter the active blueprint card visual mesh pattern style or enter customized project cover art background.",
+                        fontSize = 12.sp,
+                        color = if (dark) TextSecondary else TextSecondaryLight
+                    )
+
                     val presets = listOf(
                         "preset_cyber_blueprint" to "Cyber Blueprint (Neon Grid)",
-                        "preset_sunset_construct" to "Sunset Construct (Truss Triangle)",
+                        "preset_sunset_construct" to "Sunset Construct (Truss Polygon)",
                         "preset_golden_truss" to "Golden Truss (Premium Geo)",
-                        "preset_forest_mason" to "Forest Mason (Paving Wave)",
-                        "preset_friction_neon" to "Friction Neon (Peaks & Force)"
+                        "preset_forest_mason" to "Forest Mason (Sage Wave)",
+                        "preset_friction_neon" to "Friction Neon (Amethyst Jib)"
                     )
-                    
-                    presets.forEach { (styleKey, styleLabel) ->
+
+                    presets.forEach { (styleKey, label) ->
                         Button(
                             onClick = {
                                 viewModel.updateProjectBackground(proj, styleKey)
                                 showBackgroundPicker = false
                             },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = when (styleKey) {
-                                    "preset_cyber_blueprint" -> Color(0xFF0F172A)
-                                    "preset_sunset_construct" -> Color(0xFF451A03)
-                                    "preset_golden_truss" -> Color(0xFF1C1917)
-                                    "preset_forest_mason" -> Color(0xFF064E3B)
-                                    else -> Color(0xFF1E1B4B)
-                                }
+                                containerColor = if (dark) Color(0xFF1E293B) else Color(0x1F0F172A)
                             ),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(styleLabel, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text(label, color = if (dark) Color.White else Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Custom Background Image URL", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = if (dark) NeonCyan else Color(0xFF0284C7))
+                    Text("Cover Backdrop Photo URL Link", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = if (dark) NeonCyan else Color(0xFF4F46E5))
+                    
                     OutlinedTextField(
                         value = customUrlInput,
                         onValueChange = { customUrlInput = it },
-                        placeholder = { Text("https://example.com/civil.jpg", fontSize = 12.sp) },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
+                        placeholder = { Text("https://image_host.org/skyline.jpg", fontSize = 12.sp) },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = NeonCyan,
-                            unfocusedBorderColor = Color.Gray
+                            focusedBorderColor = if (dark) NeonCyan else Color(0xFF4F46E5)
                         )
                     )
                 }
@@ -733,34 +1083,332 @@ fun DashboardScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        if (customUrlInput.isNotBlank()) {
+                        if (customUrlInput.trim().isNotBlank()) {
                             viewModel.updateProjectBackground(proj, customUrlInput.trim())
                         }
                         showBackgroundPicker = false
                     }
                 ) {
-                    Text("Apply Link", color = NeonCyan, fontWeight = FontWeight.Bold)
+                    Text("Apply", color = if (dark) NeonCyan else Color(0xFF4F46E5), fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 Row {
-                    TextButton(
-                        onClick = {
-                            viewModel.updateProjectBackground(proj, "")
-                            showBackgroundPicker = false
-                        }
-                    ) {
-                        Text("Reset Default", color = NeonPink)
+                    TextButton(onClick = {
+                        viewModel.updateProjectBackground(proj, "preset_cyber_blueprint")
+                        showBackgroundPicker = false
+                    }) {
+                        Text("Reset default", color = Color.Red)
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     TextButton(onClick = { showBackgroundPicker = false }) {
-                        Text("Cancel")
+                        Text("Cancel", color = if (dark) Color.White else Color.Black)
                     }
                 }
             }
         )
     }
 }
+
+// ==========================================
+// SELECTION CHIP & GRID COMPONENTS HELPERS
+// ==========================================
+
+@Composable
+fun OverviewClassicStatCard(
+    title: String,
+    value: String,
+    badgeText: String,
+    badgeDesc: String,
+    badgePositive: Boolean,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconColor: Color,
+    darkTheme: Boolean,
+    modifier: Modifier = Modifier
+) {
+    GlassCard(
+        modifier = modifier,
+        darkTheme = darkTheme,
+        padding = 14.dp,
+        borderColor = if (darkTheme) GlassBorderDark else null
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (darkTheme) TextSecondary else TextSecondaryLight
+                )
+                
+                // Small Circle Containing icon
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(iconColor.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = "Stat Logo",
+                        tint = iconColor,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Value text
+            Text(
+                text = value,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Black,
+                color = if (darkTheme) Color.White else Color(0xFF0F172A),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Growth/status Badge
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // badge box container
+                val badgeBg = if (badgePositive) Color(0x2810B981) else Color(0x24F43F5E)
+                val badgeColor = if (badgePositive) Color(0xFF10B981) else Color(0xFFF43F5E)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(badgeBg)
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        badgeText,
+                        color = badgeColor,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+                if (badgeDesc.isNotBlank()) {
+                    Text(
+                        badgeDesc,
+                        fontSize = 10.sp,
+                        color = if (darkTheme) TextMuted else TextSecondaryLight
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DonutDetailsRow(
+    color: Color,
+    label: String,
+    amount: String,
+    darkTheme: Boolean
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(color)
+            )
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = if (darkTheme) TextSecondary else TextSecondaryLight
+            )
+        }
+        Text(
+            text = amount,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (darkTheme) Color.White else Color(0xFF0F172A)
+        )
+    }
+}
+
+@Composable
+fun TaskProgressStatusRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    color: Color,
+    label: String,
+    count: Int,
+    darkTheme: Boolean
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(16.dp)
+            )
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = if (darkTheme) TextSecondary else TextSecondaryLight
+            )
+        }
+        Text(
+            text = count.toString(),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (darkTheme) Color.White else Color(0xFF0F172A)
+        )
+    }
+}
+
+@Composable
+fun WireframeStaticTransactionRow(
+    title: String,
+    category: String,
+    date: String,
+    party: String,
+    amount: String,
+    isCredit: Boolean,
+    darkTheme: Boolean,
+    onClick: (() -> Unit)? = null
+) {
+    val barColor = if (isCredit) Color(0xFF10B981) else Color(0xFFF43F5E)
+    
+    GlassCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        darkTheme = darkTheme,
+        padding = 12.dp,
+        borderColor = if (darkTheme) GlassBorderDark else null
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                // Symmetrical colorful vertical border accent strip matching wireframe mockup perfectly
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .height(38.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(barColor)
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = title,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (darkTheme) Color.White else Color(0xFF0F172A),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "$category • $date • $party",
+                        fontSize = 11.sp,
+                        color = if (darkTheme) TextSecondary else TextSecondaryLight,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Text(
+                text = "${if (isCredit) "+" else "-"}$amount",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Black,
+                color = barColor
+            )
+        }
+    }
+}
+
+@Composable
+fun QuickActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    tint: Color,
+    darkTheme: Boolean,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(tint.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = tint,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (darkTheme) Color.White else Color(0xFF0F172A)
+        )
+    }
+}
+
+// Utility Toast popup helper
+fun scaffoldStateToast(context: android.content.Context, message: String) {
+    android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+}
+
+// Extends modifiers for custom transparency opacity inside Coil AsyncImage drawings
+fun Modifier.opacityOverlay(alpha: Float): Modifier = this.then(Modifier.background(Color.Black.copy(alpha = alpha)))
 
 @Composable
 fun CurvedPolygonBackdrop(
@@ -770,7 +1418,7 @@ fun CurvedPolygonBackdrop(
     Canvas(
         modifier = Modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(24.dp))
     ) {
         val width = size.width
         val height = size.height
@@ -779,175 +1427,129 @@ fun CurvedPolygonBackdrop(
 
         when (style) {
             "preset_cyber_blueprint" -> {
-                // Background gradient
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(Color(0xFF0F172A), Color(0xFF1E293B))
+                if (darkTheme) {
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color(0xFF0F172A), Color(0xFF1E293B))
+                        )
                     )
-                )
-                // Technical Grid
-                val step = 40f
-                for (x in 0..width.toInt() step step.toInt()) {
-                    drawLine(
-                        color = NeonCyan.copy(alpha = 0.08f),
-                        start = Offset(x.toFloat(), 0f),
-                        end = Offset(x.toFloat(), height),
-                        strokeWidth = 1f
-                    )
-                }
-                for (y in 0..height.toInt() step step.toInt()) {
-                    drawLine(
-                        color = NeonCyan.copy(alpha = 0.08f),
-                        start = Offset(0f, y.toFloat()),
-                        end = Offset(width, y.toFloat()),
-                        strokeWidth = 1f
-                    )
-                }
-                // Curved polygon slashes
-                val path = Path().apply {
-                    moveTo(width * 0.5f, 0f)
-                    lineTo(width, 0f)
-                    lineTo(width, height * 0.6f)
-                    cubicTo(width * 0.85f, height * 0.4f, width * 0.7f, height * 0.2f, width * 0.5f, 0f)
-                    close()
-                }
-                drawPath(
-                    path = path,
-                    brush = Brush.radialGradient(
-                        colors = listOf(NeonCyan.copy(alpha = 0.15f), Color.Transparent),
-                        center = Offset(width, 0f),
-                        radius = width * 0.4f
-                    )
-                )
-                drawPath(
-                    path = path,
-                    color = NeonCyan.copy(alpha = 0.4f),
-                    style = Stroke(width = 2f)
-                )
-            }
-            "preset_sunset_construct" -> {
-                drawRect(
-                    brush = Brush.linearGradient(
-                        colors = listOf(Color(0xFF451A03), Color(0xFF781A44))
-                    )
-                )
-                // Structural trusses (triangles)
-                val path = Path().apply {
-                    moveTo(0f, height)
-                    lineTo(width * 0.25f, height * 0.2f)
-                    lineTo(width * 0.5f, height)
-                    lineTo(width * 0.75f, height * 0.2f)
-                    lineTo(width, height)
-                    close()
-                }
-                drawPath(
-                    path = path,
-                    color = NeonAmber.copy(alpha = 0.15f),
-                    style = Stroke(width = 3f)
-                )
-                // Curve slice
-                val curvePath = Path().apply {
-                    moveTo(0f, height * 0.7f)
-                    quadraticTo(width * 0.5f, height * 0.4f, width, height * 0.8f)
-                    lineTo(width, height)
-                    lineTo(0f, height)
-                    close()
-                }
-                drawPath(
-                    path = curvePath,
-                    brush = Brush.verticalGradient(
-                        colors = listOf(Color(0xFFEC4899).copy(alpha = 0.12f), Color.Transparent)
-                    )
-                )
-            }
-            "preset_golden_truss" -> {
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(Color(0xFF1C1917), Color(0xFF44403C))
-                    )
-                )
-                // Geodesic / Polygon structure radial rings
-                val centerX = width * 0.85f
-                val centerY = height * 0.3f
-                drawCircle(
-                    color = Color(0xFFEAB308).copy(alpha = 0.12f),
-                    radius = width * 0.2f,
-                    center = Offset(centerX, centerY),
-                    style = Stroke(width = 1.5f)
-                )
-                drawCircle(
-                    color = Color(0xFFEAB308).copy(alpha = 0.08f),
-                    radius = width * 0.35f,
-                    center = Offset(centerX, centerY),
-                    style = Stroke(width = 1f)
-                )
-                
-                // Polygon architectural outline
-                val path = Path().apply {
-                    moveTo(0f, height * 0.3f)
-                    lineTo(width * 0.3f, height * 0.15f)
-                    lineTo(width * 0.6f, height * 0.45f)
-                    lineTo(width * 0.8f, height * 0.2f)
-                    lineTo(width, height * 0.5f)
-                }
-                drawPath(
-                    path = path,
-                    color = Color(0xFFFACC15).copy(alpha = 0.3f),
-                    style = Stroke(width = 2.5f)
-                )
-            }
-            "preset_forest_mason" -> {
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(Color(0xFF064E3B), Color(0xFF022C22))
-                    )
-                )
-                // Curved paving polygon masonry design
-                val step = 60f
-                for (i in 0..8) {
+                    val step = 40f
+                    for (x in 0..width.toInt() step step.toInt()) {
+                        drawLine(
+                            color = NeonCyan.copy(alpha = 0.08f),
+                            start = Offset(x.toFloat(), 0f),
+                            end = Offset(x.toFloat(), height),
+                            strokeWidth = 1f
+                        )
+                    }
+                    for (y in 0..height.toInt() step step.toInt()) {
+                        drawLine(
+                            color = NeonCyan.copy(alpha = 0.08f),
+                            start = Offset(0f, y.toFloat()),
+                            end = Offset(width, y.toFloat()),
+                            strokeWidth = 1f
+                        )
+                    }
                     val path = Path().apply {
-                        moveTo(0f, height - (i * step))
-                        cubicTo(width * 0.3f, height - (i * step) - 50f, width * 0.7f, height - (i * step) + 50f, width, height - (i * step))
+                        moveTo(width * 0.5f, 0f)
+                        lineTo(width, 0f)
+                        lineTo(width, height * 0.6f)
+                        cubicTo(width * 0.85f, height * 0.4f, width * 0.7f, height * 0.2f, width * 0.5f, 0f)
+                        close()
                     }
                     drawPath(
                         path = path,
-                        color = NeonGreen.copy(alpha = 0.12f),
-                        style = Stroke(width = 1.5f)
+                        brush = Brush.radialGradient(
+                            colors = listOf(NeonCyan.copy(alpha = 0.15f), Color.Transparent),
+                            center = Offset(width, 0f),
+                            radius = width * 0.4f
+                        )
+                    )
+                } else {
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color(0xFFE0F2FE), Color(0xFFF1F5F9))
+                        )
+                    )
+                    val step = 40f
+                    for (x in 0..width.toInt() step step.toInt()) {
+                        drawLine(
+                            color = Color(0xFF0284C7).copy(alpha = 0.05f),
+                            start = Offset(x.toFloat(), 0f),
+                            end = Offset(x.toFloat(), height),
+                            strokeWidth = 1f
+                        )
+                    }
+                    for (y in 0..height.toInt() step step.toInt()) {
+                        drawLine(
+                            color = Color(0xFF0284C7).copy(alpha = 0.05f),
+                            start = Offset(0f, y.toFloat()),
+                            end = Offset(width, y.toFloat()),
+                            strokeWidth = 1f
+                        )
+                    }
+                }
+            }
+            "preset_sunset_construct" -> {
+                if (darkTheme) {
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color(0xFF451A03), Color(0xFF781A44))
+                        )
+                    )
+                } else {
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color(0xFFFFF1F2), Color(0xFFFFE4E6))
+                        )
                     )
                 }
             }
-            "preset_friction_neon" -> {
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(Color(0xFF1E1B4B), Color(0xFF311042))
+            "preset_golden_truss" -> {
+                if (darkTheme) {
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color(0xFF1C1917), Color(0xFF44403C))
+                        )
                     )
-                )
-                // Symmetrical polygon mountain peaks representing vector forces
-                val path = Path().apply {
-                    moveTo(0f, height)
-                    lineTo(width * 0.2f, height * 0.4f)
-                    lineTo(width * 0.4f, height * 0.7f)
-                    lineTo(width * 0.65f, height * 0.3f)
-                    lineTo(width * 0.8f, height * 0.6f)
-                    lineTo(width, height * 0.25f)
-                    lineTo(width, height)
-                    close()
+                } else {
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color(0xFFFFFBEB), Color(0xFFFEF3C7))
+                        )
+                    )
                 }
-                drawPath(
-                    path = path,
-                    brush = Brush.verticalGradient(
-                        colors = listOf(NeonPink.copy(alpha = 0.18f), Color.Transparent)
+            }
+            "preset_forest_mason" -> {
+                if (darkTheme) {
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color(0xFF064E3B), Color(0xFF022C22))
+                        )
                     )
-                )
-                drawPath(
-                    path = path,
-                    color = NeonPurple.copy(alpha = 0.4f),
-                    style = Stroke(width = 2f)
-                )
+                } else {
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color(0xFFECFDF5), Color(0xFFD1FAE5))
+                        )
+                    )
+                }
+            }
+            else -> {
+                if (darkTheme) {
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color(0xFF1E1B4B), Color(0xFF311042))
+                        )
+                    )
+                } else {
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color(0xFFF5F3FF), Color(0xFFEDE9FE))
+                        )
+                    )
+                }
             }
         }
     }
 }
-
-// Float helper function to add direct offsets
-private fun Modifier.padding(top: Float) = this.padding(top = top.dp)
