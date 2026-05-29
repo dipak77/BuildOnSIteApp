@@ -1,5 +1,8 @@
 package com.example.ui
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -33,6 +37,8 @@ import com.example.data.*
 import com.example.ui.theme.*
 import java.text.NumberFormat
 import java.util.*
+import kotlin.math.cos
+import kotlin.math.sin
 
 @Composable
 fun DashboardScreen(
@@ -49,6 +55,18 @@ fun DashboardScreen(
     val context = LocalContext.current
     var showBackgroundPicker by remember { mutableStateOf(false) }
     var customUrlInput by remember { mutableStateOf("") }
+
+    // Dynamic brand text gradient shifter animation
+    val brandInfiniteTransition = rememberInfiniteTransition(label = "BrandShifterAnimation")
+    val proGradientOffset by brandInfiniteTransition.animateFloat(
+        initialValue = -300f,
+        targetValue = 600f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 6000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "gradientOffset"
+    )
     
     // Overview filter dropdown simulated state
     var selectedFilter by remember { mutableStateOf("This Month") }
@@ -180,7 +198,7 @@ fun DashboardScreen(
                     }
                 }
 
-                // App Branding Title: ConstructPro
+                // App Branding Title: ConstructPro (With premium animated gradient text)
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.weight(1f)
@@ -195,19 +213,24 @@ fun DashboardScreen(
                             fontWeight = FontWeight.Bold,
                             color = if (dark) Color.White else Color(0xFF0F172A)
                         )
+                        val proGradient = Brush.linearGradient(
+                            colors = listOf(NeonCyan, NeonPurple, NeonPink, NeonCyan),
+                            start = Offset(proGradientOffset, 0f),
+                            end = Offset(proGradientOffset + 180f, 180f)
+                        )
                         Text(
                             text = "Pro",
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Black,
-                            color = if (dark) NeonCyan else Color(0xFF4F46E5)
+                            style = androidx.compose.ui.text.TextStyle(brush = proGradient)
                         )
                     }
                     Text(
                         text = "Build. Manage. Grow.",
                         fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.Bold,
                         color = if (dark) TextSecondary else TextSecondaryLight,
-                        letterSpacing = 1.2.sp
+                        letterSpacing = 1.4.sp
                     )
                 }
 
@@ -235,12 +258,16 @@ fun DashboardScreen(
                         )
                     }
 
-                    // User Profile image
+                    // User Profile image (With gorgeous animated gradient ring)
                     Box(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
-                            .border(1.5.dp, if (dark) NeonCyan else Color(0xFF4F46E5), CircleShape)
+                            .border(
+                                width = 2.dp,
+                                brush = Brush.sweepGradient(listOf(NeonCyan, NeonPurple, NeonPink, NeonCyan)),
+                                shape = CircleShape
+                            )
                             .clickable {
                                 showProfileDetailsDialog = true
                             },
@@ -281,12 +308,12 @@ fun DashboardScreen(
         item {
             val proj = currentProject
             if (proj != null) {
-                // Linear Indigo/Blue Gradient background brushing matching wireframe mockup perfectly
+                // Linear Indigo/Blue Gradient background brushing with ultra premium metallic tones
                 val gradientBg = Brush.linearGradient(
                     colors = if (dark) {
-                        listOf(Color(0xFF2563EB), Color(0xFF4F46E5), Color(0xFF7C3AED))
+                        listOf(Color(0xFF0F172A), Color(0xFF1E1B4B), Color(0xFF311042))
                     } else {
-                        listOf(Color(0xFF3B82F6), Color(0xFF6366F1), Color(0xFF8B5CF6))
+                        listOf(Color(0xFFE0F2FE), Color(0xFFF1F5F9), Color(0xFFEDE9FE))
                     }
                 )
 
@@ -295,6 +322,13 @@ fun DashboardScreen(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(24.dp))
                         .background(gradientBg)
+                        .border(
+                            BorderStroke(
+                                1.5.dp,
+                                Brush.linearGradient(listOf(GoldLight.copy(alpha = 0.5f), NeonCyan.copy(alpha = 0.3f), GoldDark.copy(alpha = 0.6f)))
+                            ),
+                            RoundedCornerShape(24.dp)
+                        )
                 ) {
                     // Embedded design background polygon patterns if preset is set
                     if (proj.customBackground != null && proj.customBackground.isNotBlank()) {
@@ -1052,7 +1086,7 @@ fun DashboardScreen(
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     RecentActivityRow(
                         icon = Icons.Default.CreditCard,
@@ -1065,10 +1099,10 @@ fun DashboardScreen(
                         darkTheme = dark,
                         onClick = {
                             scaffoldStateToast(context, "Clicked Metro Rail Corp payment")
-                        }
+                        },
+                        drawStartLine = false,
+                        drawEndLine = true
                     )
-
-                    Divider(color = if (dark) Color(0x1F94A3B8) else Color(0x0F0F172A), thickness = 0.5.dp)
 
                     RecentActivityRow(
                         icon = Icons.Default.Layers,
@@ -1081,10 +1115,10 @@ fun DashboardScreen(
                         darkTheme = dark,
                         onClick = {
                             scaffoldStateToast(context, "Clicked Cement stock update")
-                        }
+                        },
+                        drawStartLine = true,
+                        drawEndLine = true
                     )
-
-                    Divider(color = if (dark) Color(0x1F94A3B8) else Color(0x0F0F172A), thickness = 0.5.dp)
 
                     RecentActivityRow(
                         icon = Icons.Default.Build,
@@ -1097,7 +1131,9 @@ fun DashboardScreen(
                         darkTheme = dark,
                         onClick = {
                             scaffoldStateToast(context, "Clicked Electrical work task")
-                        }
+                        },
+                        drawStartLine = true,
+                        drawEndLine = false
                     )
                 }
             }
@@ -1515,6 +1551,20 @@ fun SparklineCanvas(
                 join = androidx.compose.ui.graphics.StrokeJoin.Round
             )
         )
+
+        // Draw dynamic glowing node marker on final trendline coordinate
+        val lastX = getX(points.size - 1)
+        val lastY = getY(points.last())
+        drawCircle(
+            color = color.copy(alpha = 0.5f),
+            radius = 6.dp.toPx(),
+            center = Offset(lastX, lastY)
+        )
+        drawCircle(
+            color = Color.White,
+            radius = 2.5.dp.toPx(),
+            center = Offset(lastX, lastY)
+        )
     }
 }
 
@@ -1646,7 +1696,7 @@ fun ThreeQuarterArcGauge(
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val sw = 10.dp.toPx()
-            val diam = size.minDimension - sw
+            val diam = (size.minDimension - sw).coerceAtLeast(1f)
             val arcSize = Size(diam, diam)
             val offset = Offset((size.width - diam) / 2f, (size.height - diam) / 2f)
 
@@ -1672,6 +1722,28 @@ fun ThreeQuarterArcGauge(
                 topLeft = offset,
                 style = Stroke(width = sw, cap = androidx.compose.ui.graphics.StrokeCap.Round)
             )
+
+            // Draw radial tick dash markers along the gauge boundary representing fine dials
+            val cx = size.width / 2f
+            val cy = size.height / 2f
+            for (angleDegrees in 135..405 step 15) {
+                val angleRad = Math.toRadians(angleDegrees.toDouble())
+                val tickLength = 5.dp.toPx()
+                val outerR = diam / 2f + sw / 2f + 4.dp.toPx()
+                val innerR = outerR - tickLength
+                
+                val startX = cx + cos(angleRad).toFloat() * innerR
+                val startY = cy + sin(angleRad).toFloat() * innerR
+                val endX = cx + cos(angleRad).toFloat() * outerR
+                val endY = cy + sin(angleRad).toFloat() * outerR
+                
+                drawLine(
+                    color = if (darkTheme) Color(0x3BFFFFFF) else Color(0x28000000),
+                    start = Offset(startX, startY),
+                    end = Offset(endX, endY),
+                    strokeWidth = 1.dp.toPx()
+                )
+            }
         }
         innerContent()
     }
@@ -1687,7 +1759,9 @@ fun RecentActivityRow(
     rightInfo: String,
     rightColor: Color,
     darkTheme: Boolean,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    drawStartLine: Boolean = false,
+    drawEndLine: Boolean = false
 ) {
     Row(
         modifier = Modifier
@@ -1698,20 +1772,38 @@ fun RecentActivityRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // High-contrast vector badge
+        // High-contrast vector badge with timeline vertical connector drawing
         Box(
             modifier = Modifier
-                .size(38.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(iconBgColor),
+                .size(width = 38.dp, height = 48.dp),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(18.dp)
-            )
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val cx = size.width / 2f
+                val h = size.height
+                val lineColor = if (darkTheme) Color(0x2494A3B8) else Color(0x1F0F172A)
+                
+                if (drawStartLine) {
+                    drawLine(color = lineColor, start = Offset(cx, 0f), end = Offset(cx, h * 0.2f), strokeWidth = 1.5.dp.toPx())
+                }
+                if (drawEndLine) {
+                    drawLine(color = lineColor, start = Offset(cx, h * 0.8f), end = Offset(cx, h), strokeWidth = 1.5.dp.toPx())
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(iconBgColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
         
         Column(modifier = Modifier.weight(1f)) {
@@ -1749,6 +1841,15 @@ fun SiteStatusPillar(
     darkTheme: Boolean,
     modifier: Modifier = Modifier
 ) {
+    // Determine dynamic filled capacity ratio representing mini-statistics
+    val capacityFraction = when (label) {
+        "Workers Present" -> 0.92f
+        "Absent" -> 0.08f
+        "Late" -> 0.04f
+        "Equipment Active" -> 1.0f
+        else -> 0.60f
+    }
+
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1783,6 +1884,24 @@ fun SiteStatusPillar(
             maxLines = 2,
             lineHeight = 11.sp
         )
+        
+        Spacer(modifier = Modifier.height(2.dp))
+        
+        // Mini progress indicators representing current state capacity
+        Box(
+            modifier = Modifier
+                .width(42.dp)
+                .height(4.dp)
+                .clip(CircleShape)
+                .background(if (darkTheme) Color(0x1F94A3B8) else Color(0x0F000000))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(capacityFraction)
+                    .background(tint)
+            )
+        }
     }
 }
 
@@ -1952,29 +2071,42 @@ fun QuickActionButton(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
-            .padding(6.dp)
+            .padding(8.dp)
     ) {
+        // High-end container for the icon (with beautiful glow outline)
         Box(
             modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .background(tint.copy(alpha = 0.15f)),
+                .size(52.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(if (darkTheme) Color(0x3B1E293B) else Color(0x0F000000))
+                .border(
+                    BorderStroke(1.dp, tint.copy(alpha = 0.45f)),
+                    RoundedCornerShape(14.dp)
+                )
+                .drawBehind {
+                    drawCircle(
+                        color = tint.copy(alpha = 0.08f),
+                        radius = this.size.width * 0.48f,
+                        center = this.center
+                    )
+                },
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
                 tint = tint,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(24.dp)
             )
         }
         Text(
             text = label,
             fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = if (darkTheme) Color.White else Color(0xFF0F172A)
+            fontWeight = FontWeight.ExtraBold,
+            color = if (darkTheme) TextPrimary else TextPrimaryLight,
+            letterSpacing = 0.1.sp
         )
     }
 }

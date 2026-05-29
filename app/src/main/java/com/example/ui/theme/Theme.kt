@@ -16,9 +16,9 @@ private val GlassDarkColorScheme = darkColorScheme(
     onTertiary = Color.Black,
     background = GlassBackgroundDark,
     onBackground = TextPrimary,
-    surface = Color(0xFF0F172A), // Slate 900 base for modal fallback
+    surface = Color(0xFF0B0F19), // Deeper Slate Dark modal background
     onSurface = TextPrimary,
-    surfaceVariant = Color(0x3B1F2937),
+    surfaceVariant = GlassSurfaceDeeperDark, // Premium semi-transparent deeper overlay
     onSurfaceVariant = TextSecondary,
     outline = GlassBorderDark
 )

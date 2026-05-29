@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Construction
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,9 +42,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.ui.theme.*
+import kotlin.math.cos
+import kotlin.math.sin
 
 // ==========================================
-// 1. DYNAMIC NEBULA GRADIENT BACKGROUND
+// 1. DYNAMIC NEBULA GRADIENT BACKGROUND (WITH 3D MULTI-LAYER FLOATING DEPTH)
 // ==========================================
 
 @Composable
@@ -52,52 +55,123 @@ fun GlassAtmosphereBox(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
+    // Elegant infinite lifecycle for breathing gas clouds & rotating light nodes
+    val infiniteTransition = rememberInfiniteTransition(label = "NebulaAtmosphere")
+    
+    val breathingValue by infiniteTransition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1.15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 8000, easing = LinearOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "atmosphereBreathing"
+    )
+
+    val floatingOffsetAngle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 2f * Math.PI.toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 24000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "floatingOffsetAngle"
+    )
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(if (darkTheme) GlassBackgroundDark else GlassBackgroundLight)
             .drawBehind {
+                val w = size.width
+                val h = size.height
+                if (w <= 0f || h <= 0f) return@drawBehind
+
                 if (darkTheme) {
-                    // Draw a rich Neon Cyan bubble top-left
+                    // Floating offsets in circular pattern to simulate high-depth planetary shift
+                    val shiftX1 = cos(floatingOffsetAngle) * (w * 0.05f)
+                    val shiftY1 = sin(floatingOffsetAngle) * (h * 0.04f)
+                    val shiftX2 = sin(floatingOffsetAngle * 1.5f) * (w * 0.04f)
+                    val shiftY2 = cos(floatingOffsetAngle * 1.5f) * (h * 0.05f)
+
+                    // Layer 1: Majestic Deep Neon Cyan gas bubble top-left
                     drawCircle(
                         brush = Brush.radialGradient(
-                            colors = listOf(NeonCyan.copy(alpha = 0.18f), Color.Transparent),
-                            center = Offset(size.width * 0.1f, size.height * 0.15f),
-                            radius = size.width * 0.75f
+                            colors = listOf(NeonCyan.copy(alpha = 0.22f * breathingValue), Color.Transparent),
+                            center = Offset(w * 0.12f + shiftX1, h * 0.14f + shiftY1),
+                            radius = w * 0.80f * breathingValue
                         )
                     )
-                    // Draw a rich Neon Purple bubble bottom-right
+
+                    // Layer 2: Radiant Cosmic Violet bubble bottom-right
                     drawCircle(
                         brush = Brush.radialGradient(
-                            colors = listOf(NeonPurple.copy(alpha = 0.18f), Color.Transparent),
-                            center = Offset(size.width * 0.9f, size.height * 0.85f),
-                            radius = size.width * 0.75f
+                            colors = listOf(NeonPurple.copy(alpha = 0.20f * (2f - breathingValue)), Color.Transparent),
+                            center = Offset(w * 0.88f + shiftX2, h * 0.86f + shiftY2),
+                            radius = w * 0.82f * (2f - breathingValue)
                         )
                     )
+
+                    // Layer 3: Warm Solar Amber core in the center left (Gives dramatic multi-layered 3D nebula feeling)
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(GoldMetallic.copy(alpha = 0.09f), Color.Transparent),
+                            center = Offset(w * 0.35f - shiftX1 * 0.5f, h * 0.60f - shiftY2 * 0.5f),
+                            radius = w * 0.50f
+                        )
+                    )
+
+                    // Layer 4: Architectural grid mapping lines (Procedural overlay blueprint nodes)
+                    val columns = 8
+                    val rows = 16
+                    val gridC = Color(0x0E00F2FE)
+                    for (i in 0..columns) {
+                        val x = w * (i.toFloat() / columns.toFloat())
+                        drawLine(color = gridC, start = Offset(x, 0f), end = Offset(x, h), strokeWidth = 0.8f)
+                    }
+                    for (i in 0..rows) {
+                        val y = h * (i.toFloat() / rows.toFloat())
+                        drawLine(color = gridC, start = Offset(0f, y), end = Offset(w, y), strokeWidth = 0.8f)
+                    }
+
+                    // Floating high-contrast vector sparkle stars (3D blueprint coordinates)
+                    val starPositions = listOf(
+                        Offset(w * 0.2f, h * 0.25f),
+                        Offset(w * 0.75f, h * 0.18f),
+                        Offset(w * 0.15f, h * 0.75f),
+                        Offset(w * 0.80f, h * 0.65f),
+                        Offset(w * 0.45f, h * 0.40f)
+                    )
+                    starPositions.forEachIndexed { idx, pos ->
+                        val starBreathingAlpha = 0.15f + 0.35f * sin(floatingOffsetAngle * 2f + idx * 1.5f)
+                        drawCircle(
+                            color = NeonCyan.copy(alpha = starBreathingAlpha),
+                            radius = 1.5.dp.toPx(),
+                            center = pos
+                        )
+                    }
+
                 } else {
-                    // Elegant Luxury Sunrise aurora flow for 100-billion-dollar premium styling
-                    // 1. Soft glowing sky blue in the top-right
+                    // Elevated Light Theme sunrise aurora with deeper 3D depth layered flow
                     drawCircle(
                         brush = Brush.radialGradient(
-                            colors = listOf(Color(0xFFBAE6FD).copy(alpha = 0.42f), Color.Transparent),
-                            center = Offset(size.width * 0.85f, size.height * 0.12f),
-                            radius = size.width * 0.75f
+                            colors = listOf(Color(0xFFBAE6FD).copy(alpha = 0.48f), Color.Transparent),
+                            center = Offset(w * 0.85f, h * 0.12f),
+                            radius = w * 0.80f
                         )
                     )
-                    // 2. Sophisticated blush pink in the middle-left
                     drawCircle(
                         brush = Brush.radialGradient(
-                            colors = listOf(Color(0xFFFBCFE8).copy(alpha = 0.32f), Color.Transparent),
-                            center = Offset(size.width * 0.12f, size.height * 0.52f),
-                            radius = size.width * 0.75f
+                            colors = listOf(Color(0xFFFBCFE8).copy(alpha = 0.38f), Color.Transparent),
+                            center = Offset(w * 0.12f, h * 0.52f),
+                            radius = w * 0.80f
                         )
                     )
-                    // 3. Luxurious golden amber in the bottom-right
                     drawCircle(
                         brush = Brush.radialGradient(
-                            colors = listOf(Color(0xFFFEF08A).copy(alpha = 0.38f), Color.Transparent),
-                            center = Offset(size.width * 0.88f, size.height * 0.88f),
-                            radius = size.width * 0.7f
+                            colors = listOf(Color(0xFFFEF08A).copy(alpha = 0.42f), Color.Transparent),
+                            center = Offset(w * 0.88f, h * 0.88f),
+                            radius = w * 0.75f
                         )
                     )
                 }
@@ -107,7 +181,7 @@ fun GlassAtmosphereBox(
 }
 
 // ==========================================
-// 2. FROSTED-GLASS CARD
+// 2. FROSTED-GLASS CARD (WITH SHIMMER BORDERS & MICRO-INTERACTIONS)
 // ==========================================
 
 @Composable
@@ -123,22 +197,56 @@ fun GlassCard(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     
+    // Soft breathing scale on press
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.98f else 1.0f,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        targetValue = if (isPressed) 0.97f else 1.0f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioMediumBouncy),
         label = "clickScale"
     )
 
-    // Frosted colors - Ultra-clean crystal glass with high contrast backdrop visibility
+    // Animated glow pulse on hover/touch or continuous in dark mode
+    val infiniteTransition = rememberInfiniteTransition(label = "CardBorderShimmer")
+    val shimmerOffset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 4000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmerPercentage"
+    )
+
+    // Frosted background - richer depth and high-contrast backdrop
     val bg = if (darkTheme) {
-        Color(0x400B101E) // Premium obsidian slate tint (25% opacity)
+        Color(0x50090D1A) // Deeper crystal grey obsidian aura (31% opacity)
     } else {
-        Color(0x99FFFFFF) // Breathtaking luxury white crystal glass (60% opacity)
+        Color(0xA6FFFFFF) // Luxe crystal white backdrop with 65% opacity
     }
 
-    // Pro-level elegant borders
-    val defaultBorder = if (darkTheme) GlassBorderDark else Color(0x264F46E5) // Deluxe fine Indigo trace stroke
-    val borderStroke = BorderStroke(1.dp, borderColor ?: defaultBorder)
+    // Dynamic shimmer border brush
+    val activeBorderColor = glowColor ?: if (darkTheme) NeonCyan else Color(0xFF6366F1)
+    
+    val defaultBorderBrush = if (darkTheme) {
+        Brush.sweepGradient(
+            colors = listOf(
+                GlassBorderDark,
+                activeBorderColor.copy(alpha = 0.4f),
+                GlassBorderDark,
+                activeBorderColor.copy(alpha = 0.1f),
+                GlassBorderDark
+            )
+        )
+    } else {
+        Brush.sweepGradient(
+            colors = listOf(
+                Color(0x264F46E5),
+                activeBorderColor.copy(alpha = 0.35f),
+                Color(0x264F46E5),
+                Color(0x104F46E5),
+                Color(0x264F46E5)
+            )
+        )
+    }
 
     val contentModifier = modifier
         .graphicsLayer {
@@ -146,19 +254,22 @@ fun GlassCard(
             scaleY = scale
         }
         .drawBehind {
-            if (darkTheme && glowColor != null) {
-                // Symmetrical neon atmospheric aura behind card
+            if (darkTheme) {
+                // Layered Neon auroral glow behind card that expands slightly on press
+                val actualGlowColor = glowColor ?: NeonCyan
+                val radiusFactor = if (isPressed) 0.48f else 0.42f
+                val auraOpacity = if (isPressed) 0.12f else 0.08f
                 drawCircle(
-                    color = glowColor.copy(alpha = 0.08f),
-                    radius = size.maxDimension * 0.42f,
+                    color = actualGlowColor.copy(alpha = auraOpacity),
+                    radius = size.maxDimension * radiusFactor,
                     center = center
                 )
-            } else if (!darkTheme) {
-                // Soft luxury ambient studio drop shadow aura for light theme
-                val shadowColor = glowColor?.copy(alpha = 0.05f) ?: Color(0xFF6366F1).copy(alpha = 0.04f)
+            } else {
+                // Double soft luxury ambient drop shadow aura for light theme
+                val shadowColor = glowColor?.copy(alpha = 0.06f) ?: Color(0xFF6366F1).copy(alpha = 0.05f)
                 drawRoundRect(
                     color = shadowColor,
-                    topLeft = Offset(-4f, 2f),
+                    topLeft = Offset(-4f, 4f),
                     size = Size(size.width + 8f, size.height + 8f),
                     cornerRadius = CornerRadius(22.dp.toPx(), 22.dp.toPx())
                 )
@@ -179,7 +290,10 @@ fun GlassCard(
     Card(
         modifier = contentModifier,
         shape = RoundedCornerShape(20.dp),
-        border = borderStroke,
+        border = BorderStroke(
+            width = 1.dp,
+            brush = if (borderColor != null) Brush.linearGradient(listOf(borderColor, borderColor)) else defaultBorderBrush
+        ),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -191,7 +305,7 @@ fun GlassCard(
 }
 
 // ==========================================
-// 3. TACTILE NEON-GLOW BUTTONS
+// 3. TACTILE NEON-GLOW BUTTONS (WITH VELVET GLOW PULSE)
 // ==========================================
 
 @Composable
@@ -211,38 +325,65 @@ fun GlassButton(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
+    // Smooth snappy tactile scaling on press
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.94f else 1.0f,
-        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+        targetValue = if (isPressed) 0.93f else 1.0f,
+        animationSpec = spring(stiffness = Spring.StiffnessMedium, dampingRatio = Spring.DampingRatioMediumBouncy),
         label = "buttonScale"
     )
 
-    // In light theme, the primary action button background should be deep/rich
+    // Pulse animations for neon glow effect
+    val pulseTransition = rememberInfiniteTransition(label = "ButtonPulseGlow")
+    val pulseAlpha by pulseTransition.animateFloat(
+        initialValue = 0.12f,
+        targetValue = 0.28f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "neonPulseAlpha"
+    )
+
+    // Linear light swipe sweeping over button
+    val sweepOffset by pulseTransition.animateFloat(
+        initialValue = -1f,
+        targetValue = 2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "buttonSweepOffset"
+    )
+
     val resolvedGlowColor = if (!darkTheme && glowColor == NeonCyan) {
-        Color(0xFF0369A1) // Sky 700 for beautiful high-contrast text contrast in light theme
+        Color(0xFF0369A1) // High-contrast crisp text contrast color
     } else {
         glowColor
+    }
+
+    // Assign premium graduated gradients based on base neon tones
+    val gradientColors = when (glowColor) {
+        NeonCyan -> GradientCosmicBlue
+        NeonPurple -> GradientLuxuryPurple
+        NeonAmber -> GradientSunsetAmber
+        else -> listOf(resolvedGlowColor, resolvedGlowColor.mix(Color.Black, 0.2f))
     }
 
     val bgBrush = if (outlineMode) {
         Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
     } else {
         Brush.linearGradient(
-            colors = listOf(
-                resolvedGlowColor.copy(alpha = 0.92f),
-                resolvedGlowColor.mix(Color.Black, 0.15f).copy(alpha = 0.92f)
-            )
+            colors = gradientColors
         )
     }
 
-    // High contrast premium text selection over solid button surfaces
     val resolvedTextColor = if (outlineMode) {
         resolvedGlowColor
     } else {
-        if (resolvedGlowColor == NeonCyan || resolvedGlowColor == NeonAmber || resolvedGlowColor == Color(0xFFFCD34D) || resolvedGlowColor == Color(0xFFF59E0B)) {
-            Color(0xFF0F172A) // Slate 900 for lighter yellow/amber backgrounds
+        if (resolvedGlowColor == NeonCyan || resolvedGlowColor == NeonAmber || resolvedGlowColor == Color(0xFFFCD34D) || resolvedGlowColor == Color(0xFFF59E0B) || resolvedGlowColor == GoldLight) {
+            Color(0xFF070B14) // Deep Obsidian
         } else {
-            Color.White // Pristine crisp white for solid indigo/purple buttons
+            Color.White
         }
     }
 
@@ -254,11 +395,20 @@ fun GlassButton(
             }
             .drawBehind {
                 if (darkTheme && !outlineMode && enabled) {
+                    // Double halo ring structure
                     drawCircle(
-                        color = resolvedGlowColor.copy(alpha = if (isPressed) 0.4f else 0.22f),
-                        radius = size.width * 0.55f,
+                        color = resolvedGlowColor.copy(alpha = pulseAlpha),
+                        radius = size.width * 0.58f,
                         center = center
                     )
+                    // Core focal pressure halo
+                    if (isPressed) {
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.15f),
+                            radius = size.width * 0.42f,
+                            center = center
+                        )
+                    }
                 }
             }
             .clip(RoundedCornerShape(99.dp))
@@ -280,6 +430,25 @@ fun GlassButton(
                 indication = LocalIndication.current,
                 onClick = onClick
             )
+            .drawBehind {
+                // Procedural premium glare shine swept overlay
+                if (enabled && !outlineMode) {
+                    val brushWidth = size.width * 0.35f
+                    val sweepCenter = size.width * sweepOffset
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0f),
+                                Color.White.copy(alpha = 0.22f),
+                                Color.White.copy(alpha = 0f)
+                            ),
+                            start = Offset(sweepCenter - brushWidth, 0f),
+                            end = Offset(sweepCenter, size.height)
+                        ),
+                        size = size
+                    )
+                }
+            }
             .padding(horizontal = horizontalPadding, vertical = verticalPadding)
             .defaultMinSize(minHeight = minHeight),
         contentAlignment = Alignment.Center
@@ -300,13 +469,18 @@ fun GlassButton(
             CompositionLocalProvider(
                 LocalContentColor provides resolvedTextColor
             ) {
-                Row(content = content)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    content()
+                }
             }
         }
     }
 }
 
-// Multiplies or mixes colors
+// Multiplies or mixes colors safely
 private fun Color.mix(other: Color, ratio: Float): Color {
     return Color(
         red = this.red * (1 - ratio) + other.red * ratio,
@@ -317,7 +491,7 @@ private fun Color.mix(other: Color, ratio: Float): Color {
 }
 
 // ==========================================
-// 4. FROSTED TEXT FIELDS WITH NEON OUTLINES
+// 4. FROSTED TEXT FIELDS WITH NEON OUTLINES (ELEVATED HIERARCHY)
 // ==========================================
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -333,7 +507,7 @@ fun GlassTextField(
     isNumeric: Boolean = false,
     focusedStroke: Color = NeonCyan
 ) {
-    val containerBg = if (darkTheme) Color(0x1C111827) else Color(0x40FFFFFF)
+    val containerBg = if (darkTheme) Color(0x280B0F19) else Color(0x60FFFFFF)
     val textC = if (darkTheme) TextPrimary else TextPrimaryLight
     val labelC = if (darkTheme) TextSecondary else TextSecondaryLight
 
@@ -341,19 +515,23 @@ fun GlassTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        textStyle = LocalTextStyle.current.copy(color = textC, fontSize = 16.sp),
+        shape = RoundedCornerShape(16.dp),
+        textStyle = LocalTextStyle.current.copy(
+            color = textC, 
+            fontSize = 15.sp, 
+            fontWeight = FontWeight.Medium
+        ),
         keyboardOptions = KeyboardOptions(
             keyboardType = if (isNumeric) androidx.compose.ui.text.input.KeyboardType.Number else androidx.compose.ui.text.input.KeyboardType.Text
         ),
         leadingIcon = if (icon != null) {
             { Icon(imageVector = icon, contentDescription = null, tint = focusedStroke) }
         } else null,
-        label = { Text(text = label, color = labelC) },
-        placeholder = { Text(text = placeholder, color = labelC.copy(alpha = 0.5f)) },
+        label = { Text(text = label, color = labelC, fontWeight = FontWeight.SemiBold) },
+        placeholder = { Text(text = placeholder, color = labelC.copy(alpha = 0.45f)) },
         singleLine = true,
         colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = containerBg,
+            focusedContainerColor = if (darkTheme) Color(0x3B070A13) else Color(0x8DFFFFFF),
             unfocusedContainerColor = containerBg,
             focusedBorderColor = focusedStroke,
             unfocusedBorderColor = if (darkTheme) GlassBorderDark else GlassBorderLight,
@@ -377,33 +555,28 @@ fun GlassChip(
     darkTheme: Boolean = true,
     activeColor: Color = NeonCyan
 ) {
-    // Resolve vibrant contrast active colors for light theme to meet premium standards
     val resolvedActiveColor = if (!darkTheme) {
-        if (activeColor == NeonCyan) {
-            Color(0xFF0284C7) // Professional light ocean blue
-        } else if (activeColor == NeonPurple) {
-            Color(0xFF6D28D9) // Luxury Royal purple
-        } else if (activeColor == NeonGreen) {
-            Color(0xFF047857) // Deep jade green
-        } else if (activeColor == NeonPink) {
-            Color(0xFFBE123C) // Rich crimson rose
-        } else {
-            activeColor
+        when (activeColor) {
+            NeonCyan -> Color(0xFF0284C7)
+            NeonPurple -> Color(0xFF6D28D9)
+            NeonGreen -> Color(0xFF047857)
+            NeonPink -> Color(0xFFBE123C)
+            else -> activeColor
         }
     } else {
         activeColor
     }
 
     val bg = if (selected) {
-        resolvedActiveColor.copy(alpha = if (darkTheme) 0.25f else 0.15f)
+        resolvedActiveColor.copy(alpha = if (darkTheme) 0.28f else 0.18f)
     } else {
-        if (darkTheme) Color(0x1FFFFFFF) else Color(0x0F111827)
+        if (darkTheme) Color(0x1AFFFFFF) else Color(0x0C111827)
     }
 
     val borderC = if (selected) {
         resolvedActiveColor
     } else {
-        if (darkTheme) Color(0x1F9CA3AF) else Color(0x14111827)
+        if (darkTheme) Color(0x1F9CA3AF) else Color(0x12111827)
     }
 
     val textC = if (selected) {
@@ -425,8 +598,8 @@ fun GlassChip(
         Text(
             text = text,
             color = textC,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold
         )
     }
 }
@@ -448,13 +621,24 @@ fun GlassProgressBar(
         label = "progressPercentage"
     )
 
+    val shimmerTransition = rememberInfiniteTransition(label = "ProgressShimmer")
+    val shimmerOffset by shimmerTransition.animateFloat(
+        initialValue = -1f,
+        targetValue = 2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmerOffset"
+    )
+
     // Glowing track overlay
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(8.dp)
             .clip(RoundedCornerShape(99.dp))
-            .background(if (darkTheme) Color(0x1AFFFFFF) else Color(0x1A000000))
+            .background(if (darkTheme) Color(0x1EFFFFFF) else Color(0x15000000))
     ) {
         Box(
             modifier = Modifier
@@ -463,24 +647,41 @@ fun GlassProgressBar(
                 .clip(RoundedCornerShape(99.dp))
                 .background(
                     Brush.horizontalGradient(
-                        colors = listOf(glowColor.copy(alpha = 0.6f), glowColor)
+                        colors = listOf(glowColor.copy(alpha = 0.5f), glowColor, glowColor.copy(alpha = 0.8f))
                     )
                 )
                 .drawBehind {
                     if (darkTheme) {
                         drawCircle(
-                            color = glowColor.copy(alpha = 0.4f),
-                            radius = size.height * 1.5f,
+                            color = glowColor.copy(alpha = 0.45f),
+                            radius = size.height * 1.6f,
                             center = Offset(size.width, size.height / 2f)
                         )
                     }
                 }
-        )
+        ) {
+            // Internal sliding sheen highlights
+            val brushWidth = 40.dp
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val dx = size.width * shimmerOffset
+                drawRect(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0f),
+                            Color.White.copy(alpha = 0.35f),
+                            Color.White.copy(alpha = 0f)
+                        ),
+                        startX = dx,
+                        endX = dx + brushWidth.toPx()
+                    )
+                )
+            }
+        }
     }
 }
 
 // ==========================================
-// 7. RESPONSIVE FROSTED DIALOG / BOTTOM SHEET
+// 7. RESPONSIVE FROSTED DIALOG / BOTTOM SHEET (WITH SOFT BLUR SCATTERBackstop)
 // ==========================================
 
 @Composable
@@ -501,22 +702,23 @@ fun GlassModalDialog(
                 .padding(vertical = 24.dp)
                 .drawBehind {
                     if (darkTheme) {
+                        // Dramatic ambient light scattering backdrop circle representing "real focus glass layers"
                         drawCircle(
-                            color = glowColor.copy(alpha = 0.12f),
-                            radius = size.maxDimension * 0.55f,
+                            color = glowColor.copy(alpha = 0.15f),
+                            radius = size.maxDimension * 0.58f,
                             center = center
                         )
                     }
                 }
                 .clip(RoundedCornerShape(24.dp))
-                .background(if (darkTheme) Color(0xED0B0F19) else Color(0xEDF9FAFB)) // Dark Slate deep glass
+                .background(if (darkTheme) Color(0xF2090D1A) else Color(0xF5F8FAFC)) // Extra frosted high opacity
                 .border(
                     BorderStroke(
                         1.5.dp,
                         Brush.verticalGradient(
                             listOf(
-                                glowColor.copy(alpha = 0.5f),
-                                if (darkTheme) Color(0x18FFFFFF) else Color(0x18111827)
+                                glowColor.copy(alpha = 0.65f),
+                                if (darkTheme) Color(0x30FFFFFF) else Color(0x30111827)
                             )
                         )
                     ),
@@ -528,29 +730,56 @@ fun GlassModalDialog(
                     .fillMaxWidth()
                     .padding(20.dp)
             ) {
+                // Architectural crown accent handle
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .width(42.dp)
+                        .height(4.dp)
+                        .clip(CircleShape)
+                        .background(if (darkTheme) Color(0x3DFFFFFF) else Color(0x24000000))
+                )
+                
+                Spacer(modifier = Modifier.height(14.dp))
+
                 // Header row with Close button
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = title,
-                        color = if (darkTheme) TextPrimary else TextPrimaryLight,
-                        fontSize = 19.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(glowColor)
+                        )
+                        Text(
+                            text = title,
+                            color = if (darkTheme) TextPrimary else TextPrimaryLight,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Black,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
                     IconButton(
                         onClick = onDismiss,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(if (darkTheme) Color(0x1AFFFFFF) else Color(0x0D000000))
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close",
-                            tint = if (darkTheme) TextSecondary else TextSecondaryLight
+                            tint = if (darkTheme) TextSecondary else TextSecondaryLight,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
@@ -569,7 +798,7 @@ fun GlassModalDialog(
 }
 
 // ==========================================
-// 8. PROCEDURAL BRANDING LOGO COMPONENT
+// 8. PROCEDURAL BRANDING LOGO COMPONENT (ULTIMATE GOLD-ACCENTED VECTOR ART)
 // ==========================================
 
 @Composable
@@ -577,6 +806,17 @@ fun BuildOnSiteLogo(
     modifier: Modifier = Modifier.size(120.dp),
     darkTheme: Boolean = true
 ) {
+    val infiniteTransition = rememberInfiniteTransition(label = "LogoMachinery")
+    val rotAngle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 30000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "logoCompassRotate"
+    )
+
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center
@@ -588,187 +828,240 @@ fun BuildOnSiteLogo(
 
             val strokeScale = w / 120f
 
-            // Radial background gradient inside the circle
+            // Radial base metallic gradient
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = if (darkTheme) {
-                        listOf(Color(0xFF1E293B), Color(0xFF0F172A))
+                        listOf(Color(0xFF1E293B), Color(0xFF030712))
                     } else {
-                        listOf(Color(0xFFF8FAFC), Color(0xFFE2E8F0))
+                        listOf(Color(0xFFFEF08A).copy(alpha = 0.2f), Color(0xFFE2E8F0))
                     }
                 ),
                 radius = w * 0.5f
             )
 
-            // Outer sweep gradient border
+            // Double swept gilded golden ring edge border with 3D bevel effect
             drawCircle(
                 brush = Brush.sweepGradient(
                     colors = listOf(
-                        Color(0xFFFCD34D), // Golden Yellow
-                        Color(0xFFF59E0B), // Secondary Gold
-                        Color(0xFFD97706), // Rich Amber
-                        Color(0xFFFCD34D)
+                        GoldLight,
+                        GoldDark,
+                        GoldMetallic,
+                        GoldLight
                     )
                 ),
                 radius = w * 0.48f,
                 style = Stroke(width = (2.5f * strokeScale).coerceAtLeast(1f))
             )
 
-            // Architectural blueprint grid overlay (subtle)
-            val gridAlpha = if (darkTheme) 0.08f else 0.15f
+            // Inner high-fidelity safety outline
+            drawCircle(
+                color = if (darkTheme) NeonCyan.copy(alpha = 0.15f) else Color(0x330284C7),
+                radius = w * 0.44f,
+                style = Stroke(width = 0.8f * strokeScale)
+            )
+
+            // Rotating structural coordinate compass layout grid
+            val gridAlpha = if (darkTheme) 0.09f else 0.16f
             val gridColor = if (darkTheme) NeonCyan else Color(0xFF0284C7)
-            for (i in 1..4) {
-                val x = w * (i * 0.2f)
-                drawLine(gridColor.copy(alpha = gridAlpha), Offset(x, 0f), Offset(x, h), strokeWidth = 1f)
-                val y = h * (i * 0.2f)
-                drawLine(gridColor.copy(alpha = gridAlpha), Offset(0f, y), Offset(w, y), strokeWidth = 1f)
+            
+            // Draw compass degree markers around inner rim
+            for (degree in 0 until 360 step 45) {
+                val rad = Math.toRadians((degree + rotAngle).toDouble())
+                val startX = w * 0.5f + cos(rad).toFloat() * (w * 0.38f)
+                val startY = h * 0.5f + sin(rad).toFloat() * (h * 0.38f)
+                val endX = w * 0.5f + cos(rad).toFloat() * (w * 0.42f)
+                val endY = h * 0.5f + sin(rad).toFloat() * (h * 0.42f)
+                drawLine(
+                    color = gridColor.copy(alpha = 0.28f),
+                    start = Offset(startX, startY),
+                    end = Offset(endX, endY),
+                    strokeWidth = 1f
+                )
             }
 
-            // Rising Skyscraper core layout
-            val bLeft = w * 0.44f
-            val bRight = w * 0.72f
-            val bWidth = (bRight - bLeft).coerceAtLeast(0f)
-            val bTop = h * 0.16f
-            val bHeight = (h * 0.64f).coerceAtLeast(0f)
+            // Blueprint grid mesh background
+            for (i in 1..4) {
+                val x = w * (i * 0.2f)
+                drawLine(gridColor.copy(alpha = gridAlpha), Offset(x, 0.05f * h), Offset(x, 0.95f * h), strokeWidth = 0.8f)
+                val y = h * (i * 0.2f)
+                drawLine(gridColor.copy(alpha = gridAlpha), Offset(0.05f * w, y), Offset(0.95f * w, y), strokeWidth = 0.8f)
+            }
+
+            // Rising Skyscraper core structural towers (3 Pillars representing Builders, Finance, & Assets)
+            val baseLineY = h * 0.76f
+            val tw = w * 0.08f
             
+            val t1Left = w * 0.34f
+            val t2Left = w * 0.46f
+            val t3Left = w * 0.58f
+
+            // Tower 1 (Tech Assets - Steel blue)
             drawRect(
-                color = if (darkTheme) Color(0xFF334155) else Color(0xFF94A3B8),
-                topLeft = Offset(bLeft, bTop),
-                size = Size(bWidth, bHeight * 0.8f)
+                color = if (darkTheme) Color(0xFF475569) else Color(0xFF64748B),
+                topLeft = Offset(t1Left, h * 0.35f),
+                size = Size(tw, baseLineY - h * 0.35f)
             )
-            
-            // Alternating floors glowing blueprint highlights
-            val numFloors = 4
-            val floorHeight = ((bHeight * 0.8f) / numFloors).coerceAtLeast(0f)
-            for (f in 0 until numFloors) {
-                val fTop = bTop + f * floorHeight
-                val isAlt = f % 2 == 0
-                val col = if (isAlt) Color(0xFFD97706).copy(alpha = 0.35f) else Color(0xFF0EA5E9).copy(alpha = 0.3f)
-                drawRect(
-                    color = col,
-                    topLeft = Offset(bLeft + 2f, fTop + 2f),
-                    size = Size((bWidth - 4f).coerceAtLeast(0f), (floorHeight - 4f).coerceAtLeast(0f))
-                )
-                
-                // Translucent windows slots
-                val winW = ((bWidth - 12f) / 3f).coerceAtLeast(0f)
-                val winH = ((floorHeight - 8f) / 2f).coerceAtLeast(0f)
-                for (wx in 0..2) {
-                    for (wy in 0..1) {
-                        if (winW > 0f && winH > 0f) {
-                            drawRect(
-                                color = if (darkTheme) Color(0xFF0F172A) else Color.White,
-                                topLeft = Offset(
-                                    bLeft + 4f + wx * (winW + 2f),
-                                    fTop + 3f + wy * (winH + 2f)
-                                ),
-                                size = Size(winW, winH)
-                            )
-                        }
-                    }
+            // Tower 2 (The Central Apex - Golden GoldMetallic)
+            drawRect(
+                color = if (darkTheme) GoldDark else GoldMetallic,
+                topLeft = Offset(t2Left, h * 0.24f),
+                size = Size(tw, baseLineY - h * 0.24f)
+            )
+            // Tower 3 (Labor Strength - Rich Navy Indigo)
+            drawRect(
+                color = if (darkTheme) Color(0xFF334155) else Color(0xFF1E293B),
+                topLeft = Offset(t3Left, h * 0.42f),
+                size = Size(tw, baseLineY - h * 0.42f)
+            )
+
+            // Tower window arrays with luminous neon green and warm solar amber
+            val towers = listOf(
+                Triple(t1Left, h * 0.35f, 4),
+                Triple(t2Left, h * 0.24f, 6),
+                Triple(t3Left, h * 0.42f, 3)
+            )
+            towers.forEach { (tx, ty, floors) ->
+                val flH = (baseLineY - ty) / floors
+                for (fl in 0 until floors) {
+                    val currY = ty + fl * flH
+                    // Glowing laser telemetry outline for each floor slab
+                    drawLine(
+                        color = if (darkTheme) NeonCyan.copy(alpha = 0.6f) else Color(0xFF0EA5E9),
+                        start = Offset(tx - 1f, currY),
+                        end = Offset(tx + tw + 1f, currY),
+                        strokeWidth = 0.8f
+                    )
+                    // Windows
+                    drawRect(
+                        color = if (fl % 2 == 0) NeonGreen.copy(alpha = 0.7f) else NeonAmber.copy(alpha = 0.7f),
+                        topLeft = Offset(tx + tw * 0.2f, currY + flH * 0.25f),
+                        size = Size(tw * 0.6f, flH * 0.5f)
+                    )
                 }
             }
 
-            // Upper Scaffolding poles under-construction setup
-            val sY = bTop - (h * 0.09f)
-            drawLine(
-                color = Color(0xFFF59E0B),
-                start = Offset(bLeft + bWidth * 0.2f, bTop),
-                end = Offset(bLeft + bWidth * 0.2f, sY),
-                strokeWidth = 1.5f * strokeScale
-            )
-            drawLine(
-                color = Color(0xFFF59E0B),
-                start = Offset(bLeft + bWidth * 0.8f, bTop),
-                end = Offset(bLeft + bWidth * 0.8f, sY),
-                strokeWidth = 1.5f * strokeScale
-            )
-            drawLine(
-                color = Color(0xFFD97706),
-                start = Offset(bLeft + bWidth * 0.2f, bTop),
-                end = Offset(bLeft + bWidth * 0.8f, sY),
-                strokeWidth = 1f
-            )
-            drawLine(
-                color = Color(0xFFD97706),
-                start = Offset(bLeft + bWidth * 0.8f, bTop),
-                end = Offset(bLeft + bWidth * 0.2f, sY),
-                strokeWidth = 1f
-            )
-
-            // High-precision tower crane boom
-            val cX = w * 0.24f
-            val cTopY = h * 0.10f
-            val cLeftArmX = w * 0.08f
-            val cRightArmX = w * 0.86f
+            // Gilded heavy construction crane structure
+            val cX = w * 0.18f
+            val cTopY = h * 0.18f
+            val cRightArmX = w * 0.90f
             
-            // Principal vertical mast mast
+            // Tower Mast column truss
             drawLine(
-                color = Color(0xFFF59E0B),
-                start = Offset(cX, h * 0.72f),
+                color = GoldMetallic,
+                start = Offset(cX, baseLineY),
                 end = Offset(cX, cTopY),
-                strokeWidth = 2.5f * strokeScale
+                strokeWidth = 1.8f * strokeScale
             )
-            // Long horizontal boom jib
+            // Long jib horizontal arm boom
             drawLine(
-                color = Color(0xFFF59E0B),
-                start = Offset(cLeftArmX, cTopY),
+                color = GoldMetallic,
+                start = Offset(w * 0.04f, cTopY),
                 end = Offset(cRightArmX, cTopY),
-                strokeWidth = 2f * strokeScale
+                strokeWidth = 1.5f * strokeScale
             )
-            // Lattice frame counterweights
-            drawLine(
-                color = Color(0xFFD97706),
-                start = Offset(cX, cTopY + h * 0.12f),
-                end = Offset(cX + w * 0.12f, cTopY),
-                strokeWidth = 1.2f
-            )
-            // Wire rope sling lifting line
-            drawLine(
-                color = Color(0xFF94A3B8),
-                start = Offset(w * 0.58f, cTopY),
-                end = Offset(w * 0.58f, bTop + h * 0.04f),
-                strokeWidth = 1f
-            )
-            // Load block pulley crane hook
-            drawCircle(
-                color = Color(0xFF475569),
-                radius = 2f * strokeScale,
-                center = Offset(w * 0.58f, bTop + h * 0.04f)
-            )
-
-            // Classic safety golden yellow hardhat
-            val hatX = w * 0.26f
-            val hatY = h * 0.64f
-            val hatR = (w * 0.13f).coerceAtLeast(0f)
-            if (hatR > 0f) {
-                // Hardhat shell
-                drawArc(
-                    color = Color(0xFFF59E0B),
-                    startAngle = 180f,
-                    sweepAngle = 180f,
-                    useCenter = true,
-                    topLeft = Offset(hatX - hatR, hatY - hatR),
-                    size = Size(hatR * 2f, hatR * 2f)
+            // Diagonal structural trusses for maximum engineering authenticity
+            for (cxShift in 0..6) {
+                val step = (cRightArmX - cX) / 7
+                val currPivot = cX + cxShift * step
+                drawLine(
+                    color = GoldDark,
+                    start = Offset(currPivot, cTopY),
+                    end = Offset(currPivot + step * 0.5f, cTopY + h * 0.05f),
+                    strokeWidth = 0.8f
                 )
-                // Hardhat protective brim
-                drawRoundRect(
-                    color = Color(0xFFD97706),
-                    topLeft = Offset(hatX - hatR * 1.2f, hatY - 1f),
-                    size = Size((hatR * 2.4f).coerceAtLeast(0f), (h * 0.025f).coerceAtLeast(0f)),
-                    cornerRadius = CornerRadius(2f, 2f)
-                )
-                // Center ridge highlight
-                drawArc(
-                    color = Color.White,
-                    startAngle = 220f,
-                    sweepAngle = 100f,
-                    useCenter = false,
-                    topLeft = Offset(hatX - hatR * 0.35f, hatY - hatR * 0.96f),
-                    size = Size((hatR * 0.7f).coerceAtLeast(0f), (hatR * 0.45f).coerceAtLeast(0f))
+                drawLine(
+                    color = GoldDark,
+                    start = Offset(currPivot + step * 0.5f, cTopY + h * 0.05f),
+                    end = Offset(currPivot + step, cTopY),
+                    strokeWidth = 0.8f
                 )
             }
+
+            // Heavy duty steel wire sling crane rope carrying golden asset weight
+            val slingX = w * 0.52f
+            drawLine(
+                color = if (darkTheme) TextSecondary else Color.Gray,
+                start = Offset(slingX, cTopY),
+                end = Offset(slingX, h * 0.24f),
+                strokeWidth = 1f
+            )
+            // Drawing hooks
+            drawCircle(
+                color = Color.White,
+                radius = 1.5f * strokeScale,
+                center = Offset(slingX, h * 0.24f)
+            )
+
+            // Heavy equipment soil/concrete texture base block
+            drawRoundRect(
+                color = if (darkTheme) Color(0x3B334155) else Color(0x2864748B),
+                topLeft = Offset(w * 0.12f, baseLineY),
+                size = Size(w * 0.76f, h * 0.06f),
+                cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
+            )
         }
     }
 }
 
+// ==========================================
+// 9. NEW COMPONENT: PREMIUM STATUS BADGE (CHROME-GLOW DESIGN STRIP)
+// ==========================================
+
+@Composable
+fun PremiumStatusBadge(
+    label: String,
+    statusType: String, // "Success", "Pending", "Warning", "Danger", "Premium"
+    darkTheme: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "BadgeStatusGlow")
+    val dotAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "statusDotAlpha"
+    )
+
+    val (badgeBgColor, badgeBorderColor, badgeTextColor, badgeDotColor) = when (statusType) {
+        "Success" -> Quadruple(Color(0x1E10B981), Color(0x4D10B981), Color(0xFF10B981), Color(0xFF10B981))
+        "Pending" -> Quadruple(Color(0x1EF59E0B), Color(0x4DF59E0B), Color(0xFFF59E0B), Color(0xFFF59E0B))
+        "Warning" -> Quadruple(Color(0x1EFCD34D), Color(0x4DFCD34D), Color(0xFFEAB308), Color(0xFFFFD700))
+        "Danger" -> Quadruple(Color(0x1EF43F5E), Color(0x4DF43F5E), Color(0xFFF43F5E), Color(0xFFF43F5E))
+        "Premium" -> Quadruple(Color(0x1F8B5CF6), Color(0x4D8B5CF6), Color(0xFFA78BFA), Color(0xFFEC4899))
+        else -> Quadruple(Color(0x1F06B6D4), Color(0x4D06B6D4), Color(0xFF06B6D4), Color(0xFF06B6D4))
+    }
+
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(badgeBgColor)
+            .border(BorderStroke(1.dp, badgeBorderColor), RoundedCornerShape(8.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        // Living pulsing dot indicator
+        Box(
+            modifier = Modifier
+                .size(6.dp)
+                .clip(CircleShape)
+                .drawBehind {
+                    drawCircle(color = badgeDotColor.copy(alpha = dotAlpha))
+                }
+        )
+        Text(
+            text = label.uppercase(),
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Black,
+            color = badgeTextColor,
+            letterSpacing = 0.5.sp
+        )
+    }
+}
+
+// Helper tuple matching style layout
+data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
