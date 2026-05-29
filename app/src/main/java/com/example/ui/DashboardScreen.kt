@@ -55,6 +55,7 @@ fun DashboardScreen(
     var showFilterDropdown by remember { mutableStateOf(false) }
     var showProjectSwitcher by remember { mutableStateOf(false) }
     var showProfileDetailsDialog by remember { mutableStateOf(false) }
+    var showMenuDropdown by remember { mutableStateOf(false) }
 
     // Filtered lists for active project
     val projectTransactions = remember(allTransactions, currentProject) {
@@ -113,22 +114,70 @@ fun DashboardScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 // Hamburguer Menu Trigger
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(if (dark) Color(0x1F111827) else Color(0x0F0F172A))
-                        .clickable {
-                            // Easily switch themes as a developer utility shortcut!
-                            viewModel.darkThemeEnabled = !viewModel.darkThemeEnabled
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = "Theme switcher",
-                        tint = if (dark) Color.White else Color(0xFF0F172A)
-                    )
+                Box {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(if (dark) Color(0x1F111827) else Color(0x0F0F172A))
+                            .clickable {
+                                showMenuDropdown = true
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = "Main Menu",
+                            tint = if (dark) Color.White else Color(0xFF0F172A)
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = showMenuDropdown,
+                        onDismissRequest = { showMenuDropdown = false },
+                        modifier = Modifier.background(if (dark) Color(0xFF1E293B) else Color.White)
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Dashboard Screen", color = if (dark) Color.White else Color.Black) },
+                            onClick = {
+                                showMenuDropdown = false
+                                viewModel.currentScreen = AppScreen.Dashboard
+                            },
+                            leadingIcon = { Icon(Icons.Default.Dashboard, contentDescription = null, tint = if (dark) NeonCyan else Color(0xFF4F46E5)) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Money Tracker", color = if (dark) Color.White else Color.Black) },
+                            onClick = {
+                                showMenuDropdown = false
+                                viewModel.currentScreen = AppScreen.Money
+                            },
+                            leadingIcon = { Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = if (dark) NeonGreen else Color(0xFF16A34A)) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Site Workspace", color = if (dark) Color.White else Color.Black) },
+                            onClick = {
+                                showMenuDropdown = false
+                                viewModel.currentScreen = AppScreen.Site
+                            },
+                            leadingIcon = { Icon(Icons.Default.EventAvailable, contentDescription = null, tint = if (dark) NeonPurple else Color(0xFF8B5CF6)) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Tasks Board", color = if (dark) Color.White else Color.Black) },
+                            onClick = {
+                                showMenuDropdown = false
+                                viewModel.currentScreen = AppScreen.Tasks
+                            },
+                            leadingIcon = { Icon(Icons.Default.Assignment, contentDescription = null, tint = if (dark) NeonPink else Color(0xFFEC4899)) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("More Options", color = if (dark) Color.White else Color.Black) },
+                            onClick = {
+                                showMenuDropdown = false
+                                viewModel.currentScreen = AppScreen.More
+                            },
+                            leadingIcon = { Icon(Icons.Default.MoreHoriz, contentDescription = null, tint = if (dark) Color.LightGray else Color.Gray) }
+                        )
+                    }
                 }
 
                 // App Branding Title: ConstructPro
@@ -167,32 +216,22 @@ fun DashboardScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Translucent Notification Button
+                    // Theme Switcher Button replacing Notification Button
                     Box(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
                             .background(if (dark) Color(0x1F111827) else Color(0x0F0F172A))
                             .clickable {
-                                // Reset project database to seed state as a quick operational shortcut if clicked!
-                                scaffoldStateToast(context, "Notifications up to date.")
+                                viewModel.darkThemeEnabled = !viewModel.darkThemeEnabled
                             },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifications",
-                            tint = if (dark) Color.White else Color(0xFF0F172A),
+                            imageVector = if (dark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = "Switch Theme",
+                            tint = if (dark) NeonCyan else Color(0xFF4F46E5),
                             modifier = Modifier.size(20.dp)
-                        )
-                        // Notification Badge dot
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF8B5CF6)) // violet accent dot
-                                .align(Alignment.TopEnd)
-                                .offset(x = (-10).dp, y = 10.dp)
                         )
                     }
 
@@ -601,6 +640,11 @@ fun DashboardScreen(
             val netBalanceVal = totalInVal - totalOutVal
             val pendingTaskCount = if (totalTasks <= 0) 12 else totalTasks
 
+            val totalInPoints = listOf(10f, 15f, 13f, 22f, 18f, 26f, 22f, 32f, 30f, 42f, 38f, 48f)
+            val totalOutPoints = listOf(45f, 43f, 41f, 32f, 35f, 25f, 28f, 20f, 22f, 15f, 17f, 12f)
+            val netBalancePoints = listOf(8f, 12f, 11f, 20f, 16f, 25f, 21f, 32f, 28f, 38f, 35f, 45f)
+            val pendingTaskPoints = listOf(15f, 18f, 16f, 24f, 22f, 18f, 20f, 14f, 16f, 10f, 12f, 8f)
+
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -620,7 +664,8 @@ fun DashboardScreen(
                         badgePositive = true,
                         icon = Icons.Default.ArrowDownward,
                         iconColor = Color(0xFF10B981),
-                        darkTheme = dark
+                        darkTheme = dark,
+                        sparklinePoints = totalInPoints
                     )
 
                     // Card 2: Total Out
@@ -633,7 +678,8 @@ fun DashboardScreen(
                         badgePositive = false, // Pink/Red styled negative growth
                         icon = Icons.Default.ArrowUpward,
                         iconColor = Color(0xFFF43F5E),
-                        darkTheme = dark
+                        darkTheme = dark,
+                        sparklinePoints = totalOutPoints
                     )
                 }
 
@@ -652,7 +698,8 @@ fun DashboardScreen(
                         badgePositive = true,
                         icon = Icons.Default.AccountBalanceWallet,
                         iconColor = Color(0xFF0EA5E9),
-                        darkTheme = dark
+                        darkTheme = dark,
+                        sparklinePoints = netBalancePoints
                     )
 
                     // Card 4: Pending Tasks
@@ -665,7 +712,8 @@ fun DashboardScreen(
                         badgePositive = false, // Red subtext
                         icon = Icons.Default.TaskAlt,
                         iconColor = Color(0xFF8B5CF6),
-                        darkTheme = dark
+                        darkTheme = dark,
+                        sparklinePoints = pendingTaskPoints
                     )
                 }
             }
@@ -701,48 +749,13 @@ fun DashboardScreen(
                         )
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // Circular arc Donut Chart represent budgetSpent percentage (e.g. 66%)
-                        val resolvedSpendingPercent = if (budgetPercent <= 0) 66 else budgetPercent
-                        Box(
-                            modifier = Modifier.size(104.dp),
-                            contentAlignment = Alignment.Center
+                        val resolvedSpendingPercent = if (budgetPercent <= 0) 68 else budgetPercent
+                        ThreeQuarterArcGauge(
+                            percentage = resolvedSpendingPercent.toFloat() / 100f,
+                            color = if (dark) Color(0xFF3B82F6) else Color(0xFF1D4ED8),
+                            darkTheme = dark,
+                            modifier = Modifier.size(104.dp)
                         ) {
-                            Canvas(modifier = Modifier.fillMaxSize()) {
-                                val sw = 10.dp.toPx()
-                                val diam = size.minDimension - sw
-                                val arcSize = Size(diam, diam)
-                                val offset = Offset((size.width - diam) / 2f, (size.height - diam) / 2f)
-
-                                // background full ring track
-                                drawArc(
-                                    color = if (dark) Color(0x1F94A3B8) else Color(0x140F172A),
-                                    startAngle = 0f,
-                                    sweepAngle = 360f,
-                                    useCenter = false,
-                                    size = arcSize,
-                                    topLeft = offset,
-                                    style = Stroke(width = sw)
-                                )
-
-                                // colorful swept ring (66%)
-                                drawArc(
-                                    brush = Brush.sweepGradient(
-                                        colors = listOf(
-                                            Color(0xFF6366F1),
-                                            Color(0xFF8B5CF6),
-                                            Color(0xFF3B82F6),
-                                            Color(0xFF6366F1)
-                                        )
-                                    ),
-                                    startAngle = -90f,
-                                    sweepAngle = (resolvedSpendingPercent.toFloat() / 100f) * 360f,
-                                    useCenter = false,
-                                    size = arcSize,
-                                    topLeft = offset,
-                                    style = Stroke(width = sw)
-                                )
-                            }
-
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
                                     text = "$resolvedSpendingPercent%",
@@ -751,7 +764,7 @@ fun DashboardScreen(
                                     color = if (dark) Color.White else Color(0xFF0F172A)
                                 )
                                 Text(
-                                    text = "of Budget",
+                                    text = "Spent",
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = if (dark) TextSecondary else TextSecondaryLight
@@ -762,9 +775,42 @@ fun DashboardScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Key detail rows under the donut chart
-                        DonutDetailsRow(Color(0xFF6366F1), "Total Budget", formatIndianRupees(totalBudget), dark)
-                        DonutDetailsRow(Color(0xFF8B5CF6), "Total Spent", formatIndianRupees(totalSpent.coerceAtLeast(825000.0)), dark)
-                        DonutDetailsRow(Color(0xFF0EA5E9), "Remaining", formatIndianRupees(remainingBudget.coerceAtLeast(425000.0)), dark)
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(RoundedCornerShape(2.dp))
+                                        .background(if (dark) Color(0xFF3B82F6) else Color(0xFF1D4ED8))
+                                )
+                                Text("Budget", fontSize = 10.sp, color = if (dark) TextSecondary else TextSecondaryLight, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.weight(1f))
+                                Text("₹12,00,000", fontSize = 10.sp, color = if (dark) Color.White else Color(0xFF0F172A), fontWeight = FontWeight.Bold)
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(RoundedCornerShape(2.dp))
+                                        .background(if (dark) Color(0xFF10B981) else Color(0xFF047857))
+                                )
+                                Text("Actual", fontSize = 10.sp, color = if (dark) TextSecondary else TextSecondaryLight, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.weight(1f))
+                                Text("₹8,16,000", fontSize = 10.sp, color = if (dark) Color.White else Color(0xFF0F172A), fontWeight = FontWeight.Bold)
+                            }
+                        }
 
                         Spacer(modifier = Modifier.height(14.dp))
 
@@ -788,7 +834,7 @@ fun DashboardScreen(
                                 contentDescription = "Arrow link",
                                 tint = if (dark) NeonCyan else Color(0xFF4F46E5),
                                 modifier = Modifier.size(12.dp)
-                              )
+                            )
                         }
                     }
                 }
@@ -802,67 +848,55 @@ fun DashboardScreen(
                     padding = 12.dp,
                     borderColor = if (dark) GlassBorderDark else null
                 ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         Text(
                             text = "Task Progress",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
+                            color = if (dark) Color.White else Color(0xFF0F172A),
+                            modifier = Modifier.align(Alignment.Start)
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        val resolvedTaskPercent = if (taskPercentage <= 0.0) 75 else (taskPercentage * 100).toInt()
+                        ThreeQuarterArcGauge(
+                            percentage = resolvedTaskPercent.toFloat() / 100f,
+                            color = if (dark) Color(0xFF8B5CF6) else Color(0xFF6D28D9),
+                            darkTheme = dark,
+                            modifier = Modifier.size(104.dp)
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "$resolvedTaskPercent%",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (dark) Color.White else Color(0xFF0F172A)
+                                )
+                                Text(
+                                    text = "Done",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = if (dark) TextSecondary else TextSecondaryLight
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        // Shows completed tasks count
+                        val completedDisplay = if (doneTasks <= 0) 24 else doneTasks
+                        val totalDisplay = if (totalTasks <= 0) 32 else totalTasks
+                        Text(
+                            text = "$completedDisplay / $totalDisplay Completed",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
                             color = if (dark) Color.White else Color(0xFF0F172A)
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
 
-                        // Header percent and dynamic linear progress indicator (68%)
-                        val resolvedTaskProgress = if (totalTasks <= 0) 68 else (taskPercentage * 100).toInt()
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "Overall",
-                                fontSize = 11.sp,
-                                color = if (dark) TextSecondary else TextSecondaryLight
-                            )
-                            Text(
-                                "$resolvedTaskProgress%",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Black,
-                                color = if (dark) NeonCyan else Color(0xFF4F46E5)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        // Styled progress bar
-                        val animProgress = (resolvedTaskProgress.toFloat() / 100f).coerceIn(0f, 1f)
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(6.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(if (dark) Color(0x1F94A3B8) else Color(0x140F172A))
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    .fillMaxWidth(animProgress)
-                                    .clip(RoundedCornerShape(3.dp))
-                                    .background(
-                                        Brush.horizontalGradient(
-                                            listOf(Color(0xFF6366F1), Color(0xFF8B5CF6))
-                                        )
-                                    )
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Rows representation for status counts
-                        TaskProgressStatusRow(Icons.Default.CheckCircle, Color(0xFF10B981), "Completed", if (totalTasks <= 0) 18 else doneTasks, dark)
-                        TaskProgressStatusRow(Icons.Default.Schedule, Color(0xFF3B82F6), "In Progress", if (totalTasks <= 0) 14 else inProgressTasks, dark)
-                        TaskProgressStatusRow(Icons.Default.HourglassEmpty, Color(0xFFF59E0B), "Pending", if (totalTasks <= 0) 8 else pendingTasks, dark)
-                        TaskProgressStatusRow(Icons.Default.Warning, Color(0xFFF43F5E), "Overdue", if (totalTasks <= 0) 2 else overdueTasks, dark)
-
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(22.dp))
 
                         // Bottom View All Tasks
                         Row(
@@ -892,93 +926,180 @@ fun DashboardScreen(
         }
 
         // ==========================================
-        // 6. RECENT TRANSACTIONS HEADER
+        // SITE STATUS ROW CARD
+        // ==========================================
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Site Status",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (dark) Color.White else Color(0xFF0F172A)
+                    )
+                    Text(
+                        text = "Today",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (dark) TextSecondary else TextSecondaryLight
+                    )
+                }
+
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    darkTheme = dark,
+                    padding = 16.dp,
+                    borderColor = if (dark) GlassBorderDark else null
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceAround,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        SiteStatusPillar(
+                            icon = Icons.Default.People,
+                            tint = Color(0xFF10B981),
+                            value = "48",
+                            label = "Workers Present",
+                            darkTheme = dark,
+                            modifier = Modifier.weight(1f)
+                        )
+                        SiteStatusPillar(
+                            icon = Icons.Default.PersonOutline,
+                            tint = Color(0xFFF43F5E),
+                            value = "4",
+                            label = "Absent",
+                            darkTheme = dark,
+                            modifier = Modifier.weight(1f)
+                        )
+                        SiteStatusPillar(
+                            icon = Icons.Default.Schedule,
+                            tint = Color(0xFFF59E0B),
+                            value = "2",
+                            label = "Late",
+                            darkTheme = dark,
+                            modifier = Modifier.weight(1f)
+                        )
+                        SiteStatusPillar(
+                            icon = Icons.Default.Shield,
+                            tint = Color(0xFF0EA5E9),
+                            value = "12",
+                            label = "Equipment Active",
+                            darkTheme = dark,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // RECENT ACTIVITY HEADER & TIMELINE
         // ==========================================
         item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 10.dp),
+                    .padding(top = 14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Recent Transactions",
+                    text = "Recent Activity",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (dark) Color.White else Color(0xFF0F172A)
                 )
 
-                Text(
-                    text = "View All",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (dark) NeonCyan else Color(0xFF4F46E5),
-                    modifier = Modifier.clickable { viewModel.currentScreen = AppScreen.Money }
-                )
-            }
-        }
-
-        // ==========================================
-        // 7. TRANSACTION STACKS (MATCHING WIREFRAME LOG)
-        // ==========================================
-        val dynamicFeedList = projectTransactions.take(3)
-        if (dynamicFeedList.isEmpty()) {
-            // Display exact wireframe defaults if no transactions exist in the database yet
-            item {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.clickable {
+                        viewModel.currentScreen = AppScreen.Tasks
+                    }
                 ) {
-                    WireframeStaticTransactionRow(
-                        title = "Worker Weekly Salary Payout",
-                        category = "Labor",
-                        date = "May 22, 2026",
-                        party = "Paid to 24 workers",
-                        amount = "₹45,000.00",
-                        isCredit = false,
-                        darkTheme = dark
+                    Text(
+                        text = "View All Activity",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (dark) NeonCyan else Color(0xFF4F46E5)
                     )
-
-                    WireframeStaticTransactionRow(
-                        title = "Super Grade Portland Cement (50 Bags)",
-                        category = "Material",
-                        date = "May 21, 2026",
-                        party = "BuildMax Supplies",
-                        amount = "₹1,20,000.00",
-                        isCredit = false,
-                        darkTheme = dark
-                    )
-
-                    WireframeStaticTransactionRow(
-                        title = "Client Advance Payment Received",
-                        category = "Client Advance",
-                        date = "May 20, 2026",
-                        party = "Galaxy Infra",
-                        amount = "₹8,50,000.00",
-                        isCredit = true,
-                        darkTheme = dark
+                    Icon(
+                        imageVector = Icons.Default.ArrowForward,
+                        contentDescription = "Arrow right icon",
+                        tint = if (dark) NeonCyan else Color(0xFF4F46E5),
+                        modifier = Modifier.size(12.dp)
                     )
                 }
             }
-        } else {
-            // Render from database
-            items(dynamicFeedList) { tx ->
-                val isCredit = tx.type == "Money In"
-                val partyDesc = tx.partyName ?: if (isCredit) "Galaxy Infra" else "BuildMax Supplies"
+        }
 
-                WireframeStaticTransactionRow(
-                    title = tx.description,
-                    category = tx.category,
-                    date = tx.date,
-                    party = partyDesc,
-                    amount = formatIndianRupees(tx.amount),
-                    isCredit = isCredit,
-                    darkTheme = dark,
-                    onClick = {
-                        viewModel.sharedSelectedTxDetails = tx
-                        viewModel.currentScreen = AppScreen.Money
-                    }
-                )
+        item {
+            GlassCard(
+                modifier = Modifier.fillMaxWidth(),
+                darkTheme = dark,
+                padding = 12.dp,
+                borderColor = if (dark) GlassBorderDark else null
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    RecentActivityRow(
+                        icon = Icons.Default.CreditCard,
+                        iconBgColor = if (dark) Color(0x2810B981) else Color(0xFFECFDF5),
+                        iconTint = Color(0xFF10B981),
+                        title = "Payment received from Metro Rail Corp",
+                        timestamp = "Today, 10:30 AM",
+                        rightInfo = "₹2,50,000",
+                        rightColor = Color(0xFF10B981),
+                        darkTheme = dark,
+                        onClick = {
+                            scaffoldStateToast(context, "Clicked Metro Rail Corp payment")
+                        }
+                    )
+
+                    Divider(color = if (dark) Color(0x1F94A3B8) else Color(0x0F0F172A), thickness = 0.5.dp)
+
+                    RecentActivityRow(
+                        icon = Icons.Default.Layers,
+                        iconBgColor = if (dark) Color(0x280EA5E9) else Color(0xFFF0F9FF),
+                        iconTint = Color(0xFF0EA5E9),
+                        title = "Cement stock updated",
+                        timestamp = "Today, 09:15 AM",
+                        rightInfo = "120 Bags",
+                        rightColor = Color(0xFF0EA5E9),
+                        darkTheme = dark,
+                        onClick = {
+                            scaffoldStateToast(context, "Clicked Cement stock update")
+                        }
+                    )
+
+                    Divider(color = if (dark) Color(0x1F94A3B8) else Color(0x0F0F172A), thickness = 0.5.dp)
+
+                    RecentActivityRow(
+                        icon = Icons.Default.Build,
+                        iconBgColor = if (dark) Color(0x288B5CF6) else Color(0xFFF5F3FF),
+                        iconTint = Color(0xFF8B5CF6),
+                        title = "Electrical work task completed",
+                        timestamp = "Yesterday, 05:40 PM",
+                        rightInfo = "Task #EL-245",
+                        rightColor = Color(0xFF8B5CF6),
+                        darkTheme = dark,
+                        onClick = {
+                            scaffoldStateToast(context, "Clicked Electrical work task")
+                        }
+                    )
+                }
             }
         }
 
@@ -1323,6 +1444,81 @@ fun ProfileDetailCard(
 // ==========================================
 
 @Composable
+fun SparklineCanvas(
+    points: List<Float>,
+    color: Color,
+    darkTheme: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier) {
+        if (points.size < 2) return@Canvas
+        
+        val width = size.width
+        val height = size.height
+        val minX = 0f
+        val maxX = (points.size - 1).toFloat()
+        val minY = points.minOrNull() ?: 0f
+        val maxY = points.maxOrNull() ?: 100f
+        val rangeY = (maxY - minY).coerceAtLeast(1f)
+        
+        val path = Path()
+        val fillPath = Path()
+        
+        val getX: (Int) -> Float = { index ->
+            index * (width / maxX)
+        }
+        val getY: (Float) -> Float = { value ->
+            height - ((value - minY) / rangeY) * height
+        }
+        
+        path.moveTo(getX(0), getY(points[0]))
+        fillPath.moveTo(getX(0), height)
+        fillPath.lineTo(getX(0), getY(points[0]))
+        
+        for (i in 0 until points.size - 1) {
+            val x1 = getX(i)
+            val y1 = getY(points[i])
+            val x2 = getX(i + 1)
+            val y2 = getY(points[i + 1])
+            
+            // Cubic Bezier curve control points
+            val cx1 = x1 + (x2 - x1) / 2f
+            val cy1 = y1
+            val cx2 = cx1
+            val cy2 = y2
+            
+            path.cubicTo(cx1, cy1, cx2, cy2, x2, y2)
+            fillPath.cubicTo(cx1, cy1, cx2, cy2, x2, y2)
+        }
+        fillPath.lineTo(width, height)
+        fillPath.close()
+        
+        // Draw the beautiful soft gradient under spline
+        val gradientBrush = Brush.verticalGradient(
+            colors = listOf(
+                color.copy(alpha = if (darkTheme) 0.35f else 0.20f),
+                Color.Transparent
+            )
+        )
+        drawPath(
+            path = fillPath,
+            brush = gradientBrush
+        )
+        
+        // Draw the main elegant line with rounded corners and a glow
+        drawPath(
+            path = path,
+            color = color,
+            style = Stroke(
+                width = 2.dp.toPx(),
+                cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                join = androidx.compose.ui.graphics.StrokeJoin.Round
+            )
+        )
+    }
+}
+
+@Composable
 fun OverviewClassicStatCard(
     title: String,
     value: String,
@@ -1332,88 +1528,261 @@ fun OverviewClassicStatCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     iconColor: Color,
     darkTheme: Boolean,
+    sparklinePoints: List<Float>,
     modifier: Modifier = Modifier
 ) {
     GlassCard(
         modifier = modifier,
         darkTheme = darkTheme,
-        padding = 14.dp,
+        padding = 0.dp,
         borderColor = if (darkTheme) GlassBorderDark else null
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 14.dp, end = 14.dp, top = 14.dp)
             ) {
-                Text(
-                    text = title,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (darkTheme) TextSecondary else TextSecondaryLight
-                )
-                
-                // Small Circle Containing icon
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(iconColor.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = "Stat Logo",
-                        tint = iconColor,
-                        modifier = Modifier.size(14.dp)
+                    Text(
+                        text = title,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (darkTheme) TextSecondary else TextSecondaryLight
                     )
+                    
+                    // Small Circle Containing icon
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(iconColor.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = "Stat Logo",
+                            tint = iconColor,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Value text
+                Text(
+                    text = value,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                    color = if (darkTheme) Color.White else Color(0xFF0F172A),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Growth/status Badge
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // badge box container
+                    val badgeBg = if (badgePositive) Color(0x2810B981) else Color(0x24F43F5E)
+                    val badgeColor = if (badgePositive) Color(0xFF10B981) else Color(0xFFF43F5E)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(badgeBg)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            badgeText,
+                            color = badgeColor,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+                    if (badgeDesc.isNotBlank()) {
+                        Text(
+                            badgeDesc,
+                            fontSize = 10.sp,
+                            color = if (darkTheme) TextMuted else TextSecondaryLight
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Value text
+            // Beautiful Sparkline matching wireframe/mockup perfectly
+            SparklineCanvas(
+                points = sparklinePoints,
+                color = iconColor,
+                darkTheme = darkTheme,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun ThreeQuarterArcGauge(
+    percentage: Float, // 0f to 1f
+    color: Color,
+    darkTheme: Boolean,
+    modifier: Modifier = Modifier,
+    innerContent: @Composable () -> Unit
+) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val sw = 10.dp.toPx()
+            val diam = size.minDimension - sw
+            val arcSize = Size(diam, diam)
+            val offset = Offset((size.width - diam) / 2f, (size.height - diam) / 2f)
+
+            // Background arc: 3/4 circle = 270 degrees. Center of gap is at the bottom (90 degrees).
+            // So start from 135 degrees and sweep 270 degrees.
+            drawArc(
+                color = if (darkTheme) Color(0x1F94A3B8) else Color(0x140F172A),
+                startAngle = 135f,
+                sweepAngle = 270f,
+                useCenter = false,
+                size = arcSize,
+                topLeft = offset,
+                style = Stroke(width = sw, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            )
+
+            // Foreground progress arc with custom glow and smooth rounded cap drawing
+            drawArc(
+                color = color,
+                startAngle = 135f,
+                sweepAngle = 270f * percentage.coerceIn(0f, 1f),
+                useCenter = false,
+                size = arcSize,
+                topLeft = offset,
+                style = Stroke(width = sw, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            )
+        }
+        innerContent()
+    }
+}
+
+@Composable
+fun RecentActivityRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconBgColor: Color,
+    iconTint: Color,
+    title: String,
+    timestamp: String,
+    rightInfo: String,
+    rightColor: Color,
+    darkTheme: Boolean,
+    onClick: () -> Unit = {}
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // High-contrast vector badge
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(iconBgColor),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = value,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Black,
+                text = title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
                 color = if (darkTheme) Color.White else Color(0xFF0F172A),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // Growth/status Badge
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                // badge box container
-                val badgeBg = if (badgePositive) Color(0x2810B981) else Color(0x24F43F5E)
-                val badgeColor = if (badgePositive) Color(0xFF10B981) else Color(0xFFF43F5E)
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(badgeBg)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        badgeText,
-                        color = badgeColor,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Black
-                    )
-                }
-                if (badgeDesc.isNotBlank()) {
-                    Text(
-                        badgeDesc,
-                        fontSize = 10.sp,
-                        color = if (darkTheme) TextMuted else TextSecondaryLight
-                    )
-                }
-            }
+            Text(
+                text = timestamp,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Normal,
+                color = if (darkTheme) TextSecondary else TextSecondaryLight
+            )
         }
+        
+        Text(
+            text = rightInfo,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = rightColor
+        )
+    }
+}
+
+@Composable
+fun SiteStatusPillar(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    tint: Color,
+    value: String,
+    label: String,
+    darkTheme: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(tint.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Text(
+            text = value,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Black,
+            color = if (darkTheme) Color.White else Color(0xFF0F172A)
+        )
+        Text(
+            text = label,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Medium,
+            color = if (darkTheme) TextSecondary else TextSecondaryLight,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            maxLines = 2,
+            lineHeight = 11.sp
+        )
     }
 }
 

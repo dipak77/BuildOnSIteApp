@@ -726,8 +726,14 @@ fun SiteScreen(
                         IconButton(onClick = { Toast.makeText(context, "Logged thumbs up to site feed!", Toast.LENGTH_SHORT).show() }) {
                             Icon(Icons.Default.ThumbUp, contentDescription = null, tint = if (dark) NeonCyan else Color(0xFF0284C7))
                         }
-                        IconButton(onClick = { Toast.makeText(context, "System checking notifications...", Toast.LENGTH_SHORT).show() }) {
-                            Icon(Icons.Default.Notifications, contentDescription = null, tint = if (dark) NeonPurple else Color(0xFF8B5CF6))
+                        IconButton(onClick = {
+                            viewModel.darkThemeEnabled = !viewModel.darkThemeEnabled
+                        }) {
+                            Icon(
+                                imageVector = if (dark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                                contentDescription = "Switch Theme",
+                                tint = if (dark) NeonCyan else Color(0xFF4F46E5)
+                            )
                         }
                         IconButton(onClick = { showPdfPreviewDialog = true }) {
                             Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = Color.LightGray)
