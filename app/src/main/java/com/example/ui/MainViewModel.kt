@@ -29,7 +29,14 @@ data class GoogleUser(
 class MainViewModel(private val repository: ConstructionRepository) : ViewModel() {
 
     // Google User Session
-    private val _userSession = MutableStateFlow<GoogleUser?>(null)
+    private val _userSession = MutableStateFlow<GoogleUser?>(
+        GoogleUser(
+            displayName = "Dipak Harane",
+            email = "haranedipak@gmail.com",
+            photoUrl = null,
+            isGuest = true
+        )
+    )
     val userSession: StateFlow<GoogleUser?> = _userSession.asStateFlow()
 
     fun handleGoogleSignIn(user: GoogleUser, context: Context) {

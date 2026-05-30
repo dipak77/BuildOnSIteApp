@@ -68,24 +68,6 @@ fun DashboardScreen(
     var showProjectSwitcher     by remember { mutableStateOf(false) }
     var showProfileDetailsDialog by remember { mutableStateOf(false) }
 
-    // ── Animated gradient offset for brand shimmer ──
-    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
-    val shimmerOffset by infiniteTransition.animateFloat(
-        initialValue = -300f, targetValue = 700f,
-        animationSpec = infiniteRepeatable(tween(4000, easing = LinearEasing), RepeatMode.Restart),
-        label = "shimmer"
-    )
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "pulse"
-    )
-    val rotationAnim by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(12000, easing = LinearEasing), RepeatMode.Restart),
-        label = "rotation"
-    )
-
     // ── Computed metrics ──
     val projectTransactions = remember(allTransactions, currentProject) {
         allTransactions.filter { it.projectId == currentProject?.id }
@@ -108,6 +90,13 @@ fun DashboardScreen(
     val spendPct      = if (totalBudget > 0) (totalSpent / totalBudget).toFloat() else 0f
     val budgetPct     = (spendPct * 100).toInt().coerceIn(0, 100)
 
+    val infiniteTransition = rememberInfiniteTransition(label = "orbs_rotation")
+    val rotationAnim by infiniteTransition.animateFloat(
+        initialValue =  0f, targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(24000, easing = LinearEasing), RepeatMode.Restart),
+        label = "rotation"
+    )
+
     // ── Background ──
     Box(
         modifier = modifier.fillMaxSize()
@@ -119,10 +108,30 @@ fun DashboardScreen(
                     listOf(Color(0xFFF0F4FF), Color(0xFFE8EDF8), Color(0xFFF5F7FF))
                 )
             )
+            .then(
+                if (dark) Modifier.drawBehind {
+                    rotate(degrees = rotationAnim) {
+                        val w = size.width; val h = size.height
+                        // Large ambient orbs
+                        drawCircle(
+                            brush  = Brush.radialGradient(listOf(Color(0x1400D4FF), Color.Transparent)),
+                            radius = w * 0.55f,
+                            center = Offset(w * 0.1f, h * 0.15f)
+                        )
+                        drawCircle(
+                            brush  = Brush.radialGradient(listOf(Color(0x107C3AED), Color.Transparent)),
+                            radius = w * 0.65f,
+                            center = Offset(w * 0.9f, h * 0.7f)
+                        )
+                        drawCircle(
+                            brush  = Brush.radialGradient(listOf(Color(0x0D00FF87), Color.Transparent)),
+                            radius = w * 0.4f,
+                            center = Offset(w * 0.5f, h * 0.45f)
+                        )
+                    }
+                } else Modifier
+            )
     ) {
-        // Subtle animated background orbs
-        AnimatedBackgroundOrbs(dark = dark, rotation = rotationAnim)
-
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp),
             contentPadding = PaddingValues(top = 8.dp, bottom = 120.dp),
@@ -132,8 +141,6 @@ fun DashboardScreen(
             item {
                 EnhancedDashboardHeader(
                     dark        = dark,
-                    shimmerOff  = shimmerOffset,
-                    pulseAlpha  = pulseAlpha,
                     onMenuClick = onMenuClick,
                     onThemeToggle = { viewModel.darkThemeEnabled = !viewModel.darkThemeEnabled },
                     onProfileClick = { showProfileDetailsDialog = true },
@@ -143,7 +150,7 @@ fun DashboardScreen(
 
             // ── Live Status Banner ──
             item {
-                LiveStatusBanner(dark = dark, pulseAlpha = pulseAlpha)
+                LiveStatusBanner(dark = dark)
             }
 
             // ── Project Hero Card ──
@@ -157,7 +164,6 @@ fun DashboardScreen(
                         allProjects        = allProjects,
                         allWorkersCount    = allWorkers.size,
                         showProjectSwitcher = showProjectSwitcher,
-                        shimmerOffset      = shimmerOffset,
                         onProjectSwitcherChange = { showProjectSwitcher = it },
                         onProjectSelected  = { p ->
                             viewModel.selectedProjectId = p.id
@@ -260,8 +266,7 @@ fun DashboardScreen(
             item {
                 EnhancedSiteStatusCard(
                     dark           = dark,
-                    workersPresent = if (allWorkers.isNotEmpty()) allWorkers.size else 48,
-                    pulseAlpha     = pulseAlpha
+                    workersPresent = if (allWorkers.isNotEmpty()) allWorkers.size else 48
                 )
             }
 
@@ -321,43 +326,28 @@ fun DashboardScreen(
     }
 }
 
-// ─── Animated Background Orbs ─────────────────────────────────────────────────
-@Composable
-private fun AnimatedBackgroundOrbs(dark: Boolean, rotation: Float) {
-    if (!dark) return
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val w = size.width; val h = size.height
-        // Large ambient orbs
-        drawCircle(
-            brush  = Brush.radialGradient(listOf(Color(0x1400D4FF), Color.Transparent)),
-            radius = w * 0.55f,
-            center = Offset(w * 0.1f, h * 0.15f)
-        )
-        drawCircle(
-            brush  = Brush.radialGradient(listOf(Color(0x107C3AED), Color.Transparent)),
-            radius = w * 0.65f,
-            center = Offset(w * 0.9f, h * 0.7f)
-        )
-        drawCircle(
-            brush  = Brush.radialGradient(listOf(Color(0x0D00FF87), Color.Transparent)),
-            radius = w * 0.4f,
-            center = Offset(w * 0.5f, h * 0.45f)
-        )
-    }
-}
-
 // ─── Enhanced Dashboard Header ────────────────────────────────────────────────
 @Composable
 private fun EnhancedDashboardHeader(
     dark: Boolean,
-    shimmerOff: Float,
-    pulseAlpha: Float,
     onMenuClick: () -> Unit,
     onThemeToggle: () -> Unit,
     onProfileClick: () -> Unit,
     viewModel: MainViewModel
 ) {
     val session by viewModel.userSession.collectAsState()
+
+    val infiniteTransition = rememberInfiniteTransition(label = "header_shimmer")
+    val shimmerOff by infiniteTransition.animateFloat(
+        initialValue = -300f, targetValue = 700f,
+        animationSpec = infiniteRepeatable(tween(4000, easing = LinearEasing), RepeatMode.Restart),
+        label = "shimmer"
+    )
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "pulse"
+    )
 
     Row(
         modifier = Modifier
@@ -521,7 +511,13 @@ private fun AnimatedAvatarButton(
 
 // ─── Live Status Banner ───────────────────────────────────────────────────────
 @Composable
-private fun LiveStatusBanner(dark: Boolean, pulseAlpha: Float) {
+private fun LiveStatusBanner(dark: Boolean) {
+    val infiniteTransition = rememberInfiniteTransition(label = "banner_pulse")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "pulse"
+    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -574,12 +570,18 @@ private fun EnhancedProjectHeroCard(
     allProjects: List<Project>,
     allWorkersCount: Int,
     showProjectSwitcher: Boolean,
-    shimmerOffset: Float,
     onProjectSwitcherChange: (Boolean) -> Unit,
     onProjectSelected: (Project) -> Unit,
     onCycleProject: () -> Unit,
     onCustomizeClick: () -> Unit
 ) {
+    val infiniteTransition = rememberInfiniteTransition(label = "hero_shimmer")
+    val shimmerOffset by infiniteTransition.animateFloat(
+        initialValue = -300f, targetValue = 700f,
+        animationSpec = infiniteRepeatable(tween(4000, easing = LinearEasing), RepeatMode.Restart),
+        label = "shimmer"
+    )
+
     val enterScale by animateFloatAsState(
         targetValue  = 1f,
         animationSpec = spring(dampingRatio = 0.7f, stiffness = 100f),
@@ -1470,9 +1472,14 @@ private fun PremiumArcGauge(
 @Composable
 private fun EnhancedSiteStatusCard(
     dark: Boolean,
-    workersPresent: Int,
-    pulseAlpha: Float
+    workersPresent: Int
 ) {
+    val infiniteTransition = rememberInfiniteTransition(label = "site_card_pulse")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue =  0.4f, targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "pulse"
+    )
     Box(
         modifier = Modifier
             .fillMaxWidth()
