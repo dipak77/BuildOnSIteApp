@@ -229,8 +229,15 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            DrawerContent(viewModel = viewModel) {
-                coroutineScope.launch { drawerState.close() }
+            ModalDrawerSheet(
+                drawerContainerColor = Color.Transparent,
+                drawerTonalElevation = 0.dp,
+                drawerShape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp),
+                modifier = Modifier.width(310.dp)
+            ) {
+                DrawerContent(viewModel = viewModel) {
+                    coroutineScope.launch { drawerState.close() }
+                }
             }
         },
         gesturesEnabled = true
