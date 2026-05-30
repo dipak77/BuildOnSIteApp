@@ -83,6 +83,8 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
     var selectedProjectId by mutableStateOf<Int?>(null) // Dynamic first project selector
     var attendanceDate by mutableStateOf("2026-05-26") // Date navigator
     var darkThemeEnabled by mutableStateOf(true) // Premium dark glassmorphism mode toggle
+    var activeSiteTab by mutableStateOf("Party")
+    var onlineCloudLinkEnabled by mutableStateOf(true)
 
     // Dialogue triggers accessible globally across composing widgets
     var showQuickDialog by mutableStateOf(false)

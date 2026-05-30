@@ -50,6 +50,17 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
     var customName by remember { mutableStateOf("") }
     var customEmail by remember { mutableStateOf("") }
 
+    LaunchedEffect(isConnecting) {
+        if (isConnecting) {
+            kotlinx.coroutines.delay(4000)
+            if (isConnecting) {
+                isConnecting = false
+                showAccountChooser = true
+                Toast.makeText(context, "Google Services timeout. Falling back to offline simulator...", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     // Authentic GMS Google Sign In options config
     val gso = remember {
         try {
@@ -202,6 +213,15 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
                                 color = if (dark) TextSecondary else TextSecondaryLight,
                                 fontSize = 12.sp
                             )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            TextButton(
+                                onClick = {
+                                    isConnecting = false
+                                    showAccountChooser = true
+                                }
+                            ) {
+                                Text("Bypass / Use Demo Account", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     } else {
                         // Google Sign-In button

@@ -64,7 +64,7 @@ fun SiteScreen(
     var selectedTxDetail by remember { mutableStateOf<Transaction?>(null) }
 
     // Tab Selection state for Page 1
-    var activeSiteTab by remember { mutableStateOf("Party") }
+    val activeSiteTab = viewModel.activeSiteTab
     val tabs = listOf("Party", "Transaction", "Site", "Task", "Attendance")
 
     // Sort Query and search for Party Tab
@@ -767,7 +767,7 @@ fun SiteScreen(
                                     else Color.Transparent,
                                     RoundedCornerShape(12.dp)
                                 )
-                                .clickable { activeSiteTab = tab }
+                                .clickable { viewModel.activeSiteTab = tab }
                                 .padding(horizontal = 14.dp, vertical = 8.dp),
                             contentAlignment = Alignment.Center
                         ) {
