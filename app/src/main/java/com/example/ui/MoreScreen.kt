@@ -33,39 +33,41 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import java.text.NumberFormat
 import java.util.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PREMIUM DESIGN TOKENS
 // ─────────────────────────────────────────────────────────────────────────────
 
-private val PremiumDark = Color(0xFF050A14)
-private val PremiumCard = Color(0xFF0D1526)
-private val PremiumCardAlt = Color(0xFF111D35)
-private val PremiumBorder = Color(0xFF1E3A5F)
-private val PremiumBorderLight = Color(0xFFCBD5E1)
+private val PremiumDark        = DarkBg0
+private val PremiumCard        = DarkBg2
+private val PremiumCardAlt     = DarkBg3
+private val PremiumBorder      = GlassBorderDark
+private val PremiumBorderLight = GlassBorderLight
 
-private val AccentCyan = Color(0xFF00D4FF)
-private val AccentPurple = Color(0xFF7C3AED)
-private val AccentGreen = Color(0xFF00FF88)
-private val AccentAmber = Color(0xFFFBBF24)
-private val AccentPink = Color(0xFFFF2D78)
-private val AccentBlue = Color(0xFF3B82F6)
-private val AccentOrange = Color(0xFFFF6B35)
+private val AccentCyan         = NeonCyan
+private val AccentPurple       = NeonPurple
+private val AccentGreen        = NeonGreen
+private val AccentAmber        = NeonAmber
+private val AccentPink         = NeonPink
+private val AccentBlue         = NeonBlue
+private val AccentOrange       = NeonOrange
 
 private val GradientCyan = Brush.linearGradient(
-    listOf(Color(0xFF00D4FF), Color(0xFF0077FF))
+    listOf(NeonCyan, Color(0xFF0077FF))
 )
 private val GradientPurple = Brush.linearGradient(
-    listOf(Color(0xFF7C3AED), Color(0xFFDB2777))
+    listOf(NeonPurple, Color(0xFFDB2777))
 )
 private val GradientGreen = Brush.linearGradient(
-    listOf(Color(0xFF00FF88), Color(0xFF00C4FF))
+    listOf(NeonGreen, Color(0xFF00C4FF))
 )
 private val GradientAmber = Brush.linearGradient(
-    listOf(Color(0xFFFBBF24), Color(0xFFFF6B35))
+    listOf(NeonAmber, NeonOrange)
 )
 private val GradientPink = Brush.linearGradient(
-    listOf(Color(0xFFFF2D78), Color(0xFF7C3AED))
+    listOf(NeonPink, NeonPurple)
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -75,13 +77,13 @@ private val GradientPink = Brush.linearGradient(
 private fun getPremiumAccent(color: Color, dark: Boolean): Color {
     if (dark) return color
     return when (color) {
-        AccentCyan -> Color(0xFF0284C7)    // Sky-700
-        AccentGreen -> Color(0xFF047857)   // Emerald-700
-        AccentPurple -> Color(0xFF6D28D9)  // Violet-700
-        AccentAmber -> Color(0xFFB45309)   // Amber-700
-        AccentPink -> Color(0xFFBE185D)    // Pink-700
-        AccentBlue -> Color(0xFF1D4ED8)    // Blue-700
-        AccentOrange -> Color(0xFFC2410C)  // Orange-700
+        AccentCyan -> LightCyan
+        AccentGreen -> LightGreen
+        AccentPurple -> LightPurple
+        AccentAmber -> LightAmber
+        AccentPink -> LightPink
+        AccentBlue -> LightBlue
+        AccentOrange -> LightOrange
         else -> color
     }
 }
@@ -89,11 +91,11 @@ private fun getPremiumAccent(color: Color, dark: Boolean): Color {
 private fun getPremiumGradient(gradient: Brush, dark: Boolean): Brush {
     if (dark) return gradient
     return when (gradient) {
-        GradientCyan -> Brush.linearGradient(listOf(Color(0xFF0EA5E9), Color(0xFF0284C7)))
-        GradientPurple -> Brush.linearGradient(listOf(Color(0xFF8B5CF6), Color(0xFF6D28D9)))
-        GradientGreen -> Brush.linearGradient(listOf(Color(0xFF10B981), Color(0xFF047857)))
-        GradientAmber -> Brush.linearGradient(listOf(Color(0xFFFBBF24), Color(0xFFD97706)))
-        GradientPink -> Brush.linearGradient(listOf(Color(0xFFEC4899), Color(0xFFBE185D)))
+        GradientCyan -> Brush.linearGradient(listOf(Color(0xFF0EA5E9), LightCyan))
+        GradientPurple -> Brush.linearGradient(listOf(LightPurple, Color(0xFF6D28D9)))
+        GradientGreen -> Brush.linearGradient(listOf(LightGreen, Color(0xFF047857)))
+        GradientAmber -> Brush.linearGradient(listOf(LightAmber, LightOrange))
+        GradientPink -> Brush.linearGradient(listOf(LightPink, LightPurple))
         else -> gradient
     }
 }
@@ -120,6 +122,36 @@ fun MoreScreen(
     val cFormatter = remember { NumberFormat.getCurrencyInstance(Locale("en", "IN")) }
 
     var activeSubModal by remember { mutableStateOf<String?>(null) }
+
+    val projectImportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            try {
+                val jsonString = context.contentResolver.openInputStream(it)?.bufferedReader()?.use { reader -> reader.readText() }
+                if (jsonString != null) {
+                    viewModel.importProjectBackup(context, jsonString)
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to read backup file", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val systemRestoreLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            try {
+                val jsonString = context.contentResolver.openInputStream(it)?.bufferedReader()?.use { reader -> reader.readText() }
+                if (jsonString != null) {
+                    viewModel.importFullBackup(context, jsonString)
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to read backup file", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     // Input States
     var inputEstName by remember { mutableStateOf("") }
@@ -281,7 +313,7 @@ fun MoreScreen(
                             try {
                                 val gso = GoogleSignInOptions
                                     .Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                                    .requestIdToken("970298420983-bin5cqqcqgdoi9r256p7a78bvpi6c0hs.apps.googleusercontent.com")
+                                    .requestIdToken(com.example.BuildConfig.GOOGLE_OAUTH_CLIENT_ID)
                                     .requestEmail().build()
                                 GoogleSignIn.getClient(context, gso).signOut()
                             } catch (t: Throwable) { t.printStackTrace() }
@@ -314,9 +346,9 @@ fun MoreScreen(
                         driveSyncSuccess = true
                     },
                     onExportProject = { viewModel.exportProjectBackup(context, currentProject!!) },
-                    onImportProject = { viewModel.importProjectBackup(context, SEED_PROJECT_JSON) },
+                    onImportProject = { projectImportLauncher.launch("*/*") },
                     onBackupSystem = { viewModel.exportFullBackup(context) },
-                    onRestoreSystem = { viewModel.importFullBackup(context, SEED_FULL_JSON) }
+                    onRestoreSystem = { systemRestoreLauncher.launch("*/*") }
                 )
             }
 

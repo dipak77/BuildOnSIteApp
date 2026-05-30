@@ -47,29 +47,45 @@ import java.util.*
 import kotlin.math.absoluteValue
 
 // ─────────────────────────────────────────────
-// PREMIUM COLOR PALETTE
+// PREMIUM THEME COMPATIBILITY MAPPINGS
 // ─────────────────────────────────────────────
-private val PremiumNavy        = Color(0xFF0A0E1A)
-private val PremiumDeepBlue    = Color(0xFF0D1B3E)
-private val PremiumCard        = Color(0xFF111827)
-private val PremiumCardLight   = Color(0xFFF8FAFF)
-private val PremiumBorder      = Color(0xFF1E2D4A)
-private val PremiumBorderLight = Color(0xFFE2E8F4)
+private val PremiumNavy        = DarkBg0
+private val PremiumDeepBlue    = DarkBg2
+private val PremiumCard        = DarkBg1
+private val PremiumCardLight   = LightBg2
+private val PremiumBorder      = GlassBorderDark
+private val PremiumBorderLight = GlassBorderLight
 
-private val AquaGlow     = Color(0xFF00D4FF)
-private val VioletGlow   = Color(0xFF7C3AED)
-private val EmeraldGlow  = Color(0xFF10B981)
-private val RoseGlow     = Color(0xFFF43F5E)
-private val AmberGlow    = Color(0xFFF59E0B)
-private val IndigoGlow   = Color(0xFF6366F1)
+private val AquaGlow @Composable get() = MaterialTheme.colorScheme.ext.accentPrimary
+private val VioletGlow @Composable get() = MaterialTheme.colorScheme.ext.accentSecondary
+private val EmeraldGlow @Composable get() = MaterialTheme.colorScheme.ext.accentSuccess
+private val RoseGlow @Composable get() = MaterialTheme.colorScheme.ext.accentDanger
+private val AmberGlow @Composable get() = MaterialTheme.colorScheme.ext.accentWarning
+private val IndigoGlow @Composable get() = if (MaterialTheme.colorScheme.ext.isDark) NeonBlue else LightBlue
 
-private val GradientAqua    = Brush.linearGradient(listOf(Color(0xFF00D4FF), Color(0xFF0099CC)))
-private val GradientViolet  = Brush.linearGradient(listOf(Color(0xFF7C3AED), Color(0xFF4F46E5)))
-private val GradientEmerald = Brush.linearGradient(listOf(Color(0xFF10B981), Color(0xFF059669)))
-private val GradientRose    = Brush.linearGradient(listOf(Color(0xFFF43F5E), Color(0xFFBE185D)))
-private val GradientAmber   = Brush.linearGradient(listOf(Color(0xFFF59E0B), Color(0xFFD97706)))
-private val GradientPremium = Brush.linearGradient(
-    listOf(Color(0xFF00D4FF), Color(0xFF7C3AED), Color(0xFFF43F5E))
+private val GradientAqua @Composable get() = Brush.linearGradient(
+    if (MaterialTheme.colorScheme.ext.isDark) listOf(NeonCyan, NeonCyanDim)
+    else listOf(LightCyan, Color(0xFF0284C7))
+)
+private val GradientViolet @Composable get() = Brush.linearGradient(
+    if (MaterialTheme.colorScheme.ext.isDark) listOf(NeonPurple, NeonPurpleDim)
+    else listOf(LightPurple, Color(0xFF6D28D9))
+)
+private val GradientEmerald @Composable get() = Brush.linearGradient(
+    if (MaterialTheme.colorScheme.ext.isDark) listOf(NeonGreen, NeonGreenDim)
+    else listOf(LightGreen, Color(0xFF047857))
+)
+private val GradientRose @Composable get() = Brush.linearGradient(
+    if (MaterialTheme.colorScheme.ext.isDark) listOf(NeonPink, NeonPinkDim)
+    else listOf(LightPink, Color(0xFFBE185D))
+)
+private val GradientAmber @Composable get() = Brush.linearGradient(
+    if (MaterialTheme.colorScheme.ext.isDark) listOf(NeonAmber, NeonAmberDim)
+    else listOf(LightAmber, Color(0xFFB45309))
+)
+private val GradientPremium @Composable get() = Brush.linearGradient(
+    if (MaterialTheme.colorScheme.ext.isDark) listOf(NeonCyan, NeonPurple, NeonPink)
+    else listOf(LightCyan, LightPurple, LightPink)
 )
 
 // ─────────────────────────────────────────────
@@ -844,7 +860,7 @@ private fun PartyTab(
         if (searchedWorkers.isEmpty()) {
             item { PremiumEmptyState(dark = dark, message = "No matching workers found") }
         } else {
-            items(searchedWorkers) { worker ->
+            items(searchedWorkers, key = { it.id }) { worker ->
                 val txs = projectTransactions.filter { it.partyId == worker.id || it.partyName == worker.name }
                 val diff = txs.filter { it.type == "Money Out" }.sumOf { it.amount } -
                            txs.filter { it.type == "Money In" }.sumOf { it.amount }
@@ -933,7 +949,7 @@ private fun TransactionTab(
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
                 }
-                items(projectTransactions) { tx ->
+                items(projectTransactions, key = { it.id }) { tx ->
                     PremiumTransactionCard(tx = tx, dark = dark, onClick = { onSelectTx(tx) })
                 }
                 item { Spacer(modifier = Modifier.height(80.dp)) }
@@ -1092,7 +1108,7 @@ private fun TaskTab(
                 contentPadding = PaddingValues(18.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(projTasks) { t ->
+                items(projTasks, key = { it.id }) { t ->
                     PremiumTaskCard(task = t, dark = dark, onCycle = { viewModel.cycleTaskStatus(t) })
                 }
                 item { Spacer(modifier = Modifier.height(80.dp)) }
@@ -1220,7 +1236,7 @@ private fun AttendanceTab(
         if (allWorkers.isEmpty()) {
             item { PremiumEmptyState(dark = dark, message = "No workers registered yet") }
         } else {
-            items(allWorkers) { worker ->
+            items(allWorkers, key = { it.id }) { worker ->
                 val record = activeDateAttendance.find { it.workerId == worker.id }
                 PremiumAttendanceCard(
                     worker = worker,
@@ -1536,7 +1552,7 @@ private fun PremiumPartyDetailPage(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 84.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(historyTxs) { tx ->
+                    items(historyTxs, key = { it.id }) { tx ->
                         PartyTransactionCard(
                             tx = tx,
                             dark = dark,

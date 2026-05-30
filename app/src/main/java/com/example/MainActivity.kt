@@ -1,6 +1,7 @@
 package com.example
 
 import android.os.Bundle
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -89,30 +90,9 @@ import androidx.compose.ui.unit.sp
 import com.example.data.AppDatabase
 import com.example.data.ConstructionRepository
 import com.example.data.Worker
-import com.example.ui.MainViewModel
-import com.example.ui.AppScreen
-import com.example.ui.BuildOnSiteLogo
-import com.example.ui.DashboardScreen
-import com.example.ui.GlassAtmosphereBox
-import com.example.ui.GlassButton
-import com.example.ui.GlassModalDialog
-import com.example.ui.GlassTextField
-import com.example.ui.GoogleLoginScreen
-import com.example.ui.MoneyScreen
-import com.example.ui.MoreScreen
-import com.example.ui.SiteScreen
-import com.example.ui.TasksScreen
-import com.example.ui.theme.GlassBorderDark
-import com.example.ui.theme.GlassBorderLight
-import com.example.ui.theme.MyApplicationTheme
-import com.example.ui.theme.NeonCyan
-import com.example.ui.theme.NeonGreen
-import com.example.ui.theme.NeonPink
-import com.example.ui.theme.NeonPurple
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextPrimaryLight
-import com.example.ui.theme.TextSecondary
-import com.example.ui.theme.TextSecondaryLight
+import com.example.ui.*
+import com.example.ui.theme.*
+import kotlinx.coroutines.flow.collectLatest
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels {
@@ -128,6 +108,42 @@ class MainActivity : ComponentActivity() {
             val dark = viewModel.darkThemeEnabled
             LaunchedEffect(Unit) {
                 viewModel.loadUserSessionFromPrefs(applicationContext)
+            }
+            LaunchedEffect(key1 = true) {
+                viewModel.uiEvents.collectLatest { event ->
+                    when (event) {
+                        is UiEvent.ShowToast -> {
+                            android.widget.Toast.makeText(applicationContext, event.message, if (event.long) android.widget.Toast.LENGTH_LONG else android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                        is UiEvent.ShowError -> {
+                            android.widget.Toast.makeText(applicationContext, "Error: ${event.message}", android.widget.Toast.LENGTH_LONG).show()
+                        }
+                        is UiEvent.ShareFile -> {
+                            try {
+                                val uri = androidx.core.content.FileProvider.getUriForFile(
+                                    applicationContext,
+                                    "${packageName}.fileprovider",
+                                    event.file
+                                )
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = event.mimeType
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    putExtra(Intent.EXTRA_TITLE, event.title)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                startActivity(Intent.createChooser(intent, event.title))
+                            } catch (e: Exception) {
+                                android.widget.Toast.makeText(applicationContext, "Failed to share file: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                            }
+                        }
+                        UiEvent.ImportSuccess -> {
+                            android.widget.Toast.makeText(applicationContext, "Import completed successfully!", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                        UiEvent.ExportSuccess -> {
+                            android.widget.Toast.makeText(applicationContext, "Export completed successfully!", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
             }
             MyApplicationTheme(darkTheme = dark) {
                 GlassAtmosphereBox(darkTheme = dark) {
@@ -154,42 +170,10 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
     var showTransactionDialog by remember { mutableStateOf(false) }
     var showTaskDialog by remember { mutableStateOf(false) }
     var showWorkerDialog by remember { mutableStateOf(false) }
+    var txType by remember { mutableStateOf("Money Out") }
 
     val currentProject by viewModel.activeProject.collectAsState()
     val allWorkers by viewModel.workers.collectAsState()
-
-    var newProjName by remember { mutableStateOf("") }
-    var newProjLoc by remember { mutableStateOf("") }
-    var newProjBudget by remember { mutableStateOf("") }
-
-    var txType by remember { mutableStateOf("Money Out") }
-    var txAmount by remember { mutableStateOf("") }
-    var txCategory by remember { mutableStateOf("Material") }
-    var txDesc by remember { mutableStateOf("") }
-    var txSelectedParty by remember { mutableStateOf<Worker?>(null) }
-    var txReference by remember { mutableStateOf("") }
-    var txPaymentMethod by remember { mutableStateOf("Cash") }
-    var partySearchQuery by remember { mutableStateOf("") }
-    var isSearchingParty by remember { mutableStateOf(false) }
-
-    var taskTitle by remember { mutableStateOf("") }
-    var taskPriority by remember { mutableStateOf("Medium") }
-    var taskAssigneeName by remember { mutableStateOf("") }
-    var taskDueDate by remember { mutableStateOf("2026-05-30") }
-
-    var workerName by remember { mutableStateOf("") }
-    var workerRole by remember { mutableStateOf("Mason Foreman") }
-    var workerShift by remember { mutableStateOf("Day") }
-    var workerWage by remember { mutableStateOf("") }
-    var workerPhone by remember { mutableStateOf("") }
-    var workerEmail by remember { mutableStateOf("") }
-    var workerPartyType by remember { mutableStateOf("Worker") }
-    var workerAddress by remember { mutableStateOf("") }
-    var workerPartyId by remember { mutableStateOf("") }
-    var workerDateOfJoining by remember { mutableStateOf("30/05/2026") }
-    var workerAadhaar by remember { mutableStateOf("") }
-    var workerPan by remember { mutableStateOf("") }
-    var workerReference by remember { mutableStateOf("") }
 
     LaunchedEffect(viewModel.showQuickDialog) {
         if (viewModel.showQuickDialog) {
@@ -370,334 +354,86 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
 
     }
 
-    GlassModalDialog(
+    QuickAddDialog(
         visible = showQuickDialog,
         onDismiss = { showQuickDialog = false },
-        title = "Operations Quick Actions",
         darkTheme = dark,
-        glowColor = NeonCyan
-    ) {
-        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text("Register a quick site ledger transaction or assignment slot.", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 12.sp)
-            GlassButton(onClick = { showQuickDialog = false; showTransactionDialog = true }, darkTheme = dark, glowColor = NeonCyan, modifier = Modifier.fillMaxWidth()) {
-                Text("Register Cash Transaction", fontWeight = FontWeight.Bold)
-            }
-            GlassButton(onClick = { showQuickDialog = false; showTaskDialog = true }, darkTheme = dark, glowColor = NeonPurple, modifier = Modifier.fillMaxWidth()) {
-                Text("Assign Crew Task", fontWeight = FontWeight.Bold)
-            }
-            GlassButton(onClick = { showQuickDialog = false; showWorkerDialog = true }, darkTheme = dark, glowColor = NeonGreen, modifier = Modifier.fillMaxWidth()) {
-                Text("Create Worker Profile", fontWeight = FontWeight.Bold)
-            }
-        }
-    }
+        onAddTransaction = { showTransactionDialog = true },
+        onAddTask = { showTaskDialog = true },
+        onAddWorker = { showWorkerDialog = true }
+    )
 
-    GlassModalDialog(
+    ProjectFormDialog(
         visible = showProjectDialog,
         onDismiss = { showProjectDialog = false },
-        title = "Initialize Construction Site Project",
         darkTheme = dark,
-        glowColor = NeonPurple
-    ) {
-        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            GlassTextField(newProjName, { newProjName = it }, "Site / Project Class Name", placeholder = "Skyline Corporate Tower", darkTheme = dark)
-            GlassTextField(newProjLoc, { newProjLoc = it }, "Geological Location Block", placeholder = "Sector 62, City Center", darkTheme = dark)
-            GlassTextField(newProjBudget, { newProjBudget = it }, "Fiscal Budget (₹)", isNumeric = true, placeholder = "1250000.0", darkTheme = dark)
-            GlassButton(
-                onClick = {
-                    val budget = newProjBudget.toDoubleOrNull() ?: 100000.0
-                    if (newProjName.isNotBlank() && newProjLoc.isNotBlank()) {
-                        viewModel.addProject(newProjName, newProjLoc, budget)
-                        newProjName = ""
-                        newProjLoc = ""
-                        newProjBudget = ""
-                        showProjectDialog = false
-                    }
-                },
-                enabled = newProjName.isNotBlank(),
-                glowColor = NeonPurple,
-                darkTheme = dark,
-                modifier = Modifier.fillMaxWidth()
-            ) { Text("LAUNCH SITE OPERATIONS", fontWeight = FontWeight.Bold) }
+        onSave = { name, location, budget ->
+            viewModel.addProject(name, location, budget)
         }
-    }
+    )
 
-    GlassModalDialog(
+    TransactionFormDialog(
         visible = showTransactionDialog,
         onDismiss = { showTransactionDialog = false },
-        title = "Register Cash Ledgers",
         darkTheme = dark,
-        glowColor = if (txType == "Money In") NeonGreen else NeonPink
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TogglePill(
-                    text = "Cash In",
-                    selected = txType == "Money In",
-                    selectedColor = NeonGreen,
-                    darkTheme = dark,
-                    modifier = Modifier.weight(1f)
-                ) { txType = "Money In" }
-                TogglePill(
-                    text = "Cash Out",
-                    selected = txType == "Money Out",
-                    selectedColor = NeonPink,
-                    darkTheme = dark,
-                    modifier = Modifier.weight(1f)
-                ) { txType = "Money Out" }
+        presetType = txType,
+        allWorkers = allWorkers,
+        onCreateNewParty = { showWorkerDialog = true },
+        onSave = { type, amount, category, description, party, reference, paymentMethod ->
+            val proj = currentProject
+            if (proj != null) {
+                viewModel.addTransaction(
+                    projectId = proj.id,
+                    type = type,
+                    amount = amount,
+                    category = category,
+                    description = description,
+                    date = viewModel.todayIso(),
+                    partyId = party?.id,
+                    partyName = party?.name,
+                    reference = reference,
+                    paymentMethod = paymentMethod
+                )
             }
-
-            Text("Party Name Mapping / Account", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(modifier = Modifier.weight(1f)) {
-                    GlassTextField(
-                        value = txSelectedParty?.name ?: partySearchQuery,
-                        onValueChange = {
-                            if (txSelectedParty != null) txSelectedParty = null
-                            partySearchQuery = it
-                            isSearchingParty = true
-                        },
-                        label = "Search or Select Party",
-                        placeholder = "Type to search party...",
-                        darkTheme = dark,
-                        icon = Icons.Default.Search
-                    )
-                }
-                if (txSelectedParty != null) {
-                    androidx.compose.material3.IconButton(onClick = { txSelectedParty = null; partySearchQuery = "" }) {
-                        Icon(Icons.Default.Clear, "Clear mapping", tint = NeonPink)
-                    }
-                }
-            }
-
-            if (isSearchingParty || (partySearchQuery.isNotEmpty() && txSelectedParty == null)) {
-                val matched = allWorkers.filter {
-                    it.name.contains(partySearchQuery, ignoreCase = true) || it.partyType.contains(partySearchQuery, ignoreCase = true)
-                }
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = if (dark) Color(0xFF1E293B) else Color(0xFFF1F5F9)),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(modifier = Modifier.padding(6.dp)) {
-                        if (matched.isEmpty()) {
-                            Text("No matching parties found.", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 12.sp, modifier = Modifier.padding(8.dp))
-                        } else {
-                            matched.take(5).forEach { party ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().clickable {
-                                        txSelectedParty = party
-                                        partySearchQuery = party.name
-                                        isSearchingParty = false
-                                    }.padding(8.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column {
-                                        Text(party.name, color = if (dark) TextPrimary else TextPrimaryLight, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                        Text(party.partyType + (if (party.phone.isNotEmpty()) " • ${party.phone}" else ""), color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp)
-                                    }
-                                    Text("Select", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = if (dark) Color(0x33FFFFFF) else Color(0x33000000))
-                        Row(
-                            modifier = Modifier.fillMaxWidth().clickable {
-                                isSearchingParty = false
-                                showTransactionDialog = false
-                                showWorkerDialog = true
-                            }.padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(Icons.Default.AddCircleOutline, null, tint = NeonCyan, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("+ Create New Party", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            } else if (txSelectedParty != null) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(if (dark) Color(0x3310B981) else Color(0x2210B981)).padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.CheckCircle, null, tint = NeonGreen, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Mapped to: ${txSelectedParty?.name} [${txSelectedParty?.partyType}]", color = if (dark) NeonGreen else Color(0xFF047857), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-
-            GlassTextField(txAmount, { txAmount = it }, "Transaction Amount (₹)", isNumeric = true, placeholder = "45000.0", darkTheme = dark)
-            Text("Payment Method", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Cash", "Bank Transfer", "Cheque").forEach { method ->
-                    TogglePill(method, txPaymentMethod == method, NeonGreen, dark, Modifier.weight(1f)) { txPaymentMethod = method }
-                }
-            }
-            GlassTextField(txReference, { txReference = it }, "Reference No. / Cheque / TxRef", placeholder = "REF-987293", darkTheme = dark)
-            Text("Add Cost Code / Segment", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Material", "Labor", "Equipment", "Other").forEach { cat ->
-                    TogglePill(cat, txCategory == cat, NeonPurple, dark, Modifier.weight(1f)) { txCategory = cat }
-                }
-            }
-            GlassTextField(txDesc, { txDesc = it }, "Brief Expenditure Memo / More Details", placeholder = "Weekly worker payout session", darkTheme = dark)
-            GlassButton(
-                onClick = {
-                    val amt = txAmount.toDoubleOrNull() ?: 0.0
-                    val proj = currentProject
-                    if (amt > 0 && txDesc.isNotBlank() && proj != null) {
-                        viewModel.addTransaction(
-                            projectId = proj.id,
-                            type = txType,
-                            amount = amt,
-                            category = txCategory,
-                            description = txDesc,
-                            date = "2026-05-30",
-                            partyId = txSelectedParty?.id,
-                            partyName = txSelectedParty?.name,
-                            reference = txReference,
-                            paymentMethod = txPaymentMethod
-                        )
-                        txAmount = ""
-                        txDesc = ""
-                        txReference = ""
-                        txSelectedParty = null
-                        partySearchQuery = ""
-                        showTransactionDialog = false
-                    }
-                },
-                enabled = txAmount.isNotBlank() && txDesc.isNotBlank(),
-                glowColor = if (txType == "Money In") NeonGreen else NeonPink,
-                darkTheme = dark,
-                modifier = Modifier.fillMaxWidth()
-            ) { Text("PROCESS TRANSACTION RECORD", fontWeight = FontWeight.Bold) }
         }
-    }
+    )
 
-    GlassModalDialog(
+    TaskFormDialog(
         visible = showTaskDialog,
         onDismiss = { showTaskDialog = false },
-        title = "Deploy Site Task Assignment",
         darkTheme = dark,
-        glowColor = NeonCyan
-    ) {
-        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            GlassTextField(taskTitle, { taskTitle = it }, "Task Description Title", placeholder = "Conduct structural welding integration", darkTheme = dark)
-            GlassTextField(taskAssigneeName, { taskAssigneeName = it }, "Select/Type Assignee Name", placeholder = "Supervisor / Crew", darkTheme = dark)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("High", "Medium", "Low").forEach { p ->
-                    TogglePill(p, taskPriority == p, NeonCyan, dark, Modifier.weight(1f)) { taskPriority = p }
-                }
+        onSave = { title, priority, assignee, dueDate ->
+            val proj = currentProject
+            if (proj != null) {
+                viewModel.addTask(proj.id, title, priority, assignee, dueDate)
             }
-            GlassTextField(taskDueDate, { taskDueDate = it }, "Task Due Date Deadline", placeholder = "2026-05-30", darkTheme = dark)
-            GlassButton(
-                onClick = {
-                    val proj = currentProject
-                    if (taskTitle.isNotBlank() && proj != null) {
-                        viewModel.addTask(proj.id, taskTitle, taskPriority, if (taskAssigneeName.isBlank()) "Crew" else taskAssigneeName, taskDueDate)
-                        taskTitle = ""
-                        taskAssigneeName = ""
-                        showTaskDialog = false
-                    }
-                },
-                enabled = taskTitle.isNotBlank(),
-                glowColor = NeonCyan,
-                darkTheme = dark,
-                modifier = Modifier.fillMaxWidth()
-            ) { Text("DELEGATE SITE TASK", fontWeight = FontWeight.Bold) }
         }
-    }
+    )
 
-    LaunchedEffect(showWorkerDialog) {
-        if (showWorkerDialog && workerPartyId.isBlank()) workerPartyId = "PID-${allWorkers.size + 1}"
-    }
-    GlassModalDialog(
+    WorkerFormDialog(
         visible = showWorkerDialog,
         onDismiss = { showWorkerDialog = false },
-        title = "Add New Party / Worker Profile",
         darkTheme = dark,
-        glowColor = NeonGreen
-    ) {
-        Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            GlassTextField(workerPartyId, { workerPartyId = it }, "Party ID", placeholder = "PID-1", darkTheme = dark)
-            GlassTextField(workerName, { workerName = it }, "Party / Worker Full Name", placeholder = "e.g. John Doe / Tejas Contractors", darkTheme = dark)
-            GlassTextField(workerPhone, { workerPhone = it }, "Phone Number (+91)", placeholder = "9876543210", darkTheme = dark)
-            GlassTextField(workerEmail, { workerEmail = it }, "Email Address", placeholder = "client@example.com", darkTheme = dark)
-            Text("Party Type Category", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                listOf("Client", "Staff", "Vendor", "Worker", "Investor").forEach { type ->
-                    TogglePill(type, workerPartyType == type, NeonGreen, dark, Modifier.weight(1f), fontSize = 10.sp) { workerPartyType = type }
-                }
-            }
-            GlassTextField(workerAddress, { workerAddress = it }, "Address / Location", placeholder = "Enter home or office address", darkTheme = dark)
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(modifier = Modifier.weight(1f)) { GlassTextField(workerDateOfJoining, { workerDateOfJoining = it }, "Date of Joining", placeholder = "30/05/2026", darkTheme = dark) }
-                Box(modifier = Modifier.weight(1f)) { GlassTextField(workerRole, { workerRole = it }, "Designation / Role", placeholder = "Foreman", darkTheme = dark) }
-            }
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(modifier = Modifier.weight(1f)) { GlassTextField(workerAadhaar, { workerAadhaar = it }, "Aadhaar Card No.", placeholder = "12-digit", darkTheme = dark) }
-                Box(modifier = Modifier.weight(1f)) { GlassTextField(workerPan, { workerPan = it }, "PAN Card No.", placeholder = "10-character", darkTheme = dark) }
-            }
-            GlassTextField(workerReference, { workerReference = it }, "Referred By / Given Reference", placeholder = "Partner X", darkTheme = dark)
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.weight(1.2f)) {
-                    GlassTextField(workerWage, { workerWage = it }, "Daily Wage / Rate (₹)", isNumeric = true, placeholder = "350.0", darkTheme = dark)
-                }
-                Column(modifier = Modifier.weight(0.8f)) {
-                    Text("Standard Shift", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 2.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        listOf("Day", "Night").forEach { sh ->
-                            TogglePill(sh, workerShift == sh, NeonGreen, dark, Modifier.weight(1f), fontSize = 11.sp) { workerShift = sh }
-                        }
-                    }
-                }
-            }
-            GlassButton(
-                onClick = {
-                    val rate = workerWage.toDoubleOrNull() ?: 0.0
-                    if (workerName.isNotBlank()) {
-                        val colors = listOf(0xFF3B82F6.toInt(), 0xFFEC4899.toInt(), 0xFF10B981.toInt(), 0xFFF59E0B.toInt(), 0xFF8B5CF6.toInt())
-                        viewModel.addWorker(
-                            name = workerName,
-                            role = if (workerRole.isNotBlank()) workerRole else workerPartyType,
-                            shift = workerShift,
-                            wageRate = rate,
-                            color = colors.random(),
-                            phone = workerPhone,
-                            email = workerEmail,
-                            partyType = workerPartyType,
-                            address = workerAddress,
-                            partyId = workerPartyId,
-                            dateOfJoining = workerDateOfJoining,
-                            aadhaar = workerAadhaar,
-                            pan = workerPan,
-                            reference = workerReference
-                        )
-                        workerName = ""
-                        workerRole = "Mason Foreman"
-                        workerWage = ""
-                        workerPhone = ""
-                        workerEmail = ""
-                        workerPartyType = "Worker"
-                        workerAddress = ""
-                        workerPartyId = ""
-                        workerAadhaar = ""
-                        workerPan = ""
-                        workerReference = ""
-                        showWorkerDialog = false
-                    }
-                },
-                enabled = workerName.isNotBlank(),
-                glowColor = NeonGreen,
-                darkTheme = dark,
-                modifier = Modifier.fillMaxWidth()
-            ) { Text("PROCESS PARTY PROFILE", fontWeight = FontWeight.Bold) }
+        workerCount = allWorkers.size,
+        onSave = { name, role, shift, wageRate, phone, email, partyType, address, partyId, dateOfJoining, aadhaar, pan, reference ->
+            viewModel.addWorker(
+                name = name,
+                role = role,
+                shift = shift,
+                wageRate = wageRate,
+                color = listOf(0xFF3B82F6.toInt(), 0xFFEC4899.toInt(), 0xFF10B981.toInt(), 0xFFF59E0B.toInt(), 0xFF8B5CF6.toInt()).random(),
+                phone = phone,
+                email = email,
+                partyType = partyType,
+                address = address,
+                partyId = partyId,
+                dateOfJoining = dateOfJoining,
+                aadhaar = aadhaar,
+                pan = pan,
+                reference = reference
+            )
         }
-    }
+    )
 }
 
 @Composable

@@ -13,6 +13,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 enum class AppScreen {
     Dashboard, Money, Tasks, Site, More
@@ -28,7 +30,25 @@ data class GoogleUser(
 
 class MainViewModel(private val repository: ConstructionRepository) : ViewModel() {
 
-    // Google User Session
+    // ==========================================
+    // UI EVENT CHANNEL (replaces Context-based Toasts)
+    // ==========================================
+    private val _uiEvents = MutableSharedFlow<UiEvent>(extraBufferCapacity = 16)
+    val uiEvents: SharedFlow<UiEvent> = _uiEvents.asSharedFlow()
+
+    private fun emitEvent(event: UiEvent) {
+        viewModelScope.launch { _uiEvents.emit(event) }
+    }
+
+    // ==========================================
+    // OPERATION PROGRESS TRACKING
+    // ==========================================
+    var operationProgress by mutableStateOf(OperationProgress())
+        private set
+
+    // ==========================================
+    // GOOGLE USER SESSION
+    // ==========================================
     private val _userSession = MutableStateFlow<GoogleUser?>(
         GoogleUser(
             displayName = "Dipak Harane",
@@ -85,10 +105,20 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
         }
     }
 
-    // UI States
+    // ==========================================
+    // DATE UTILITIES
+    // ==========================================
+    private val isoFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+
+    /** Returns today's date as YYYY-MM-DD string */
+    fun todayIso(): String = isoFormatter.format(Date())
+
+    // ==========================================
+    // UI STATES
+    // ==========================================
     var currentScreen by mutableStateOf(AppScreen.Dashboard)
     var selectedProjectId by mutableStateOf<Int?>(null) // Dynamic first project selector
-    var attendanceDate by mutableStateOf("2026-05-26") // Date navigator
+    var attendanceDate by mutableStateOf(isoFormatter.format(Date())) // Date navigator — uses live date
     var darkThemeEnabled by mutableStateOf(true) // Premium dark glassmorphism mode toggle
     var activeSiteTab by mutableStateOf("Party")
     var onlineCloudLinkEnabled by mutableStateOf(true)
@@ -111,7 +141,9 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
     // Selected transaction state globally shared for beautiful click details navigation
     var sharedSelectedTxDetails by mutableStateOf<Transaction?>(null)
 
-    // Base Database Flows
+    // ==========================================
+    // BASE DATABASE FLOWS
+    // ==========================================
     val projects = repository.allProjects.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val workers = repository.allWorkers.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val attendance = repository.allAttendance.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -137,6 +169,7 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                emitEvent(UiEvent.ShowError("Failed to initialize database", e))
             }
 
             projects.collectLatest { projectList ->
@@ -148,29 +181,48 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
     }
 
     // ==========================================
-    // CRUD DATA MUTATORS
+    // CRUD DATA MUTATORS (with error handling)
     // ==========================================
 
     // Projects
     fun addProject(name: String, location: String, budget: Double) {
+        val nameResult = FormValidator.validateProjectName(name)
+        val locResult = FormValidator.validateLocation(location)
+        if (!nameResult.isValid) { emitEvent(UiEvent.ShowToast(nameResult.errorMessage ?: "Invalid name")); return }
+        if (!locResult.isValid) { emitEvent(UiEvent.ShowToast(locResult.errorMessage ?: "Invalid location")); return }
+
         viewModelScope.launch {
-            val id = repository.insertProject(Project(name = name, location = location, budget = budget, status = "Active"))
-            selectedProjectId = id.toInt()
+            try {
+                val id = repository.insertProject(Project(name = name, location = location, budget = budget, status = "Active"))
+                selectedProjectId = id.toInt()
+                emitEvent(UiEvent.ShowToast("Project \"$name\" created!"))
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to create project", e))
+            }
         }
     }
 
     fun updateProject(project: Project) {
         viewModelScope.launch {
-            repository.updateProject(project)
+            try {
+                repository.updateProject(project)
+                emitEvent(UiEvent.ShowToast("Project updated successfully"))
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to update project", e))
+            }
         }
     }
 
     fun deleteProject(project: Project, context: Context) {
         viewModelScope.launch {
-            repository.deleteProject(project)
-            Toast.makeText(context, "Project deleted successfully", Toast.LENGTH_SHORT).show()
-            // Reset project focus
-            selectedProjectId = null
+            try {
+                repository.deleteProject(project)
+                emitEvent(UiEvent.ShowToast("Project deleted successfully"))
+                // Reset project focus
+                selectedProjectId = null
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to delete project", e))
+            }
         }
     }
 
@@ -191,96 +243,138 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
         pan: String = "",
         reference: String = ""
     ) {
+        val nameResult = FormValidator.validateWorkerName(name)
+        if (!nameResult.isValid) { emitEvent(UiEvent.ShowToast(nameResult.errorMessage ?: "Invalid name")); return }
+
         viewModelScope.launch {
-            repository.insertWorker(
-                Worker(
-                    name = name,
-                    role = role,
-                    shift = shift,
-                    wageRate = wageRate,
-                    avatarColor = color,
-                    phone = phone,
-                    email = email,
-                    partyType = partyType,
-                    address = address,
-                    partyId = partyId,
-                    dateOfJoining = dateOfJoining,
-                    aadhaar = aadhaar,
-                    pan = pan,
-                    reference = reference
+            try {
+                repository.insertWorker(
+                    Worker(
+                        name = name,
+                        role = role,
+                        shift = shift,
+                        wageRate = wageRate,
+                        avatarColor = color,
+                        phone = phone,
+                        email = email,
+                        partyType = partyType,
+                        address = address,
+                        partyId = partyId,
+                        dateOfJoining = dateOfJoining,
+                        aadhaar = aadhaar,
+                        pan = pan,
+                        reference = reference
+                    )
                 )
-            )
+                emitEvent(UiEvent.ShowToast("Party \"$name\" added!"))
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to add worker", e))
+            }
         }
     }
 
     fun updateWorker(worker: Worker) {
         viewModelScope.launch {
-            repository.updateWorker(worker)
+            try {
+                repository.updateWorker(worker)
+                emitEvent(UiEvent.ShowToast("Worker profile updated"))
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to update worker", e))
+            }
         }
     }
 
     fun deleteWorker(worker: Worker, context: Context) {
         viewModelScope.launch {
-            repository.deleteWorker(worker)
-            Toast.makeText(context, "Worker profile removed", Toast.LENGTH_SHORT).show()
+            try {
+                repository.deleteWorker(worker)
+                emitEvent(UiEvent.ShowToast("Worker profile removed"))
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to delete worker", e))
+            }
         }
     }
 
     // Attendance (Toggle/Mark)
     fun recordAttendance(workerId: Int, projectId: Int, date: String, status: String, overtimeHours: Double = 0.0) {
         viewModelScope.launch {
-            if (status == "Clear") {
-                repository.deleteAttendanceRecord(workerId, date)
-            } else {
-                repository.insertAttendance(
-                    Attendance(
-                        workerId = workerId,
-                        projectId = projectId,
-                        date = date,
-                        status = status,
-                        overtimeHours = overtimeHours
+            try {
+                if (status == "Clear") {
+                    repository.deleteAttendanceRecord(workerId, date)
+                } else {
+                    repository.insertAttendance(
+                        Attendance(
+                            workerId = workerId,
+                            projectId = projectId,
+                            date = date,
+                            status = status,
+                            overtimeHours = overtimeHours
+                        )
                     )
-                )
+                }
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to record attendance", e))
             }
         }
     }
 
     // Tasks
     fun addTask(projectId: Int, title: String, priority: String, assignee: String, dueDate: String) {
+        val titleResult = FormValidator.validateTaskTitle(title)
+        if (!titleResult.isValid) { emitEvent(UiEvent.ShowToast(titleResult.errorMessage ?: "Invalid title")); return }
+
         viewModelScope.launch {
-            repository.insertTask(
-                Task(
-                    projectId = projectId,
-                    title = title,
-                    priority = priority,
-                    status = "To Do",
-                    dueDate = dueDate,
-                    assignee = assignee
+            try {
+                repository.insertTask(
+                    Task(
+                        projectId = projectId,
+                        title = title,
+                        priority = priority,
+                        status = "To Do",
+                        dueDate = dueDate,
+                        assignee = assignee
+                    )
                 )
-            )
+                emitEvent(UiEvent.ShowToast("Task assigned!"))
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to create task", e))
+            }
         }
     }
 
     fun cycleTaskStatus(task: Task) {
         viewModelScope.launch {
-            val nextStatus = when (task.status) {
-                "To Do" -> "In Progress"
-                "In Progress" -> "Done"
-                else -> "To Do"
+            try {
+                val nextStatus = when (task.status) {
+                    "To Do" -> "In Progress"
+                    "In Progress" -> "Done"
+                    else -> "To Do"
+                }
+                repository.updateTask(task.copy(status = nextStatus))
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to update task", e))
             }
-            repository.updateTask(task.copy(status = nextStatus))
         }
     }
 
     fun updateTask(task: Task) {
         viewModelScope.launch {
-            repository.updateTask(task)
+            try {
+                repository.updateTask(task)
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to update task", e))
+            }
         }
     }
 
     fun deleteTask(task: Task) {
         viewModelScope.launch {
-            repository.deleteTask(task)
+            try {
+                repository.deleteTask(task)
+                emitEvent(UiEvent.ShowToast("Task deleted"))
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to delete task", e))
+            }
         }
     }
 
@@ -298,118 +392,190 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
         paymentMethod: String = "Cash"
     ) {
         viewModelScope.launch {
-            repository.insertTransaction(
-                Transaction(
-                    projectId = projectId,
-                    type = type,
-                    amount = amount,
-                    category = category,
-                    description = description,
-                    date = date,
-                    partyId = partyId,
-                    partyName = partyName,
-                    reference = reference,
-                    paymentMethod = paymentMethod
+            try {
+                repository.insertTransaction(
+                    Transaction(
+                        projectId = projectId,
+                        type = type,
+                        amount = amount,
+                        category = category,
+                        description = description,
+                        date = date,
+                        partyId = partyId,
+                        partyName = partyName,
+                        reference = reference,
+                        paymentMethod = paymentMethod
+                    )
                 )
-            )
+                emitEvent(UiEvent.ShowToast("Transaction recorded!"))
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to record transaction", e))
+            }
         }
     }
 
     fun deleteTransaction(transaction: Transaction) {
         viewModelScope.launch {
-            repository.deleteTransaction(transaction)
+            try {
+                repository.deleteTransaction(transaction)
+                emitEvent(UiEvent.ShowToast("Transaction deleted"))
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to delete transaction", e))
+            }
         }
     }
 
     // MOM
     fun addMOM(projectId: Int, title: String, content: String, date: String) {
         viewModelScope.launch {
-            repository.insertMOM(MOM(projectId = projectId, title = title, content = content, date = date))
+            try {
+                repository.insertMOM(MOM(projectId = projectId, title = title, content = content, date = date))
+                emitEvent(UiEvent.ShowToast("Meeting minutes saved"))
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to save MOM", e))
+            }
         }
     }
 
     fun deleteMOM(mom: MOM) {
         viewModelScope.launch {
-            repository.deleteMOM(mom)
+            try {
+                repository.deleteMOM(mom)
+                emitEvent(UiEvent.ShowToast("Meeting minutes deleted"))
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to delete MOM", e))
+            }
         }
     }
 
     // Payroll
     fun addPayroll(workerId: Int, projectId: Int, date: String, wagesPaid: Double, status: String) {
         viewModelScope.launch {
-            repository.insertPayroll(Payroll(workerId = workerId, projectId = projectId, date = date, wagesPaid = wagesPaid, status = status))
+            try {
+                repository.insertPayroll(Payroll(workerId = workerId, projectId = projectId, date = date, wagesPaid = wagesPaid, status = status))
+                emitEvent(UiEvent.ShowToast("Payroll entry recorded"))
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to process payroll", e))
+            }
         }
     }
 
     fun updatePayroll(payroll: Payroll) {
         viewModelScope.launch {
-            repository.updatePayroll(payroll)
+            try {
+                repository.updatePayroll(payroll)
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to update payroll", e))
+            }
         }
     }
 
     fun deletePayroll(payroll: Payroll) {
         viewModelScope.launch {
-            repository.deletePayroll(payroll)
+            try {
+                repository.deletePayroll(payroll)
+                emitEvent(UiEvent.ShowToast("Payroll entry removed"))
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to delete payroll", e))
+            }
         }
     }
 
     // Estimates
     fun addEstimate(projectId: Int, itemName: String, quantity: Double, unit: String, rate: Double) {
         viewModelScope.launch {
-            repository.insertEstimate(
-                Estimate(
-                    projectId = projectId,
-                    itemName = itemName,
-                    quantity = quantity,
-                    unit = unit,
-                    rate = rate,
-                    totalCost = quantity * rate
+            try {
+                repository.insertEstimate(
+                    Estimate(
+                        projectId = projectId,
+                        itemName = itemName,
+                        quantity = quantity,
+                        unit = unit,
+                        rate = rate,
+                        totalCost = quantity * rate
+                    )
                 )
-            )
+                emitEvent(UiEvent.ShowToast("Estimate added"))
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to add estimate", e))
+            }
         }
     }
 
     fun deleteEstimate(estimate: Estimate) {
         viewModelScope.launch {
-            repository.deleteEstimate(estimate)
+            try {
+                repository.deleteEstimate(estimate)
+                emitEvent(UiEvent.ShowToast("Estimate removed"))
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to delete estimate", e))
+            }
         }
     }
 
     // ==========================================
-    // DATA EXPORT/IMPORT RIGS
+    // DATA EXPORT/IMPORT RIGS (with progress tracking)
     // ==========================================
 
     fun exportTransactionsCSV(context: Context) {
         viewModelScope.launch {
-            val activeProj = activeProject.value ?: return@launch
-            val list = transactions.value.filter { it.projectId == activeProj.id }
-            DataIO.exportTransactionsCSV(context, list, activeProj.name)
+            try {
+                operationProgress = OperationProgress(isActive = true, progress = 0.3f, message = "Preparing CSV...")
+                val activeProj = activeProject.value ?: run {
+                    emitEvent(UiEvent.ShowToast("No active project selected")); return@launch
+                }
+                val list = transactions.value.filter { it.projectId == activeProj.id }
+                operationProgress = operationProgress.copy(progress = 0.7f, message = "Writing file...")
+                DataIO.exportTransactionsCSV(context, list, activeProj.name)
+                operationProgress = OperationProgress()
+                emitEvent(UiEvent.ExportSuccess)
+            } catch (e: Exception) {
+                operationProgress = OperationProgress()
+                emitEvent(UiEvent.ShowError("CSV export failed", e))
+            }
         }
     }
 
     fun exportFullBackup(context: Context) {
         viewModelScope.launch {
-            DataIO.exportBackupJSON(
-                context,
-                projects.value,
-                workers.value,
-                tasks.value,
-                transactions.value,
-                attendance.value,
-                moms.value,
-                payroll.value,
-                estimates.value
-            )
+            try {
+                operationProgress = OperationProgress(isActive = true, progress = 0.2f, message = "Collecting data...")
+                DataIO.exportBackupJSON(
+                    context,
+                    projects.value,
+                    workers.value,
+                    tasks.value,
+                    transactions.value,
+                    attendance.value,
+                    moms.value,
+                    payroll.value,
+                    estimates.value
+                )
+                operationProgress = OperationProgress()
+                emitEvent(UiEvent.ExportSuccess)
+                emitEvent(UiEvent.ShowToast("Full backup exported!"))
+            } catch (e: Exception) {
+                operationProgress = OperationProgress()
+                emitEvent(UiEvent.ShowError("Backup export failed", e))
+            }
         }
     }
 
     fun importFullBackup(context: Context, jsonString: String) {
         viewModelScope.launch {
-            val success = DataIO.importBackupJSON(jsonString, AppDatabase.getDatabase(context).constructionDao())
-            if (success) {
-                Toast.makeText(context, "Database backup restored successfully!", Toast.LENGTH_LONG).show()
-            } else {
-                Toast.makeText(context, "Failed to restore backup. Please verify file integrity.", Toast.LENGTH_LONG).show()
+            try {
+                operationProgress = OperationProgress(isActive = true, progress = 0.1f, message = "Parsing backup...")
+                val success = DataIO.importBackupJSON(jsonString, AppDatabase.getDatabase(context).constructionDao())
+                operationProgress = OperationProgress()
+                if (success) {
+                    emitEvent(UiEvent.ImportSuccess)
+                    emitEvent(UiEvent.ShowToast("Database backup restored successfully!", long = true))
+                } else {
+                    emitEvent(UiEvent.ShowError("Failed to restore backup. Please verify file integrity."))
+                }
+            } catch (e: Exception) {
+                operationProgress = OperationProgress()
+                emitEvent(UiEvent.ShowError("Import failed: ${e.localizedMessage}", e))
             }
         }
     }
@@ -417,34 +583,54 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
     // Project-wise backup & background mutators
     fun exportProjectBackup(context: Context, project: Project) {
         viewModelScope.launch {
-            DataIO.exportProjectBackupJSON(
-                context,
-                project,
-                tasks.value,
-                transactions.value,
-                attendance.value,
-                moms.value,
-                payroll.value,
-                estimates.value
-            )
+            try {
+                operationProgress = OperationProgress(isActive = true, progress = 0.3f, message = "Exporting project...")
+                DataIO.exportProjectBackupJSON(
+                    context,
+                    project,
+                    tasks.value,
+                    transactions.value,
+                    attendance.value,
+                    moms.value,
+                    payroll.value,
+                    estimates.value
+                )
+                operationProgress = OperationProgress()
+                emitEvent(UiEvent.ExportSuccess)
+            } catch (e: Exception) {
+                operationProgress = OperationProgress()
+                emitEvent(UiEvent.ShowError("Project export failed", e))
+            }
         }
     }
 
     fun importProjectBackup(context: Context, jsonString: String) {
         viewModelScope.launch {
-            val success = DataIO.importProjectBackupJSON(jsonString, AppDatabase.getDatabase(context).constructionDao())
-            if (success) {
-                Toast.makeText(context, "Project restored successfully!", Toast.LENGTH_LONG).show()
-            } else {
-                Toast.makeText(context, "Failed to restore project backup. Check file integrity.", Toast.LENGTH_LONG).show()
+            try {
+                operationProgress = OperationProgress(isActive = true, progress = 0.1f, message = "Importing project...")
+                val success = DataIO.importProjectBackupJSON(jsonString, AppDatabase.getDatabase(context).constructionDao())
+                operationProgress = OperationProgress()
+                if (success) {
+                    emitEvent(UiEvent.ImportSuccess)
+                    emitEvent(UiEvent.ShowToast("Project restored successfully!", long = true))
+                } else {
+                    emitEvent(UiEvent.ShowError("Failed to restore project backup. Check file integrity."))
+                }
+            } catch (e: Exception) {
+                operationProgress = OperationProgress()
+                emitEvent(UiEvent.ShowError("Project import failed", e))
             }
         }
     }
 
     fun updateProjectBackground(project: Project, backgroundStyle: String) {
         viewModelScope.launch {
-            val updated = project.copy(customBackground = backgroundStyle)
-            repository.updateProject(updated)
+            try {
+                val updated = project.copy(customBackground = backgroundStyle)
+                repository.updateProject(updated)
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to update background", e))
+            }
         }
     }
 

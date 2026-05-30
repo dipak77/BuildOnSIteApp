@@ -65,7 +65,7 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
     val gso = remember {
         try {
             GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken("970298420983-bin5cqqcqgdoi9r256p7a78bvpi6c0hs.apps.googleusercontent.com")
+                .requestIdToken(com.example.BuildConfig.GOOGLE_OAUTH_CLIENT_ID)
                 .requestEmail()
                 .requestProfile()
                 .build()

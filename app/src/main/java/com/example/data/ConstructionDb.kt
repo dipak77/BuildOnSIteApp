@@ -12,7 +12,13 @@ import kotlinx.coroutines.launch
 // 1. DATABASE ENTITIES
 // ==========================================
 
-@Entity(tableName = "projects")
+@Entity(
+    tableName = "projects",
+    indices = [
+        Index(value = ["status"]),
+        Index(value = ["name"])
+    ]
+)
 data class Project(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
@@ -41,7 +47,15 @@ data class Worker(
     val reference: String = "" // given reference field
 )
 
-@Entity(tableName = "attendance")
+@Entity(
+    tableName = "attendance",
+    indices = [
+        Index(value = ["workerId", "date"], unique = true),
+        Index(value = ["projectId"]),
+        Index(value = ["date"]),
+        Index(value = ["status"])
+    ]
+)
 data class Attendance(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val workerId: Int,
@@ -51,7 +65,14 @@ data class Attendance(
     val overtimeHours: Double
 )
 
-@Entity(tableName = "tasks")
+@Entity(
+    tableName = "tasks",
+    indices = [
+        Index(value = ["projectId"]),
+        Index(value = ["status"]),
+        Index(value = ["priority"])
+    ]
+)
 data class Task(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val projectId: Int,
@@ -62,7 +83,16 @@ data class Task(
     val assignee: String
 )
 
-@Entity(tableName = "transactions")
+@Entity(
+    tableName = "transactions",
+    indices = [
+        Index(value = ["projectId"]),
+        Index(value = ["type"]),
+        Index(value = ["date"]),
+        Index(value = ["partyId"]),
+        Index(value = ["category"])
+    ]
+)
 data class Transaction(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val projectId: Int,
@@ -77,7 +107,10 @@ data class Transaction(
     val paymentMethod: String = "Cash" // "Cash", "Bank Transfer", "Cheque"
 )
 
-@Entity(tableName = "mom")
+@Entity(
+    tableName = "mom",
+    indices = [Index(value = ["projectId"])]
+)
 data class MOM(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val projectId: Int,
@@ -86,7 +119,14 @@ data class MOM(
     val date: String // YYYY-MM-DD
 )
 
-@Entity(tableName = "payroll")
+@Entity(
+    tableName = "payroll",
+    indices = [
+        Index(value = ["workerId"]),
+        Index(value = ["projectId"]),
+        Index(value = ["date"])
+    ]
+)
 data class Payroll(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val workerId: Int,
@@ -96,7 +136,10 @@ data class Payroll(
     val status: String // "Paid", "Pending"
 )
 
-@Entity(tableName = "estimates")
+@Entity(
+    tableName = "estimates",
+    indices = [Index(value = ["projectId"])]
+)
 data class Estimate(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val projectId: Int,
@@ -225,6 +268,63 @@ interface ConstructionDao {
 
     @Delete
     suspend fun deleteEstimate(estimate: Estimate)
+
+    // ── Bulk Insert Methods (for 10K-record JSON imports) ──
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllProjects(projects: List<Project>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllWorkers(workers: List<Worker>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllAttendance(attendance: List<Attendance>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllTasks(tasks: List<Task>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllTransactions(transactions: List<Transaction>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllMOMs(moms: List<MOM>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllPayroll(payroll: List<Payroll>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllEstimates(estimates: List<Estimate>)
+
+    // ── Count queries for UI stats ──
+    @Query("SELECT COUNT(*) FROM transactions WHERE projectId = :projectId")
+    suspend fun getTransactionCount(projectId: Int): Int
+
+    @Query("SELECT COUNT(*) FROM workers")
+    suspend fun getWorkerCount(): Int
+
+    // ── Clear all tables (for full restore) ──
+    @Query("DELETE FROM projects")
+    suspend fun clearProjects()
+
+    @Query("DELETE FROM workers")
+    suspend fun clearWorkers()
+
+    @Query("DELETE FROM attendance")
+    suspend fun clearAttendance()
+
+    @Query("DELETE FROM tasks")
+    suspend fun clearTasks()
+
+    @Query("DELETE FROM transactions")
+    suspend fun clearTransactions()
+
+    @Query("DELETE FROM mom")
+    suspend fun clearMOMs()
+
+    @Query("DELETE FROM payroll")
+    suspend fun clearPayroll()
+
+    @Query("DELETE FROM estimates")
+    suspend fun clearEstimates()
 }
 
 // ==========================================
@@ -242,7 +342,7 @@ interface ConstructionDao {
         Payroll::class,
         Estimate::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
