@@ -17,6 +17,8 @@ import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -75,6 +77,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.ui.theme.*
 import kotlin.math.cos
 import kotlin.math.sin
@@ -512,15 +515,19 @@ fun GlassModalDialog(
     title: String,
     darkTheme: Boolean = true,
     glowColor: Color = NeonCyan,
+    scrollable: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
     if (!visible) return
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 24.dp)
+                .fillMaxWidth(0.92f)
+                .padding(vertical = 12.dp)
                 .drawBehind {
                     if (darkTheme) drawCircle(color = glowColor.copy(alpha = 0.15f), radius = size.maxDimension * 0.58f, center = center)
                 }
@@ -559,7 +566,14 @@ fun GlassModalDialog(
                         Icon(Icons.Default.Close, contentDescription = "Close", tint = if (darkTheme) TextSecondary else TextSecondaryLight, modifier = Modifier.size(16.dp))
                     }
                 }
-                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp), content = content)
+                val scrollState = rememberScrollState()
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 560.dp)
+                        .then(if (scrollable) Modifier.verticalScroll(scrollState) else Modifier),
+                    content = content
+                )
             }
         }
     }

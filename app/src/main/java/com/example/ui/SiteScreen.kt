@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -1258,6 +1259,16 @@ private fun PremiumPartyDetailPage(
     val totalPaid     = matchedTxs.filter { it.type == "Money In" }.sumOf { it.amount }
     val diff          = totalReceived - totalPaid
 
+    var selectedHistoryTab by remember { mutableStateOf("Received") }
+
+    val historyTxs = remember(matchedTxs, selectedHistoryTab) {
+        if (selectedHistoryTab == "Received") {
+            matchedTxs.filter { it.type == "Money Out" }
+        } else {
+            matchedTxs.filter { it.type == "Money In" }
+        }
+    }
+
     val bgBrush = if (dark)
         Brush.verticalGradient(listOf(PremiumNavy, Color(0xFF080C18)))
     else
@@ -1268,43 +1279,91 @@ private fun PremiumPartyDetailPage(
             .fillMaxSize()
             .background(bgBrush)
     ) {
-        // Header
-        PremiumPageHeader(
-            dark = dark,
-            title = worker.name,
-            subtitle = "Party Balance · ${currentProject?.name ?: "Project"}",
-            onBack = onBack,
-            actions = {
-                PremiumIconBtn(Icons.Default.GetApp, EmeraldGlow, dark) {
-                    Toast.makeText(context, "Exported!", Toast.LENGTH_SHORT).show()
-                }
-                PremiumIconBtn(Icons.Default.MoreVert, if (dark) Color(0xFF64748B) else Color(0xFF94A3B8), dark) {}
+        // Center-aligned visual header mimicking the screenshot
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(if (dark) PremiumNavy else Color.White)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowLeft,
+                    contentDescription = "Back",
+                    tint = if (dark) Color.White else Color(0xFF1E293B),
+                    modifier = Modifier.size(28.dp)
+                )
             }
-        )
+
+            Text(
+                text = "Party Project Balance",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (dark) Color.White else Color(0xFF131F3C),
+                modifier = Modifier.weight(1f),
+                textAlign = TextAlign.Center
+            )
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                HeaderActionButton(
+                    icon = Icons.Default.ThumbUp,
+                    dark = dark,
+                    onClick = {
+                        val amountStr = formatIndianRupees(diff.absoluteValue)
+                        val statusText = if (diff >= 0) "Advance Paid" else "Pending to Pay"
+                        val shareTxt = """
+                            Party Project Balance:
+                            Party: ${worker.name}
+                            Project: ${currentProject?.name ?: "Treasure Garden"}
+                            Balance: $amountStr ($statusText)
+                            Received: ${formatIndianRupees(totalReceived)}
+                            Paid: ${formatIndianRupees(totalPaid)}
+                        """.trimIndent()
+                        val intent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, shareTxt)
+                        }
+                        context.startActivity(Intent.createChooser(intent, "Share Balance Review"))
+                    }
+                )
+                HeaderActionButton(
+                    icon = Icons.Default.GetApp,
+                    dark = dark,
+                    onClick = {
+                        Toast.makeText(context, "Exporting ledger...", Toast.LENGTH_SHORT).show()
+                    }
+                )
+                HeaderActionButton(
+                    icon = Icons.Default.MoreVert,
+                    dark = dark,
+                    onClick = {
+                        Toast.makeText(context, "More Options", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
+        }
 
         // Balance Hero Card
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 14.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(
-                    if (diff >= 0)
-                        Brush.linearGradient(listOf(EmeraldGlow.copy(alpha = 0.18f), EmeraldGlow.copy(alpha = 0.05f)))
-                    else
-                        Brush.linearGradient(listOf(RoseGlow.copy(alpha = 0.18f), RoseGlow.copy(alpha = 0.05f)))
-                )
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(if (dark) Color(0xFF111827) else Color.White)
                 .border(
                     1.dp,
-                    Brush.linearGradient(
-                        if (diff >= 0)
-                            listOf(EmeraldGlow.copy(alpha = 0.6f), EmeraldGlow.copy(alpha = 0.1f))
-                        else
-                            listOf(RoseGlow.copy(alpha = 0.6f), RoseGlow.copy(alpha = 0.1f))
-                    ),
-                    RoundedCornerShape(20.dp)
+                    if (dark) Color(0xFF1E2D4A) else Color(0xFFE2E8F4),
+                    RoundedCornerShape(12.dp)
                 )
-                .padding(20.dp)
+                .padding(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1312,180 +1371,385 @@ private fun PremiumPartyDetailPage(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    // Avatar + name
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(Color(worker.avatarColor), Color(worker.avatarColor).copy(alpha = 0.6f))
-                                    ), CircleShape
-                                )
-                                .border(2.dp, Color.White.copy(alpha = 0.3f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                worker.name.take(2).uppercase(),
-                                color = Color.White,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Black
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                worker.name,
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (dark) Color(0xFFE2E8F4) else Color(0xFF1E293B)
-                            )
-                            Text(
-                                worker.role,
-                                fontSize = 11.sp,
-                                color = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8)
-                            )
-                        }
-                    }
+                    Text(
+                        text = worker.name,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (dark) Color.White else Color(0xFF13203C)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = currentProject?.name ?: "Treasure garden",
+                        fontSize = 14.sp,
+                        color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                    )
                 }
+
                 Column(horizontalAlignment = Alignment.End) {
+                    val isAdvance = diff >= 0
+                    val statusColor = if (isAdvance) Color(0xFF0F766E) else Color(0xFFE11D48)
+                    val statusText = if (isAdvance) "Advance Paid" else "Pending to Pay"
                     Text(
                         text = formatIndianRupees(diff.absoluteValue),
-                        style = TextStyle(
-                            brush = if (diff >= 0) GradientEmerald else GradientRose,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Black
-                        )
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Black,
+                        color = statusColor
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = if (diff >= 0) "Advance Paid" else "Pending to Pay",
-                        fontSize = 10.sp,
+                        text = statusText,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (diff >= 0) EmeraldGlow else RoseGlow
+                        color = statusColor
                     )
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Mini stats
-            Row(
+        // Tab-wise received vs paid summary
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val leftActive = selectedHistoryTab == "Received"
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    .weight(1f)
+                    .clickable { selectedHistoryTab = "Received" }
+                    .padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("RECEIVED", fontSize = 9.sp, fontWeight = FontWeight.Black,
-                        letterSpacing = 1.sp, color = if (dark) Color(0xFF475569) else Color(0xFF94A3B8))
-                    Text(formatIndianRupees(totalReceived), fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (dark) Color(0xFFE2E8F4) else Color(0xFF1E293B))
-                }
-                Box(
-                    modifier = Modifier.width(1.dp).height(32.dp)
-                        .background(if (dark) Color(0xFF1E2D4A) else Color(0xFFDDE4F0))
+                Text(
+                    text = "Party Received",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (dark) (if (leftActive) Color.White else Color(0xFF64748B)) else (if (leftActive) Color(0xFF1E293B) else Color(0xFF64748B))
                 )
-                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                    Text("PAID BACK", fontSize = 9.sp, fontWeight = FontWeight.Black,
-                        letterSpacing = 1.sp, color = if (dark) Color(0xFF475569) else Color(0xFF94A3B8))
-                    Text(formatIndianRupees(totalPaid), fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (dark) Color(0xFFE2E8F4) else Color(0xFF1E293B))
-                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = formatIndianRupees(totalReceived),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (dark) (if (leftActive) Color.White else Color(0xFF94A3B8)) else (if (leftActive) Color(0xFF0F172A) else Color(0xFF475569))
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .height(2.dp)
+                        .background(if (leftActive) (if (dark) AquaGlow else Color(0xFF4F46E5)) else Color.Transparent)
+                )
             }
-        }
 
-        // Section label
-        Text(
-            text = "TRANSACTION HISTORY  ·  ${matchedTxs.size}",
-            fontSize = 10.sp, fontWeight = FontWeight.Black,
-            letterSpacing = 2.sp,
-            color = if (dark) Color(0xFF475569) else Color(0xFF94A3B8),
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 4.dp)
-        )
-
-        if (matchedTxs.isEmpty()) {
-            Box(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) { PremiumEmptyState(dark = dark, message = "No transactions for this party") }
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+            val rightActive = selectedHistoryTab == "Paid"
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { selectedHistoryTab = "Paid" }
+                    .padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                items(matchedTxs) { tx ->
-                    PremiumTransactionCard(tx = tx, dark = dark, workerName = worker.name, onClick = { onSelectTx(tx) })
-                }
-                item { Spacer(modifier = Modifier.height(90.dp)) }
+                Text(
+                    text = "Party Paid",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (dark) (if (rightActive) Color.White else Color(0xFF64748B)) else (if (rightActive) Color(0xFF1E293B) else Color(0xFF64748B))
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = formatIndianRupees(totalPaid),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (dark) (if (rightActive) Color.White else Color(0xFF94A3B8)) else (if (rightActive) Color(0xFF0F172A) else Color(0xFF475569))
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .height(2.dp)
+                        .background(if (rightActive) (if (dark) AquaGlow else Color(0xFF4F46E5)) else Color.Transparent)
+                )
             }
         }
 
-        // Bottom Action Bar
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    if (dark)
-                        Brush.verticalGradient(listOf(Color.Transparent, PremiumNavy))
-                    else
-                        Brush.verticalGradient(listOf(Color.Transparent, Color(0xFFEEF2FF)))
-                )
-                .padding(horizontal = 18.dp, vertical = 14.dp)
+                .height(1.dp)
+                .background(if (dark) Color(0xFF1E2D4A) else Color(0xFFE2E8F0))
+        )
+
+        // Filter Bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(GradientRose)
-                        .clickable(onClick = onIPaid)
-                        .padding(vertical = 13.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(Icons.Default.ArrowUpward, null, tint = Color.White, modifier = Modifier.size(14.dp))
-                        Text("I PAID", fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color.White, letterSpacing = 0.5.sp)
-                    }
-                }
+                Icon(
+                    imageVector = Icons.Default.FilterList,
+                    contentDescription = "Filter",
+                    tint = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "Filter",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                )
+            }
 
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .background(GradientViolet, CircleShape)
-                        .clickable(onClick = onAddTx),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(22.dp))
-                }
+            Text(
+                text = "Amount",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B)
+            )
+        }
 
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            if (historyTxs.isEmpty()) {
                 Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(GradientEmerald)
-                        .clickable(onClick = onIReceived)
-                        .padding(vertical = 13.dp),
+                    modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(Icons.Default.ArrowDownward, null, tint = Color.White, modifier = Modifier.size(14.dp))
-                        Text("I RECEIVED", fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color.White, letterSpacing = 0.5.sp)
+                    PremiumEmptyState(
+                        dark = dark,
+                        message = if (selectedHistoryTab == "Received") "No content received" else "No paid transactions"
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 84.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(historyTxs) { tx ->
+                        PartyTransactionCard(
+                            tx = tx,
+                            dark = dark,
+                            workerName = worker.name,
+                            onClick = { onSelectTx(tx) }
+                        )
                     }
                 }
             }
+
+            // Bottom Action Bar overlaid
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.Transparent,
+                                if (dark) PremiumNavy.copy(alpha = 0.95f) else Color(0xFAF0F4FF)
+                            )
+                        )
+                    )
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFD11A5B))
+                            .clickable(onClick = onIPaid),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "I Paid",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF5D53EA))
+                            .clickable(onClick = onAddTx),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Transaction",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF00897B))
+                            .clickable(onClick = onIReceived),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "I Received",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeaderActionButton(
+    icon: ImageVector,
+    dark: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (dark) Color(0xFF1E2D4A) else Color.White)
+            .border(
+                1.dp,
+                if (dark) Color(0xFF2D3F5E) else Color(0xFFE2E8F0),
+                RoundedCornerShape(10.dp)
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (dark) Color.White else Color(0xFF1E293B),
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun PartyTransactionCard(
+    tx: Transaction,
+    dark: Boolean,
+    workerName: String,
+    onClick: () -> Unit
+) {
+    val dateParts = tx.date.split("-")
+    val months = listOf("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
+    val dayStr = dateParts.getOrNull(2) ?: "27"
+    val monStr = months.getOrElse((dateParts.getOrNull(1)?.toIntOrNull() ?: 1) - 1) { "May" }
+    val yearStr = dateParts.getOrNull(0) ?: "2026"
+
+    val topBg = if (dark) Color(0xFF7C3AED) else Color(0xFF4F46E5)
+    val botBg = if (dark) Color(0xFF7C3AED).copy(alpha = 0.15f) else Color(0xFFEEF2FF)
+    val botTextColor = if (dark) Color(0xFFC084FC) else Color(0xFF312E81)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (dark) Color(0xFF111827) else Color.White)
+            .border(
+                1.dp,
+                if (dark) Color(0xFF1E2D4A) else Color(0xFFE2E8F0),
+                RoundedCornerShape(8.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Split Date Badge
+                Column(
+                    modifier = Modifier
+                        .width(60.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(
+                            1.dp,
+                            if (dark) Color(0xFF7C3AED).copy(alpha = 0.4f) else Color(0xFFE0E7FF),
+                            RoundedCornerShape(8.dp)
+                        )
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(topBg)
+                            .padding(vertical = 3.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = yearStr,
+                            fontSize = 10.sp,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(botBg)
+                            .padding(vertical = 5.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "$dayStr $monStr",
+                            fontSize = 11.sp,
+                            color = botTextColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                val directionText = if (tx.type == "Money Out") {
+                    "Company  >  $workerName"
+                } else {
+                    "$workerName  >  Company"
+                }
+
+                Text(
+                    text = directionText,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (dark) Color(0xFFE2E8F4) else Color(0xFF1E293B)
+                )
+            }
+
+            Text(
+                text = formatIndianRupees(tx.amount),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (dark) Color.White else Color(0xFF0F172A)
+            )
         }
     }
 }
@@ -2616,7 +2880,8 @@ private fun PremiumAttendanceDialog(
         onDismiss = onDismiss,
         title = "Mark Attendance",
         darkTheme = dark,
-        glowColor = VioletGlow
+        glowColor = VioletGlow,
+        scrollable = true
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -2778,7 +3043,8 @@ private fun PremiumAddTransactionDialog(
         visible = true, onDismiss = onDismiss,
         title = "Record Payment",
         darkTheme = dark,
-        glowColor = if (partyTxType == "Money Out") RoseGlow else EmeraldGlow
+        glowColor = if (partyTxType == "Money Out") RoseGlow else EmeraldGlow,
+        scrollable = true
     ) {
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             // Party label
@@ -2926,7 +3192,8 @@ private fun PremiumPdfDialog(
     GlassModalDialog(
         visible = true, onDismiss = onDismiss,
         title = "PDF Receipt Preview",
-        darkTheme = dark, glowColor = AquaGlow
+        darkTheme = dark, glowColor = AquaGlow,
+        scrollable = true
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),

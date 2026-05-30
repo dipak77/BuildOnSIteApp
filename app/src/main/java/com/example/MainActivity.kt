@@ -343,7 +343,16 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
                     AppScreen.Dashboard -> showQuickDialog = true
                     AppScreen.Money -> showTransactionDialog = true
                     AppScreen.Tasks -> showTaskDialog = true
-                    AppScreen.Site -> showWorkerDialog = true
+                    AppScreen.Site -> {
+                        when (viewModel.activeSiteTab) {
+                            "Party" -> showWorkerDialog = true
+                            "Transaction" -> showTransactionDialog = true
+                            "Task" -> showTaskDialog = true
+                            "Attendance" -> showWorkerDialog = true
+                            "Site" -> showProjectDialog = true
+                            else -> showWorkerDialog = true
+                        }
+                    }
                     AppScreen.More -> showProjectDialog = true
                 }
             },

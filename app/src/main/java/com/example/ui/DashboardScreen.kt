@@ -382,13 +382,15 @@ private fun EnhancedDashboardHeader(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(
-                            Brush.linearGradient(
+                        .drawWithContent {
+                            val badgeBrush = Brush.linearGradient(
                                 colors = listOf(ElectricBlue, DeepViolet, Color(0xFFEC4899), RoyalGold, ElectricBlue),
                                 start  = Offset(shimmerOff, 0f),
                                 end    = Offset(shimmerOff + 200f, 80f)
                             )
-                        )
+                            drawRect(brush = badgeBrush)
+                            drawContent()
+                        }
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
@@ -601,22 +603,24 @@ private fun EnhancedProjectHeroCard(
                         listOf(Color(0xFF1E3A8A), Color(0xFF4338CA), Color(0xFF6D28D9))
                 )
             )
-            .border(
-                BorderStroke(
-                    1.5.dp,
-                    Brush.linearGradient(
-                        colors = listOf(
-                            ElectricBlue.copy(alpha = 0.7f),
-                            DeepViolet.copy(alpha = 0.5f),
-                            Color(0xFFEC4899).copy(alpha = 0.4f),
-                            ElectricBlue.copy(alpha = 0.3f)
-                        ),
-                        start = Offset(shimmerOffset, 0f),
-                        end   = Offset(shimmerOffset + 300f, 200f)
-                    )
-                ),
-                RoundedCornerShape(32.dp)
-            )
+            .drawWithContent {
+                drawContent()
+                val borderBrush = Brush.linearGradient(
+                    colors = listOf(
+                        ElectricBlue.copy(alpha = 0.7f),
+                        DeepViolet.copy(alpha = 0.5f),
+                        Color(0xFFEC4899).copy(alpha = 0.4f),
+                        ElectricBlue.copy(alpha = 0.3f)
+                    ),
+                    start = Offset(shimmerOffset, 0f),
+                    end   = Offset(shimmerOffset + 300f, 200f)
+                )
+                drawRoundRect(
+                    brush = borderBrush,
+                    cornerRadius = CornerRadius(32.dp.toPx(), 32.dp.toPx()),
+                    style = Stroke(width = 1.5.dp.toPx())
+                )
+            }
             .drawBehind {
                 // Ambient glow circles
                 drawCircle(

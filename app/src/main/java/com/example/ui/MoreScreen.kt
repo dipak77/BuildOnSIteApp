@@ -13,6 +13,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -65,6 +67,36 @@ private val GradientAmber = Brush.linearGradient(
 private val GradientPink = Brush.linearGradient(
     listOf(Color(0xFFFF2D78), Color(0xFF7C3AED))
 )
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRO-LEVEL COLOR MANAGEMENT HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+private fun getPremiumAccent(color: Color, dark: Boolean): Color {
+    if (dark) return color
+    return when (color) {
+        AccentCyan -> Color(0xFF0284C7)    // Sky-700
+        AccentGreen -> Color(0xFF047857)   // Emerald-700
+        AccentPurple -> Color(0xFF6D28D9)  // Violet-700
+        AccentAmber -> Color(0xFFB45309)   // Amber-700
+        AccentPink -> Color(0xFFBE185D)    // Pink-700
+        AccentBlue -> Color(0xFF1D4ED8)    // Blue-700
+        AccentOrange -> Color(0xFFC2410C)  // Orange-700
+        else -> color
+    }
+}
+
+private fun getPremiumGradient(gradient: Brush, dark: Boolean): Brush {
+    if (dark) return gradient
+    return when (gradient) {
+        GradientCyan -> Brush.linearGradient(listOf(Color(0xFF0EA5E9), Color(0xFF0284C7)))
+        GradientPurple -> Brush.linearGradient(listOf(Color(0xFF8B5CF6), Color(0xFF6D28D9)))
+        GradientGreen -> Brush.linearGradient(listOf(Color(0xFF10B981), Color(0xFF047857)))
+        GradientAmber -> Brush.linearGradient(listOf(Color(0xFFFBBF24), Color(0xFFD97706)))
+        GradientPink -> Brush.linearGradient(listOf(Color(0xFFEC4899), Color(0xFFBE185D)))
+        else -> gradient
+    }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN SCREEN
@@ -122,14 +154,14 @@ fun MoreScreen(
     var pPan by remember { mutableStateOf("") }
     var pReference by remember { mutableStateOf("") }
 
-    val bgColor = if (dark) PremiumDark else Color(0xFFF0F4FF)
+    val bgColor = if (dark) PremiumDark else Color(0xFFF5F8FF)
 
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(bgColor)
     ) {
-        // Subtle radial background glow (dark mode only)
+        // Subtle radial background glow
         if (dark) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 drawCircle(
@@ -150,6 +182,40 @@ fun MoreScreen(
                         ),
                         center = Offset(size.width * 0.1f, size.height * 0.3f),
                         radius = size.width * 0.5f
+                    )
+                )
+            }
+        } else {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                // Soft gradient pastel orbs for a premium glassmorphic atmosphere
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFFE0F2FE).copy(alpha = 0.85f), // Sky blue flare
+                            Color.Transparent
+                        ),
+                        center = Offset(size.width * 0.95f, size.height * 0.05f),
+                        radius = size.width * 0.75f
+                    )
+                )
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFFF5F3FF).copy(alpha = 0.9f), // Lavender flare
+                            Color.Transparent
+                        ),
+                        center = Offset(size.width * 0.05f, size.height * 0.25f),
+                        radius = size.width * 0.6f
+                    )
+                )
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFFFCE7F3).copy(alpha = 0.72f), // Warm rose pink flare
+                            Color.Transparent
+                        ),
+                        center = Offset(size.width * 0.5f, size.height * 0.65f),
+                        radius = size.width * 0.7f
                     )
                 )
             }
@@ -585,9 +651,16 @@ private fun PremiumHeaderHero(dark: Boolean) {
         ), label = "glow"
     )
 
+    val cyanRes = getPremiumAccent(AccentCyan, dark)
+    val purpleRes = getPremiumAccent(AccentPurple, dark)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .shadow(
+                elevation = if (dark) 0.dp else 4.dp,
+                shape = RoundedCornerShape(24.dp)
+            )
             .clip(RoundedCornerShape(24.dp))
             .background(
                 if (dark)
@@ -596,20 +669,28 @@ private fun PremiumHeaderHero(dark: Boolean) {
                     )
                 else
                     Brush.linearGradient(
-                        listOf(Color(0xFFEFF6FF), Color(0xFFDBEAFE), Color(0xFFEDE9FE))
+                        listOf(
+                            Color.White.copy(alpha = 0.85f),
+                            Color(0xFFEFF6FF).copy(alpha = 0.95f),
+                            Color(0xFFF5F3FF).copy(alpha = 0.85f)
+                        )
                     )
             )
-            .border(
-                1.dp,
-                Brush.linearGradient(
+            .drawWithContent {
+                drawContent()
+                val borderBrush = Brush.linearGradient(
                     listOf(
-                        AccentCyan.copy(alpha = glowAlpha),
-                        AccentPurple.copy(alpha = glowAlpha * 0.7f),
-                        AccentCyan.copy(alpha = glowAlpha * 0.4f)
-                    )
-                ),
-                RoundedCornerShape(24.dp)
-            )
+                        cyanRes.copy(alpha = glowAlpha),
+                        purpleRes.copy(alpha = glowAlpha * 0.7f),
+                        cyanRes.copy(alpha = glowAlpha * 0.4f)
+                     )
+                )
+                drawRoundRect(
+                    brush = borderBrush,
+                    cornerRadius = CornerRadius(24.dp.toPx(), 24.dp.toPx()),
+                    style = Stroke(width = 1.dp.toPx())
+                )
+            }
             .padding(22.dp)
     ) {
         Row(
@@ -619,59 +700,87 @@ private fun PremiumHeaderHero(dark: Boolean) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 // Badge
-                Box(
+                Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
-                        .background(AccentCyan.copy(alpha = 0.15f))
-                        .border(1.dp, AccentCyan.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                        .background(cyanRes.copy(alpha = 0.12f))
+                        .border(1.dp, cyanRes.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Icon(
+                        imageVector = Icons.Default.VerifiedUser,
+                        contentDescription = null,
+                        tint = cyanRes,
+                        modifier = Modifier.size(11.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
                     Text(
                         "CONTROL CENTER",
-                        color = AccentCyan,
+                        color = cyanRes,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = 2.sp
                     )
                 }
                 Spacer(Modifier.height(10.dp))
-                Text(
-                    "Admin\nWorkspace",
-                    color = if (dark) Color.White else Color(0xFF0F172A),
-                    fontSize = 30.sp,
-                    fontWeight = FontWeight.Black,
-                    lineHeight = 34.sp,
-                    letterSpacing = (-0.5).sp
-                )
+                Column {
+                    Text(
+                        "Admin",
+                        color = if (dark) Color.White else Color(0xFF0F172A),
+                        fontSize = 30.sp,
+                        fontWeight = FontWeight.Black,
+                        lineHeight = 32.sp,
+                        letterSpacing = (-0.5).sp
+                    )
+                    Text(
+                        "Workspace",
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Black,
+                        lineHeight = 34.sp,
+                        letterSpacing = (-0.5).sp,
+                        style = androidx.compose.ui.text.TextStyle(
+                            brush = Brush.linearGradient(
+                                colors = listOf(Color(0xFF3B82F6), Color(0xFF8B5CF6))
+                            )
+                        )
+                    )
+                }
                 Spacer(Modifier.height(6.dp))
                 Text(
                     "Unified construction management platform",
-                    color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                    color = if (dark) Color(0xFF94A3B8) else Color(0xFF475569),
                     fontSize = 12.sp,
                     lineHeight = 17.sp
                 )
             }
-            // Icon cluster
+            
+            // Icon cluster with Glassmorphic orb and Apps 2x2 grid icon
             Box(
                 modifier = Modifier
-                    .size(72.dp)
+                    .size(74.dp)
                     .clip(CircleShape)
                     .background(
-                        Brush.radialGradient(
-                            listOf(
-                                AccentCyan.copy(alpha = 0.25f),
-                                AccentPurple.copy(alpha = 0.1f),
-                                Color.Transparent
-                            )
-                        )
+                        if (dark) Color(0xFF0F1E38).copy(alpha = 0.7f)
+                        else Color.White.copy(alpha = 0.85f)
                     )
-                    .border(1.dp, AccentCyan.copy(alpha = 0.4f), CircleShape),
+                    .shadow(
+                        elevation = if (dark) 0.dp else 4.dp,
+                        shape = CircleShape
+                    )
+                    .border(
+                        1.5.dp,
+                        Brush.linearGradient(
+                            listOf(cyanRes.copy(alpha = 0.8f), purpleRes.copy(alpha = 0.4f))
+                        ),
+                        CircleShape
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Dashboard,
+                    imageVector = Icons.Default.Apps,
                     contentDescription = null,
-                    tint = AccentCyan,
+                    tint = cyanRes,
                     modifier = Modifier.size(32.dp)
                 )
             }
@@ -696,6 +805,8 @@ private fun PremiumStatsRow(
             value = "$projects",
             label = "Projects",
             gradient = GradientCyan,
+            icon = Icons.Default.Business,
+            accentColor = AccentCyan,
             dark = dark,
             modifier = Modifier.weight(1f)
         )
@@ -703,6 +814,8 @@ private fun PremiumStatsRow(
             value = "$workers",
             label = "Parties",
             gradient = GradientPurple,
+            icon = Icons.Default.Groups,
+            accentColor = AccentPurple,
             dark = dark,
             modifier = Modifier.weight(1f)
         )
@@ -710,6 +823,8 @@ private fun PremiumStatsRow(
             value = formatIndianRupeesShort(totalBudget),
             label = "Budget",
             gradient = GradientGreen,
+            icon = Icons.Default.Payments,
+            accentColor = AccentGreen,
             dark = dark,
             modifier = Modifier.weight(1.2f)
         )
@@ -718,37 +833,146 @@ private fun PremiumStatsRow(
 
 @Composable
 private fun PremiumStatChip(
-    value: String, label: String, gradient: Brush,
-    dark: Boolean, modifier: Modifier = Modifier
+    value: String,
+    label: String,
+    gradient: Brush,
+    icon: ImageVector,
+    accentColor: Color,
+    dark: Boolean,
+    modifier: Modifier = Modifier
 ) {
+    val resolvedAccent = getPremiumAccent(accentColor, dark)
+
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
+            .shadow(
+                elevation = if (dark) 0.dp else 4.dp,
+                shape = RoundedCornerShape(20.dp),
+                clip = false
+            )
+            .clip(RoundedCornerShape(20.dp))
             .background(
-                if (dark) Color(0xFF0D1526) else Color.White
+                if (dark) Color(0xFF0D1526)
+                else Color.White
             )
             .border(
-                1.dp,
-                if (dark) PremiumBorder else PremiumBorderLight,
-                RoundedCornerShape(16.dp)
+                1.3.dp,
+                if (dark) Brush.linearGradient(listOf(PremiumBorder.copy(alpha = 0.5f), PremiumBorder.copy(alpha = 0.2f)))
+                else Brush.linearGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.95f),
+                        Color(0xFFCBD5E1).copy(alpha = 0.35f),
+                        Color.White.copy(alpha = 0.9f)
+                    )
+                ),
+                RoundedCornerShape(20.dp)
             )
-            .padding(14.dp),
-        contentAlignment = Alignment.Center
+            .padding(12.dp)
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = value,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Black,
-                style = androidx.compose.ui.text.TextStyle(brush = gradient)
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = label,
-                fontSize = 10.sp,
-                color = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
-                fontWeight = FontWeight.Medium
-            )
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Circular icon indicator
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(resolvedAccent.copy(alpha = 0.08f))
+                        .border(1.dp, resolvedAccent.copy(alpha = 0.25f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = resolvedAccent,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = value,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Black,
+                        style = androidx.compose.ui.text.TextStyle(brush = getPremiumGradient(gradient, dark)),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = label,
+                        fontSize = 11.sp,
+                        color = if (dark) Color(0xFF94A3B8) else Color(0xFF475569),
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Flowing Sparkline Graph
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(24.dp)
+            ) {
+                // Pre-defined relative coords for variations in wave shapes
+                val points = when (label) {
+                    "Projects" -> listOf(0.0f to 0.7f, 0.2f to 0.5f, 0.4f to 0.65f, 0.6f to 0.4f, 0.8f to 0.6f, 1.0f to 0.2f)
+                    "Parties" -> listOf(0.0f to 0.65f, 0.2f to 0.62f, 0.4f to 0.45f, 0.6f to 0.55f, 0.8f to 0.35f, 1.0f to 0.48f)
+                    else -> listOf(0.0f to 0.62f, 0.2f to 0.55f, 0.4f to 0.72f, 0.6f to 0.38f, 0.8f to 0.48f, 1.0f to 0.35f)
+                }
+
+                val path = Path()
+                if (points.isNotEmpty()) {
+                    val p0 = points[0]
+                    path.moveTo(p0.first * size.width, p0.second * size.height)
+
+                    for (i in 1 until points.size) {
+                        val prev = points[i - 1]
+                        val curr = points[i]
+                        val cx = (prev.first + curr.first) / 2f
+                        path.quadraticTo(
+                            prev.first * size.width, prev.second * size.height,
+                            cx * size.width, ((prev.second + curr.second) / 2f) * size.height
+                        )
+                    }
+                    val last = points.last()
+                    path.lineTo(last.first * size.width, last.second * size.height)
+                }
+
+                // 1. Draw smooth gradient area under curve
+                val filledPath = Path().apply {
+                    addPath(path)
+                    lineTo(size.width, size.height)
+                    lineTo(0f, size.height)
+                    close()
+                }
+                drawPath(
+                    path = filledPath,
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            resolvedAccent.copy(alpha = if (dark) 0.18f else 0.12f),
+                            Color.Transparent
+                        )
+                    )
+                )
+
+                // 2. Draw outline path with anti-aliasing
+                drawPath(
+                    path = path,
+                    color = resolvedAccent,
+                    style = Stroke(
+                        width = 1.8.dp.toPx(),
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
+                )
+            }
         }
     }
 }
@@ -766,7 +990,7 @@ private fun PremiumSectionHeader(label: String, subtitle: String, dark: Boolean)
                     .width(3.dp)
                     .height(16.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(GradientCyan)
+                    .background(getPremiumGradient(GradientCyan, dark))
             )
             Spacer(Modifier.width(8.dp))
             Text(
@@ -780,7 +1004,7 @@ private fun PremiumSectionHeader(label: String, subtitle: String, dark: Boolean)
         if (subtitle.isNotEmpty()) {
             Text(
                 text = subtitle,
-                color = if (dark) Color(0xFF475569) else Color(0xFF94A3B8),
+                color = if (dark) Color(0xFF94A3B8) else Color(0xFF475569),
                 fontSize = 12.sp,
                 modifier = Modifier.padding(start = 11.dp, top = 2.dp)
             )
@@ -864,7 +1088,7 @@ private fun PremiumModuleCard(
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "card")
     val borderAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.3f, targetValue = 0.7f,
+        initialValue = 0.4f, targetValue = 0.8f,
         animationSpec = infiniteRepeatable(
             tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse
         ), label = "border"
@@ -877,49 +1101,62 @@ private fun PremiumModuleCard(
         label = "scale"
     )
 
+    val resolvedAccent = getPremiumAccent(module.accentColor, dark)
+
     Box(
         modifier = modifier
             .scale(scale)
-            .clip(RoundedCornerShape(20.dp))
+            .shadow(
+                elevation = if (dark) 0.dp else 4.dp,
+                shape = RoundedCornerShape(24.dp)
+            )
+            .clip(RoundedCornerShape(24.dp))
             .background(
                 if (dark)
                     Brush.linearGradient(listOf(Color(0xFF0D1526), Color(0xFF111D35)))
                 else
-                    Brush.linearGradient(listOf(Color.White, Color(0xFFF8FAFF)))
+                    Brush.linearGradient(
+                        listOf(
+                            Color.White,
+                            Color(0xFFFBFDFF)
+                        )
+                    )
             )
             .border(
-                1.dp,
+                1.3.dp,
                 Brush.linearGradient(
-                    listOf(
-                        module.accentColor.copy(alpha = borderAlpha),
-                        module.accentColor.copy(alpha = 0.1f)
+                    colors = listOf(
+                        resolvedAccent.copy(alpha = borderAlpha),
+                        resolvedAccent.copy(alpha = borderAlpha * 0.2f),
+                        if (dark) Color.White.copy(alpha = 0.05f) else Color(0xFFCBD5E1).copy(alpha = 0.35f),
+                        resolvedAccent.copy(alpha = borderAlpha * 0.5f)
                     )
                 ),
-                RoundedCornerShape(20.dp)
+                RoundedCornerShape(24.dp)
             )
             .clickable {
                 pressed = true
                 onClick()
             }
     ) {
-        // Background glow
+        // Soft background glow radiating from top-left
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(if (fullWidth) 80.dp else 110.dp)
+                .height(if (fullWidth) 90.dp else 145.dp)
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            module.accentColor.copy(alpha = 0.08f),
+                            resolvedAccent.copy(alpha = 0.09f),
                             Color.Transparent
                         ),
-                        radius = 300f
+                        radius = 280f
                     )
                 )
         )
 
         if (fullWidth) {
-            // Wide layout
+            // Wide layout (Minutes)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -927,33 +1164,57 @@ private fun PremiumModuleCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    PremiumModuleIcon(module = module)
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    PremiumModuleIcon(module = module, dark = dark)
                     Spacer(Modifier.width(16.dp))
-                    Column {
-                        Text(module.title, color = if (dark) Color.White else Color(0xFF0F172A),
-                            fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text(module.subtitle,
-                            color = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
-                            fontSize = 12.sp)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = module.title,
+                            color = if (dark) Color.White else Color(0xFF0F172A),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            text = module.subtitle,
+                            color = if (dark) Color(0xFF94A3B8) else Color(0xFF475569),
+                            fontSize = 11.sp
+                        )
                     }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     module.badge?.let {
-                        PremiumBadge(text = it, color = module.accentColor)
-                        Spacer(Modifier.width(10.dp))
+                        PremiumBadge(text = it, color = resolvedAccent)
                     }
-                    Icon(Icons.Default.ChevronRight, null,
-                        tint = module.accentColor.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(resolvedAccent.copy(alpha = 0.08f))
+                            .border(1.dp, resolvedAccent.copy(alpha = 0.2f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowForward,
+                            contentDescription = null,
+                            tint = resolvedAccent,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
         } else {
-            // Square layout
+            // Square layout matching reference exactly
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
-                    .height(110.dp),
+                    .height(115.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
@@ -961,16 +1222,44 @@ private fun PremiumModuleCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.Top
                 ) {
-                    PremiumModuleIcon(module = module)
-                    module.badge?.let { PremiumBadge(text = it, color = module.accentColor) }
+                    PremiumModuleIcon(module = module, dark = dark)
+                    module.badge?.let { PremiumBadge(text = it, color = resolvedAccent) }
                 }
-                Column {
-                    Text(module.title,
-                        color = if (dark) Color.White else Color(0xFF0F172A),
-                        fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text(module.subtitle,
-                        color = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
-                        fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = module.title,
+                            color = if (dark) Color.White else Color(0xFF0F172A),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            text = module.subtitle,
+                            color = if (dark) Color(0xFF94A3B8) else Color(0xFF475569),
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(resolvedAccent.copy(alpha = 0.08f))
+                            .border(1.dp, resolvedAccent.copy(alpha = 0.2f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowForward,
+                            contentDescription = null,
+                            tint = resolvedAccent,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
         }
@@ -985,19 +1274,20 @@ private fun PremiumModuleCard(
 }
 
 @Composable
-private fun PremiumModuleIcon(module: ModuleItem) {
+private fun PremiumModuleIcon(module: ModuleItem, dark: Boolean) {
+    val resolvedAccent = getPremiumAccent(module.accentColor, dark)
     Box(
         modifier = Modifier
             .size(42.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(module.accentColor.copy(alpha = 0.15f))
-            .border(1.dp, module.accentColor.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
+            .background(resolvedAccent.copy(alpha = 0.12f))
+            .border(1.dp, resolvedAccent.copy(alpha = 0.35f), RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = module.icon,
             contentDescription = null,
-            tint = module.accentColor,
+            tint = resolvedAccent,
             modifier = Modifier.size(22.dp)
         )
     }
@@ -1024,19 +1314,39 @@ private fun PremiumBadge(text: String, color: Color) {
 private fun PremiumAccountCard(
     user: GoogleUser, dark: Boolean, onSignOut: () -> Unit
 ) {
+    val purpleRes = getPremiumAccent(AccentPurple, dark)
+    val cyanRes = getPremiumAccent(AccentCyan, dark)
+    val greenRes = getPremiumAccent(AccentGreen, dark)
+    val pinkRes = getPremiumAccent(AccentPink, dark)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .shadow(
+                elevation = if (dark) 0.dp else 4.dp,
+                shape = RoundedCornerShape(20.dp)
+            )
             .clip(RoundedCornerShape(20.dp))
             .background(
                 if (dark)
                     Brush.linearGradient(listOf(Color(0xFF0D1A2E), Color(0xFF1A0A2E)))
                 else
-                    Brush.linearGradient(listOf(Color(0xFFF5F3FF), Color(0xFFEDE9FE)))
+                    Brush.linearGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.85f),
+                            Color(0xFFF5F3FF).copy(alpha = 0.95f),
+                            Color(0xFFEDE9FE).copy(alpha = 0.85f)
+                        )
+                    )
             )
             .border(
-                1.dp,
-                Brush.linearGradient(listOf(AccentPurple.copy(0.5f), AccentCyan.copy(0.3f))),
+                1.2.dp,
+                Brush.linearGradient(
+                    listOf(
+                        purpleRes.copy(alpha = if (dark) 0.5f else 0.4f),
+                        cyanRes.copy(alpha = if (dark) 0.3f else 0.25f)
+                    )
+                ),
                 RoundedCornerShape(20.dp)
             )
             .padding(18.dp)
@@ -1053,9 +1363,9 @@ private fun PremiumAccountCard(
                         .size(50.dp)
                         .clip(CircleShape)
                         .background(
-                            Brush.linearGradient(listOf(AccentPurple, AccentCyan))
+                            Brush.linearGradient(listOf(purpleRes, cyanRes))
                         )
-                        .border(2.dp, AccentCyan.copy(0.6f), CircleShape),
+                        .border(2.dp, cyanRes.copy(0.6f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -1078,22 +1388,23 @@ private fun PremiumAccountCard(
                         Box(
                             modifier = Modifier
                                 .size(8.dp)
-                                .background(AccentGreen, CircleShape)
+                                .background(greenRes, CircleShape)
                         )
                     }
                     Text(
                         text = user.email,
-                        color = if (dark) Color(0xFF64748B) else Color(0xFF6D28D9),
+                        color = if (dark) Color(0xFF64748B) else Color(0xFF475569),
                         fontSize = 11.sp
                     )
                     Spacer(Modifier.height(4.dp))
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(AccentGreen.copy(0.15f))
+                            .background(greenRes.copy(0.12f))
+                            .border(1.dp, greenRes.copy(0.35f), RoundedCornerShape(4.dp))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
-                        Text("WORKSPACE ACTIVE", color = AccentGreen,
+                        Text("WORKSPACE ACTIVE", color = greenRes,
                             fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                     }
                 }
@@ -1102,16 +1413,16 @@ private fun PremiumAccountCard(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
-                    .background(AccentPink.copy(0.12f))
-                    .border(1.dp, AccentPink.copy(0.35f), RoundedCornerShape(10.dp))
+                    .background(pinkRes.copy(0.12f))
+                    .border(1.dp, pinkRes.copy(0.35f), RoundedCornerShape(10.dp))
                     .clickable(onClick = onSignOut)
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Logout, null, tint = AccentPink, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.Logout, null, tint = pinkRes, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("SIGN OUT", color = AccentPink, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
+                    Text("SIGN OUT", color = pinkRes, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
                 }
             }
         }
@@ -1136,12 +1447,44 @@ private fun PremiumThemeBackupCard(
     onBackupSystem: () -> Unit,
     onRestoreSystem: () -> Unit
 ) {
+    val cloudCyan = getPremiumAccent(AccentCyan, dark)
+    val cloudGreen = getPremiumAccent(AccentGreen, dark)
+    val cloudPurple = getPremiumAccent(AccentPurple, dark)
+    val cloudAmber = getPremiumAccent(AccentAmber, dark)
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .shadow(
+                elevation = if (dark) 0.dp else 4.dp,
+                shape = RoundedCornerShape(24.dp)
+            )
             .clip(RoundedCornerShape(24.dp))
-            .background(if (dark) Color(0xFF0D1526) else Color.White)
-            .border(1.dp, if (dark) PremiumBorder else PremiumBorderLight, RoundedCornerShape(24.dp))
+            .then(
+                if (dark) Modifier.background(Color(0xFF0D1526))
+                else Modifier.background(
+                    Brush.linearGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.85f),
+                            Color(0xFFF8FAFF).copy(alpha = 0.95f)
+                        )
+                    )
+                )
+            )
+            .then(
+                if (dark) Modifier.border(1.2.dp, PremiumBorder, RoundedCornerShape(24.dp))
+                else Modifier.border(
+                    1.2.dp,
+                    Brush.linearGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.95f),
+                            Color(0xFFCBD5E1).copy(alpha = 0.35f),
+                            Color.White.copy(alpha = 0.9f)
+                        )
+                    ),
+                    RoundedCornerShape(24.dp)
+                )
+            )
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
@@ -1181,7 +1524,7 @@ private fun PremiumThemeBackupCard(
                     )
                     Text(
                         if (dark) "Frosted glass with neon accents" else "Clean minimal light interface",
-                        color = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
+                        color = if (dark) Color(0xFF64748B) else Color(0xFF475569),
                         fontSize = 11.sp
                     )
                 }
@@ -1201,40 +1544,40 @@ private fun PremiumThemeBackupCard(
         PremiumDivider(dark)
 
         // Cloud Sync Section
-        PremiumSubSectionHeader("Cloud Sync & Backup", Icons.Default.CloudSync, AccentCyan, dark)
+        PremiumSubSectionHeader("Cloud Sync & Backup", Icons.Default.CloudSync, cloudCyan, dark)
 
         // Drive info card
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
-                .background(AccentCyan.copy(0.05f))
-                .border(1.dp, AccentCyan.copy(0.2f), RoundedCornerShape(14.dp))
+                .background(cloudCyan.copy(0.05f))
+                .border(1.dp, cloudCyan.copy(0.2f), RoundedCornerShape(14.dp))
                 .padding(14.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CloudQueue, null, tint = AccentCyan, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.CloudQueue, null, tint = cloudCyan, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Google Drive Integration", color = if (dark) Color.White else Color(0xFF0F172A),
                         fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
                 Text("/My Drive/ConstructPro_Backups/",
-                    color = if (dark) Color(0xFF475569) else Color(0xFF94A3B8), fontSize = 10.sp)
+                    color = if (dark) Color(0xFF94A3B8) else Color(0xFF475569), fontSize = 10.sp)
                 Spacer(Modifier.height(2.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
-                        .background(AccentGreen.copy(0.08f))
-                        .border(1.dp, AccentGreen.copy(0.2f), RoundedCornerShape(8.dp))
+                        .background(cloudGreen.copy(0.08f))
+                        .border(1.dp, cloudGreen.copy(0.2f), RoundedCornerShape(8.dp))
                         .padding(8.dp),
                     verticalAlignment = Alignment.Top
                 ) {
                     Text("💡 ", fontSize = 11.sp)
                     Text(
                         "Tap SYNC → select \"Drive\" from the share sheet to securely export CSV + JSON to your Google Account.",
-                        color = if (dark) AccentGreen.copy(0.9f) else Color(0xFF047857),
+                        color = if (dark) cloudGreen.copy(0.9f) else Color(0xFF047857),
                         fontSize = 10.sp, lineHeight = 14.sp, fontWeight = FontWeight.Medium
                     )
                 }
@@ -1248,7 +1591,7 @@ private fun PremiumThemeBackupCard(
             PremiumGradientButton(
                 label = "SYNC TO GOOGLE DRIVE (CSV + JSON)",
                 icon = Icons.Default.Sync,
-                gradient = GradientCyan,
+                gradient = getPremiumGradient(GradientCyan, dark),
                 onClick = onSync,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -1259,16 +1602,16 @@ private fun PremiumThemeBackupCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
-                    .background(AccentGreen.copy(0.1f))
-                    .border(1.dp, AccentGreen.copy(0.3f), RoundedCornerShape(10.dp))
+                    .background(cloudGreen.copy(0.12f))
+                    .border(1.dp, cloudGreen.copy(0.35f), RoundedCornerShape(10.dp))
                     .padding(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.CheckCircle, null, tint = AccentGreen, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.CheckCircle, null, tint = cloudGreen, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
                     "Sync complete — CSV & JSON written to /My Drive/ConstructPro_Backups/",
-                    color = AccentGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold
+                    color = cloudGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold
                 )
             }
         }
@@ -1276,21 +1619,21 @@ private fun PremiumThemeBackupCard(
         PremiumDivider(dark)
 
         // Project-wise operations
-        PremiumSubSectionHeader("Project Database", Icons.Default.FolderOpen, AccentPurple, dark)
+        PremiumSubSectionHeader("Project Database", Icons.Default.FolderOpen, cloudPurple, dark)
 
         if (currentProject != null) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PremiumGradientButton(
                     label = "EXPORT",
                     icon = Icons.Default.Upload,
-                    gradient = GradientPurple,
+                    gradient = getPremiumGradient(GradientPurple, dark),
                     onClick = onExportProject,
                     modifier = Modifier.weight(1f)
                 )
                 PremiumOutlineButton(
                     label = "IMPORT",
                     icon = Icons.Default.Download,
-                    color = AccentCyan,
+                    color = cloudCyan,
                     onClick = onImportProject,
                     dark = dark,
                     modifier = Modifier.weight(1f)
@@ -1301,15 +1644,15 @@ private fun PremiumThemeBackupCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
-                    .background(AccentAmber.copy(0.07f))
-                    .border(1.dp, AccentAmber.copy(0.25f), RoundedCornerShape(10.dp))
+                    .background(cloudAmber.copy(0.07f))
+                    .border(1.dp, cloudAmber.copy(0.25f), RoundedCornerShape(10.dp))
                     .padding(12.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Info, null, tint = AccentAmber, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Info, null, tint = cloudAmber, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Select an active project below to enable project-level exports.",
-                        color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                        color = if (dark) Color(0xFF94A3B8) else Color(0xFF475569),
                         fontSize = 11.sp)
                 }
             }
@@ -1318,20 +1661,20 @@ private fun PremiumThemeBackupCard(
         PremiumDivider(dark)
 
         // Full system backup
-        PremiumSubSectionHeader("Full System Backup", Icons.Default.Storage, AccentGreen, dark)
+        PremiumSubSectionHeader("Full System Backup", Icons.Default.Storage, cloudGreen, dark)
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PremiumGradientButton(
                 label = "BACKUP ALL",
                 icon = Icons.Default.CloudUpload,
-                gradient = GradientGreen,
+                gradient = getPremiumGradient(GradientGreen, dark),
                 onClick = onBackupSystem,
                 modifier = Modifier.weight(1f)
             )
             PremiumOutlineButton(
                 label = "RESTORE",
                 icon = Icons.Default.Restore,
-                color = AccentAmber,
+                color = cloudAmber,
                 onClick = onRestoreSystem,
                 dark = dark,
                 modifier = Modifier.weight(1f)
@@ -1353,37 +1696,42 @@ private fun PremiumProjectCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val statusColor = when (project.status) {
+    val rawStatusColor = when (project.status) {
         "Active" -> AccentGreen
         "On Hold" -> AccentAmber
         else -> AccentCyan
     }
+    val statusColor = getPremiumAccent(rawStatusColor, dark)
 
     val borderBrush = if (isActive)
-        Brush.linearGradient(listOf(AccentCyan, AccentPurple))
+        Brush.linearGradient(listOf(getPremiumAccent(AccentCyan, dark), getPremiumAccent(AccentPurple, dark)))
     else
         Brush.linearGradient(listOf(
-            if (dark) PremiumBorder else PremiumBorderLight,
-            if (dark) PremiumBorder else PremiumBorderLight
+            if (dark) PremiumBorder else Color.White.copy(alpha = 0.95f),
+            if (dark) PremiumBorder else Color(0xFFCBD5E1).copy(alpha = 0.35f)
         ))
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .shadow(
+                elevation = if (dark) 0.dp else if (isActive) 5.dp else 2.dp,
+                shape = RoundedCornerShape(18.dp)
+            )
             .clip(RoundedCornerShape(18.dp))
             .background(
                 if (isActive)
                     Brush.linearGradient(
                         listOf(
-                            if (dark) Color(0xFF0D1F3C) else Color(0xFFEFF6FF),
-                            if (dark) Color(0xFF111D35) else Color(0xFFF5F3FF)
+                            if (dark) Color(0xFF0D1F3C) else Color(0xFFEFF6FF).copy(alpha = 0.95f),
+                            if (dark) Color(0xFF111D35) else Color(0xFFF5F3FF).copy(alpha = 0.95f)
                         )
                     )
                 else
                     Brush.linearGradient(
                         listOf(
-                            if (dark) Color(0xFF0D1526) else Color.White,
-                            if (dark) Color(0xFF0D1526) else Color.White
+                            if (dark) Color(0xFF0D1526) else Color.White.copy(alpha = 0.85f),
+                            if (dark) Color(0xFF0D1526) else Color(0xFFF8FAFF).copy(alpha = 0.85f)
                         )
                     )
             )
@@ -1436,11 +1784,11 @@ private fun PremiumProjectCard(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(4.dp))
-                                    .background(AccentCyan.copy(0.15f))
-                                    .border(1.dp, AccentCyan.copy(0.4f), RoundedCornerShape(4.dp))
+                                    .background(getPremiumAccent(AccentCyan, dark).copy(0.12f))
+                                    .border(1.dp, getPremiumAccent(AccentCyan, dark).copy(0.35f), RoundedCornerShape(4.dp))
                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
-                                Text("ACTIVE", color = AccentCyan,
+                                Text("ACTIVE", color = getPremiumAccent(AccentCyan, dark),
                                     fontSize = 7.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                             }
                         }
@@ -1448,12 +1796,12 @@ private fun PremiumProjectCard(
                     Spacer(Modifier.height(3.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.LocationOn, null,
-                            tint = if (dark) Color(0xFF475569) else Color(0xFF94A3B8),
+                            tint = if (dark) Color(0xFF475569) else Color(0xFF64748B),
                             modifier = Modifier.size(12.dp))
                         Spacer(Modifier.width(3.dp))
                         Text(
                             project.location,
-                            color = if (dark) Color(0xFF475569) else Color(0xFF94A3B8),
+                            color = if (dark) Color(0xFF475569) else Color(0xFF64748B),
                             fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
                         )
                     }
@@ -1467,9 +1815,9 @@ private fun PremiumProjectCard(
             }
             // Actions
             Row(verticalAlignment = Alignment.CenterVertically) {
-                PremiumIconAction(icon = Icons.Default.Edit, color = AccentCyan, onClick = onEdit)
+                PremiumIconAction(icon = Icons.Default.Edit, color = getPremiumAccent(AccentCyan, dark), onClick = onEdit)
                 Spacer(Modifier.width(4.dp))
-                PremiumIconAction(icon = Icons.Default.DeleteOutline, color = AccentPink, onClick = onDelete)
+                PremiumIconAction(icon = Icons.Default.DeleteOutline, color = getPremiumAccent(AccentPink, dark), onClick = onDelete)
             }
         }
     }
@@ -1496,6 +1844,9 @@ private fun PremiumIconAction(icon: ImageVector, color: Color, onClick: () -> Un
 
 @Composable
 private fun PremiumDeveloperCard(dark: Boolean, onClick: () -> Unit) {
+    val purpleRes = getPremiumAccent(AccentPurple, dark)
+    val pinkRes = getPremiumAccent(AccentPink, dark)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -1508,7 +1859,7 @@ private fun PremiumDeveloperCard(dark: Boolean, onClick: () -> Unit) {
             )
             .border(
                 1.dp,
-                Brush.linearGradient(listOf(AccentPurple.copy(0.6f), AccentPink.copy(0.4f))),
+                Brush.linearGradient(listOf(purpleRes.copy(0.6f), pinkRes.copy(0.4f))),
                 RoundedCornerShape(24.dp)
             )
             .clickable(onClick = onClick)
@@ -1520,7 +1871,7 @@ private fun PremiumDeveloperCard(dark: Boolean, onClick: () -> Unit) {
                     modifier = Modifier
                         .size(56.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Brush.linearGradient(listOf(AccentPurple, AccentPink))),
+                        .background(Brush.linearGradient(listOf(purpleRes, pinkRes))),
                     contentAlignment = Alignment.Center
                 ) {
                     BuildOnSiteLogo(modifier = Modifier.size(40.dp), darkTheme = dark)
@@ -1534,25 +1885,25 @@ private fun PremiumDeveloperCard(dark: Boolean, onClick: () -> Unit) {
                     )
                     Text(
                         "Lead Engineer: Dipak Harane",
-                        color = if (dark) AccentPurple.copy(0.9f) else AccentPurple,
+                        color = purpleRes,
                         fontSize = 12.sp, fontWeight = FontWeight.Medium
                     )
                     Row(modifier = Modifier.padding(top = 4.dp)) {
-                        PremiumBadge("v2.0 PRO", AccentPurple)
+                        PremiumBadge("v2.0 PRO", purpleRes)
                         Spacer(Modifier.width(6.dp))
-                        PremiumBadge("PUNE", AccentPink)
+                        PremiumBadge("PUNE", pinkRes)
                     }
                 }
             }
             Text(
                 "Meticulously crafted to empower site engineers, project managers & contractors with real-time financial audits, digital wage registers, and secure cloud backups.",
-                color = if (dark) Color(0xFF64748B) else Color(0xFF6D28D9).copy(0.7f),
+                color = if (dark) Color(0xFF64748B) else Color(0xFF475569),
                 fontSize = 12.sp, lineHeight = 18.sp
             )
             PremiumGradientButton(
                 label = "VIEW DETAILS & SEND FEEDBACK",
                 icon = Icons.Default.Email,
-                gradient = GradientPurple,
+                gradient = getPremiumGradient(GradientPurple, dark),
                 onClick = onClick,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -2062,7 +2413,12 @@ private fun PremiumReportsContent(
         .mapValues { it.value.sumOf { tx -> tx.amount } }
     val totalSum = projTx.sumOf { it.amount }
 
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
         // Summary header
         Box(
             modifier = Modifier

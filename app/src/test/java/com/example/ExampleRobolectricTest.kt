@@ -1,6 +1,7 @@
 package com.example
 
 import android.content.Context
+import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.AppDatabase
 import kotlinx.coroutines.flow.first
@@ -15,6 +16,15 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
 class ExampleRobolectricTest {
+
+  @Test
+  fun `verify main activity launches without crashing`() {
+    ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+      scenario.onActivity { activity ->
+        assertTrue(true)
+      }
+    }
+  }
 
   @Test
   fun `read string from context`() {
