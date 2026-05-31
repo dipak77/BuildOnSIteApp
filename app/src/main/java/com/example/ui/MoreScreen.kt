@@ -123,6 +123,25 @@ fun MoreScreen(
 
     var activeSubModal by remember { mutableStateOf<String?>(null) }
 
+    // Input States
+    var inputEstName by remember { mutableStateOf("") }
+    var inputEstQty by remember { mutableStateOf("") }
+    var inputEstRate by remember { mutableStateOf("") }
+    var inputMOMTitle by remember { mutableStateOf("") }
+    var inputMOMContent by remember { mutableStateOf("") }
+    var selectedWorkerForPayroll by remember { mutableStateOf<Worker?>(null) }
+    var inputPayrollAmount by remember { mutableStateOf("") }
+    var googleDriveSyncing by remember { mutableStateOf(false) }
+    var driveSyncSuccess by remember { mutableStateOf(false) }
+    var showProjectModal by remember { mutableStateOf(false) }
+    var editingProject by remember { mutableStateOf<Project?>(null) }
+    var projName by remember { mutableStateOf("") }
+    var projLocation by remember { mutableStateOf("") }
+    var projBudget by remember { mutableStateOf("") }
+    var projStatus by remember { mutableStateOf("Active") }
+    var projBg by remember { mutableStateOf("") }
+    var showDeleteProjectConfirmForObj by remember { mutableStateOf<Project?>(null) }
+
     val projectImportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -134,6 +153,25 @@ fun MoreScreen(
                 }
             } catch (e: Exception) {
                 Toast.makeText(context, "Failed to read backup file", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val projectImagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            try {
+                val inputStream = context.contentResolver.openInputStream(it)
+                val dir = java.io.File(context.filesDir, "project_images")
+                if (!dir.exists()) dir.mkdirs()
+                val file = java.io.File(dir, "proj_${System.currentTimeMillis()}.jpg")
+                file.outputStream().use { outputStream ->
+                    inputStream?.copyTo(outputStream)
+                }
+                projBg = file.absolutePath
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to copy image: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -153,24 +191,6 @@ fun MoreScreen(
         }
     }
 
-    // Input States
-    var inputEstName by remember { mutableStateOf("") }
-    var inputEstQty by remember { mutableStateOf("") }
-    var inputEstRate by remember { mutableStateOf("") }
-    var inputMOMTitle by remember { mutableStateOf("") }
-    var inputMOMContent by remember { mutableStateOf("") }
-    var selectedWorkerForPayroll by remember { mutableStateOf<Worker?>(null) }
-    var inputPayrollAmount by remember { mutableStateOf("") }
-    var googleDriveSyncing by remember { mutableStateOf(false) }
-    var driveSyncSuccess by remember { mutableStateOf(false) }
-    var showProjectModal by remember { mutableStateOf(false) }
-    var editingProject by remember { mutableStateOf<Project?>(null) }
-    var projName by remember { mutableStateOf("") }
-    var projLocation by remember { mutableStateOf("") }
-    var projBudget by remember { mutableStateOf("") }
-    var projStatus by remember { mutableStateOf("Active") }
-    var projBg by remember { mutableStateOf("") }
-    var showDeleteProjectConfirmForObj by remember { mutableStateOf<Project?>(null) }
     var showingPartyForm by remember { mutableStateOf(false) }
     var editingWorker by remember { mutableStateOf<Worker?>(null) }
     var pName by remember { mutableStateOf("") }
@@ -635,6 +655,7 @@ fun MoreScreen(
                 onBudgetChange = { projBudget = it },
                 onStatusChange = { projStatus = it },
                 onBgChange = { projBg = it },
+                onUploadImageClick = { projectImagePickerLauncher.launch("image/*") },
                 onCancel = { showProjectModal = false; editingProject = null },
                 onSave = {
                     val bud = projBudget.toDoubleOrNull() ?: 0.0
@@ -2669,6 +2690,7 @@ private fun PremiumProjectFormContent(
     onNameChange: (String) -> Unit, onLocationChange: (String) -> Unit,
     onBudgetChange: (String) -> Unit, onStatusChange: (String) -> Unit,
     onBgChange: (String) -> Unit,
+    onUploadImageClick: () -> Unit,
     onCancel: () -> Unit, onSave: () -> Unit
 ) {
     Column(
@@ -2682,8 +2704,27 @@ private fun PremiumProjectFormContent(
         GlassTextField(value = projBudget, onValueChange = onBudgetChange,
             label = "Base Budget (₹)", isNumeric = true,
             placeholder = "e.g. 15000000 (1.5 Cr)", darkTheme = dark)
-        GlassTextField(value = projBg, onValueChange = onBgChange,
-            label = "Project Image URL / Path", placeholder = "https://images.unsplash.com/... or path", darkTheme = dark)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                GlassTextField(value = projBg, onValueChange = onBgChange,
+                    label = "Project Image URL / Path", placeholder = "https://images.unsplash.com/... or path", darkTheme = dark)
+            }
+            IconButton(
+                onClick = onUploadImageClick,
+                modifier = Modifier
+                    .padding(top = 16.dp)
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (dark) Color(0xFF1E293B) else Color(0xFFF1F5F9))
+                    .border(1.dp, AccentPurple.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+            ) {
+                Icon(Icons.Default.Image, contentDescription = "Upload Image", tint = AccentPurple)
+            }
+        }
 
         val parsedBudget = projBudget.toDoubleOrNull() ?: 0.0
         if (parsedBudget > 0.0) {

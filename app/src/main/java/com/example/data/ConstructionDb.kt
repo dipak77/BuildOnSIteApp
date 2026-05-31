@@ -397,7 +397,7 @@ abstract class AppDatabase : RoomDatabase() {
             // Seed Transactions
             dao.insertTransaction(Transaction(projectId = p1Id, type = "Money In", amount = 850000.0, category = "Client Advance", description = "Initial milestone payment received", date = "2026-05-15"))
             dao.insertTransaction(Transaction(projectId = p1Id, type = "Money Out", amount = 120000.0, category = "Material", description = "Super Grade Portland Cement (400 Bags)", date = "2026-05-18"))
-            dao.insertTransaction(Transaction(projectId = p1Id, type = "Money Out", amount = 45000.0, category = "Labor", description = "Worker weekly salary payout", date = "2026-05-22"))
+            dao.insertTransaction(Transaction(projectId = p1Id, type = "Money Out", amount = 45000.0, category = "Labour", description = "Worker weekly salary payout", date = "2026-05-22"))
             dao.insertTransaction(Transaction(projectId = p2Id, type = "Money In", amount = 300000.0, category = "Client Advance", description = "Phase-1 booking advance received", date = "2026-05-10"))
             dao.insertTransaction(Transaction(projectId = p2Id, type = "Money Out", amount = 35000.0, category = "Equipment", description = "Excavator rental for foundation dig", date = "2026-05-12"))
 

@@ -6,12 +6,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -175,9 +174,9 @@ fun TransactionFormDialog(
     darkTheme: Boolean,
     presetType: String,
     allWorkers: List<Worker>,
-    onCreateNewParty: () -> Unit,
     onSave: (type: String, amount: Double, category: String, description: String, party: Worker?, reference: String, paymentMethod: String, date: String) -> Unit,
-    transactionToEdit: Transaction? = null
+    transactionToEdit: Transaction? = null,
+    viewModel: MainViewModel
 ) {
     var type by remember { mutableStateOf("Money Out") }
     var amountStr by remember { mutableStateOf("") }
@@ -186,12 +185,7 @@ fun TransactionFormDialog(
     var selectedParty by remember { mutableStateOf<Worker?>(null) }
     var reference by remember { mutableStateOf("") }
     var paymentMethod by remember { mutableStateOf("Cash") }
-    var partySearchQuery by remember { mutableStateOf("") }
-    var isSearchingParty by remember { mutableStateOf(false) }
     var date by remember { mutableStateOf("") }
-
-    var amountError by remember { mutableStateOf<String?>(null) }
-    var descError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(visible) {
         if (visible) {
@@ -203,10 +197,6 @@ fun TransactionFormDialog(
                 selectedParty = allWorkers.find { it.id == transactionToEdit.partyId || it.name == transactionToEdit.partyName }
                 reference = transactionToEdit.reference
                 paymentMethod = transactionToEdit.paymentMethod
-                partySearchQuery = transactionToEdit.partyName ?: ""
-                isSearchingParty = false
-                amountError = null
-                descError = null
                 date = transactionToEdit.date
             } else {
                 type = presetType
@@ -216,10 +206,6 @@ fun TransactionFormDialog(
                 selectedParty = null
                 reference = ""
                 paymentMethod = "Cash"
-                partySearchQuery = ""
-                isSearchingParty = false
-                amountError = null
-                descError = null
                 date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
             }
         }
@@ -233,33 +219,126 @@ fun TransactionFormDialog(
         glowColor = if (type == "Money In") NeonGreen else NeonPink,
         scrollable = true
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TogglePill(
-                    text = "Cash In",
-                    selected = type == "Money In",
-                    selectedColor = NeonGreen,
-                    darkTheme = darkTheme,
-                    modifier = Modifier.weight(1f)
-                ) { type = "Money In" }
-                TogglePill(
-                    text = "Cash Out",
-                    selected = type == "Money Out",
-                    selectedColor = NeonPink,
-                    darkTheme = darkTheme,
-                    modifier = Modifier.weight(1f)
-                ) { type = "Money Out" }
-            }
+        UnifiedTransactionFormContent(
+            dark = darkTheme,
+            type = type,
+            onTypeChange = { type = it },
+            allWorkers = allWorkers,
+            selectedParty = selectedParty,
+            onPartySelected = { selectedParty = it },
+            amountStr = amountStr,
+            onAmountChange = { amountStr = it },
+            category = category,
+            onCategoryChange = { category = it },
+            description = description,
+            onDescriptionChange = { description = it },
+            reference = reference,
+            onReferenceChange = { reference = it },
+            paymentMethod = paymentMethod,
+            onPaymentMethodChange = { paymentMethod = it },
+            date = date,
+            onDateChange = { date = it },
+            onSave = {
+                val amt = amountStr.toDoubleOrNull() ?: 0.0
+                onSave(type, amt, category, description, selectedParty, reference, paymentMethod, date)
+                onDismiss()
+            },
+            onCancel = onDismiss,
+            isPartyLocked = false,
+            viewModel = viewModel
+        )
+    }
+}
 
-            Text(
-                "Party Name Mapping / Account",
-                color = if (darkTheme) TextSecondary else TextSecondaryLight,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
+@Composable
+fun UnifiedTransactionFormContent(
+    dark: Boolean,
+    type: String,
+    onTypeChange: (String) -> Unit,
+    allWorkers: List<Worker>,
+    selectedParty: Worker?,
+    onPartySelected: (Worker?) -> Unit,
+    amountStr: String,
+    onAmountChange: (String) -> Unit,
+    category: String,
+    onCategoryChange: (String) -> Unit,
+    description: String,
+    onDescriptionChange: (String) -> Unit,
+    reference: String,
+    onReferenceChange: (String) -> Unit,
+    paymentMethod: String,
+    onPaymentMethodChange: (String) -> Unit,
+    date: String,
+    onDateChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onCancel: () -> Unit,
+    isPartyLocked: Boolean = false,
+    viewModel: MainViewModel
+) {
+    var partySearchQuery by remember { mutableStateOf("") }
+    var isSearchingParty by remember { mutableStateOf(false) }
+    var showInlinePartyForm by remember { mutableStateOf(false) }
+
+    var amountError by remember { mutableStateOf<String?>(null) }
+    var descError by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(selectedParty) {
+        if (selectedParty != null) {
+            partySearchQuery = selectedParty.name
+        }
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TogglePill(
+                text = "Cash In",
+                selected = type == "Money In",
+                selectedColor = NeonGreen,
+                darkTheme = dark,
+                modifier = Modifier.weight(1f)
+            ) { onTypeChange("Money In") }
+            TogglePill(
+                text = "Cash Out",
+                selected = type == "Money Out",
+                selectedColor = NeonPink,
+                darkTheme = dark,
+                modifier = Modifier.weight(1f)
+            ) { onTypeChange("Money Out") }
+        }
+
+        Text(
+            "Party Name Mapping / Account",
+            color = if (dark) TextSecondary else TextSecondaryLight,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        if (isPartyLocked) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (dark) Color(0xFF1E293B) else Color(0xFFF1F5F9))
+                    .border(1.dp, if (dark) GlassBorderDark else GlassBorderLight, RoundedCornerShape(10.dp))
+                    .padding(12.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Default.Person, null, tint = NeonCyan, modifier = Modifier.size(16.dp))
+                    Text(
+                        selectedParty?.name ?: partySearchQuery.ifBlank { "No mapped party" },
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (dark) TextPrimary else TextPrimaryLight
+                    )
+                }
+            }
+        } else {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -269,37 +348,112 @@ fun TransactionFormDialog(
                     GlassTextField(
                         value = selectedParty?.name ?: partySearchQuery,
                         onValueChange = {
-                            if (selectedParty != null) selectedParty = null
+                            if (selectedParty != null) onPartySelected(null)
                             partySearchQuery = it
                             isSearchingParty = true
                         },
                         label = "Search or Select Party",
                         placeholder = "Type to search party...",
-                        darkTheme = darkTheme,
+                        darkTheme = dark,
                         icon = Icons.Default.Search
                     )
                 }
-                if (selectedParty != null) {
-                    IconButton(onClick = { selectedParty = null; partySearchQuery = "" }) {
+                if (selectedParty != null || partySearchQuery.isNotEmpty()) {
+                    IconButton(onClick = {
+                        onPartySelected(null)
+                        partySearchQuery = ""
+                        isSearchingParty = false
+                    }) {
                         Icon(Icons.Default.Clear, "Clear mapping", tint = NeonPink)
                     }
                 }
             }
 
-            if (isSearchingParty || (partySearchQuery.isNotEmpty() && selectedParty == null)) {
+            if (showInlinePartyForm) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = if (dark) Color(0xFF1E293B) else Color(0xFFF1F5F9)),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, NeonCyan.copy(alpha = 0.5f))
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Create New Party Inline", color = NeonCyan, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+
+                        var inlineName by remember { mutableStateOf(partySearchQuery) }
+                        var inlinePhone by remember { mutableStateOf("") }
+                        var inlineWageStr by remember { mutableStateOf("") }
+                        var inlineType by remember { mutableStateOf("Worker") }
+
+                        GlassTextField(value = inlineName, onValueChange = { inlineName = it }, label = "Full Name", placeholder = "e.g. Tejas Contractors", darkTheme = dark)
+                        GlassTextField(value = inlinePhone, onValueChange = { inlinePhone = it }, label = "Phone Number", placeholder = "e.g. 9876543210", darkTheme = dark)
+
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                GlassTextField(value = inlineWageStr, onValueChange = { inlineWageStr = it }, label = "Daily Wage / Rate (₹)", isNumeric = true, placeholder = "e.g. 350.0", darkTheme = dark)
+                            }
+                        }
+
+                        Text("Party Type", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            listOf("Client", "Staff", "Vendor", "Worker", "Investor").forEach { typeOption ->
+                                TogglePill(typeOption, inlineType == typeOption, NeonCyan, dark, Modifier.weight(1f), fontSize = 9.sp) { inlineType = typeOption }
+                            }
+                        }
+
+                        val isInlineValid = inlineName.isNotBlank()
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            GlassButton(
+                                onClick = { showInlinePartyForm = false },
+                                darkTheme = dark,
+                                outlineMode = true,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Cancel", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                            GlassButton(
+                                onClick = {
+                                    val rate = inlineWageStr.toDoubleOrNull() ?: 0.0
+                                    viewModel.addWorkerInline(
+                                        name = inlineName,
+                                        role = inlineType,
+                                        shift = "Day",
+                                        wageRate = rate,
+                                        color = 0xFF10B981.toInt(),
+                                        phone = inlinePhone,
+                                        partyType = inlineType,
+                                        partyId = "PID-${System.currentTimeMillis() % 100000}",
+                                        dateOfJoining = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()),
+                                        onSuccess = { newWorker ->
+                                            onPartySelected(newWorker)
+                                            showInlinePartyForm = false
+                                            isSearchingParty = false
+                                        }
+                                    )
+                                },
+                                enabled = isInlineValid,
+                                darkTheme = dark,
+                                glowColor = NeonCyan,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Save & Select", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        }
+                    }
+                }
+            } else if (isSearchingParty || (partySearchQuery.isNotEmpty() && selectedParty == null)) {
                 val matched = allWorkers.filter {
                     it.name.contains(partySearchQuery, ignoreCase = true) || it.partyType.contains(partySearchQuery, ignoreCase = true)
                 }
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = if (darkTheme) Color(0xFF1E293B) else Color(0xFFF1F5F9)),
+                    colors = CardDefaults.cardColors(containerColor = if (dark) Color(0xFF1E293B) else Color(0xFFF1F5F9)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(modifier = Modifier.padding(6.dp)) {
                         if (matched.isEmpty()) {
                             Text(
                                 "No matching parties found.",
-                                color = if (darkTheme) TextSecondary else TextSecondaryLight,
+                                color = if (dark) TextSecondary else TextSecondaryLight,
                                 fontSize = 12.sp,
                                 modifier = Modifier.padding(8.dp)
                             )
@@ -309,8 +463,7 @@ fun TransactionFormDialog(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
-                                            selectedParty = party
-                                            partySearchQuery = party.name
+                                            onPartySelected(party)
                                             isSearchingParty = false
                                         }
                                         .padding(8.dp),
@@ -318,10 +471,10 @@ fun TransactionFormDialog(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column {
-                                        Text(party.name, color = if (darkTheme) TextPrimary else TextPrimaryLight, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                        Text(party.name, color = if (dark) TextPrimary else TextPrimaryLight, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                         Text(
                                             party.partyType + (if (party.phone.isNotEmpty()) " • ${party.phone}" else ""),
-                                            color = if (darkTheme) TextSecondary else TextSecondaryLight,
+                                            color = if (dark) TextSecondary else TextSecondaryLight,
                                             fontSize = 11.sp
                                         )
                                     }
@@ -329,14 +482,12 @@ fun TransactionFormDialog(
                                 }
                             }
                         }
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = if (darkTheme) Color(0x33FFFFFF) else Color(0x33000000))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = if (dark) Color(0x33FFFFFF) else Color(0x33000000))
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    isSearchingParty = false
-                                    onDismiss()
-                                    onCreateNewParty()
+                                    showInlinePartyForm = true
                                 }
                                 .padding(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -344,7 +495,7 @@ fun TransactionFormDialog(
                         ) {
                             Icon(Icons.Default.CheckCircle, null, tint = NeonCyan, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("+ Create New Party", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("+ Create New Party Inline", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -353,96 +504,170 @@ fun TransactionFormDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
-                        .background(if (darkTheme) Color(0x3310B981) else Color(0x2210B981))
+                        .background(if (dark) Color(0x3310B981) else Color(0x2210B981))
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(Icons.Default.CheckCircle, null, tint = NeonGreen, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        "Mapped to: ${selectedParty?.name} [${selectedParty?.partyType}]",
-                        color = if (darkTheme) NeonGreen else Color(0xFF047857),
+                        "Mapped to: ${selectedParty.name} [${selectedParty.partyType}]",
+                        color = if (dark) NeonGreen else Color(0xFF047857),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
+        }
 
-            Column {
-                GlassTextField(
-                    value = amountStr,
-                    onValueChange = {
-                        amountStr = it
-                        amountError = FormValidator.validateAmount(it).errorMessage
-                    },
-                    label = "Transaction Amount (₹)",
-                    isNumeric = true,
-                    placeholder = "45000.0",
-                    darkTheme = darkTheme,
-                    focusedStroke = if (amountError != null) Color.Red else (if (type == "Money In") NeonGreen else NeonPink)
-                )
-                if (amountError != null) {
-                    Text(amountError!!, color = Color.Red, fontSize = 11.sp, modifier = Modifier.padding(start = 4.dp, top = 2.dp))
-                }
-            }
-
-            Column {
-                GlassDatePickerField(
-                    value = date,
-                    onValueChange = { date = it },
-                    label = "Transaction Date",
-                    darkTheme = darkTheme,
-                    focusedStroke = if (type == "Money In") NeonGreen else NeonPink
-                )
-            }
-
-            Text("Payment Method", color = if (darkTheme) TextSecondary else TextSecondaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Cash", "Bank Transfer", "Cheque").forEach { method ->
-                    TogglePill(method, paymentMethod == method, NeonGreen, darkTheme, Modifier.weight(1f)) { paymentMethod = method }
-                }
-            }
-
-            GlassTextField(value = reference, onValueChange = { reference = it }, label = "Reference No. / Cheque / TxRef", placeholder = "REF-987293", darkTheme = darkTheme)
-
-            Text("Add Cost Code / Segment", color = if (darkTheme) TextSecondary else TextSecondaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Material", "Labor", "Equipment", "Other").forEach { cat ->
-                    TogglePill(cat, category == cat, NeonPurple, darkTheme, Modifier.weight(1f)) { category = cat }
-                }
-            }
-
-            Column {
-                GlassTextField(
-                    value = description,
-                    onValueChange = {
-                        description = it
-                        descError = FormValidator.validateDescription(it).errorMessage
-                    },
-                    label = "Brief Expenditure Memo / More Details",
-                    placeholder = "Weekly worker payout session",
-                    darkTheme = darkTheme,
-                    focusedStroke = if (descError != null) Color.Red else NeonPurple
-                )
-                if (descError != null) {
-                    Text(descError!!, color = Color.Red, fontSize = 11.sp, modifier = Modifier.padding(start = 4.dp, top = 2.dp))
-                }
-            }
-
-            val isValid = amountStr.isNotBlank() && description.isNotBlank() && amountError == null && descError == null
-
-            GlassButton(
-                onClick = {
-                    val amt = amountStr.toDoubleOrNull() ?: 0.0
-                    onSave(type, amt, category, description, selectedParty, reference, paymentMethod, date)
-                    onDismiss()
+        Column {
+            GlassTextField(
+                value = amountStr,
+                onValueChange = {
+                    onAmountChange(it)
+                    amountError = FormValidator.validateAmount(it).errorMessage
                 },
-                enabled = isValid,
-                glowColor = if (type == "Money In") NeonGreen else NeonPink,
-                darkTheme = darkTheme,
-                modifier = Modifier.fillMaxWidth()
+                label = "Transaction Amount (₹)",
+                isNumeric = true,
+                placeholder = "45000.0",
+                darkTheme = dark,
+                focusedStroke = if (amountError != null) Color.Red else (if (type == "Money In") NeonGreen else NeonPink)
+            )
+            if (amountError != null) {
+                Text(amountError!!, color = Color.Red, fontSize = 11.sp, modifier = Modifier.padding(start = 4.dp, top = 2.dp))
+            }
+        }
+
+        Column {
+            GlassDatePickerField(
+                value = date,
+                onValueChange = onDateChange,
+                label = "Transaction Date",
+                darkTheme = dark,
+                focusedStroke = if (type == "Money In") NeonGreen else NeonPink
+            )
+        }
+
+        Text("Payment Method", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            PAYMENT_METHODS.forEach { method ->
+                val sel = paymentMethod == method
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (sel) NeonGreen.copy(alpha = 0.20f) else Color.Transparent)
+                        .border(
+                            1.dp,
+                            if (sel) NeonGreen else (if (dark) GlassBorderLight.copy(alpha = 0.20f) else GlassBorderLight),
+                            RoundedCornerShape(10.dp)
+                        )
+                        .clickable { onPaymentMethodChange(method) }
+                        .padding(horizontal = 6.dp, vertical = 9.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = method,
+                        color = if (sel) (if (dark) NeonGreen else Color(0xFF047857)) else (if (dark) TextSecondary else TextSecondaryLight),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+
+        GlassTextField(
+            value = reference,
+            onValueChange = onReferenceChange,
+            label = "Reference No. / Cheque / TxRef",
+            placeholder = "REF-987293",
+            darkTheme = dark
+        )
+
+        Text("Add Cost Code / Segment", color = if (dark) TextSecondary else TextSecondaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            COST_CODES.forEach { cat ->
+                val sel = category == cat
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (sel) NeonPurple.copy(alpha = 0.20f) else Color.Transparent)
+                        .border(
+                            1.dp,
+                            if (sel) NeonPurple else (if (dark) GlassBorderLight.copy(alpha = 0.20f) else GlassBorderLight),
+                            RoundedCornerShape(10.dp)
+                        )
+                        .clickable { onCategoryChange(cat) }
+                        .padding(horizontal = 12.dp, vertical = 9.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = cat,
+                        color = if (sel) (if (dark) NeonPurple else Color(0xFF6D28D9)) else (if (dark) TextSecondary else TextSecondaryLight),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+
+        Column {
+            GlassTextField(
+                value = description,
+                onValueChange = {
+                    onDescriptionChange(it)
+                    descError = FormValidator.validateDescription(it).errorMessage
+                },
+                label = "Brief Expenditure Memo / More Details",
+                placeholder = "Weekly worker payout session",
+                darkTheme = dark,
+                focusedStroke = if (descError != null) Color.Red else NeonPurple
+            )
+            if (descError != null) {
+                Text(descError!!, color = Color.Red, fontSize = 11.sp, modifier = Modifier.padding(start = 4.dp, top = 2.dp))
+            }
+        }
+
+        val isValid = amountStr.isNotBlank() && description.isNotBlank() && amountError == null && descError == null
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .border(1.dp, NeonPink.copy(0.5f), RoundedCornerShape(12.dp))
+                    .background(NeonPink.copy(alpha = 0.08f))
+                    .clickable(onClick = onCancel)
+                    .padding(vertical = 13.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text(if (transactionToEdit != null) "UPDATE TRANSACTION RECORD" else "PROCESS TRANSACTION RECORD", fontWeight = FontWeight.Bold)
+                Text("CANCEL", color = NeonPink, fontWeight = FontWeight.Black, fontSize = 12.sp)
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isValid) (if (type == "Money In") NeonGreen else NeonPink) else Color.Gray.copy(alpha = 0.5f))
+                    .then(if (isValid) Modifier.clickable(onClick = onSave) else Modifier)
+                    .padding(vertical = 13.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "SAVE RECORD",
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 12.sp
+                )
             }
         }
     }

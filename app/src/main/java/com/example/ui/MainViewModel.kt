@@ -261,6 +261,54 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
         }
     }
 
+    fun addWorkerInline(
+        name: String,
+        role: String,
+        shift: String,
+        wageRate: Double,
+        color: Int,
+        phone: String = "",
+        email: String = "",
+        partyType: String = "Worker",
+        address: String = "",
+        partyId: String = "",
+        dateOfJoining: String = "",
+        aadhaar: String = "",
+        pan: String = "",
+        reference: String = "",
+        onSuccess: (Worker) -> Unit
+    ) {
+        val nameResult = FormValidator.validateWorkerName(name)
+        if (!nameResult.isValid) { emitEvent(UiEvent.ShowToast(nameResult.errorMessage ?: "Invalid name")); return }
+
+        viewModelScope.launch {
+            try {
+                val newWorker = Worker(
+                    name = name,
+                    role = role,
+                    shift = shift,
+                    wageRate = wageRate,
+                    avatarColor = color,
+                    phone = phone,
+                    email = email,
+                    partyType = partyType,
+                    address = address,
+                    partyId = partyId,
+                    dateOfJoining = dateOfJoining,
+                    aadhaar = aadhaar,
+                    pan = pan,
+                    reference = reference
+                )
+                val insertedId = repository.insertWorker(newWorker)
+                val finalWorker = newWorker.copy(id = insertedId.toInt())
+                emitEvent(UiEvent.ShowToast("Party \"$name\" created and selected!"))
+                onSuccess(finalWorker)
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to add party inline", e))
+            }
+        }
+    }
+
     fun updateWorker(worker: Worker) {
         viewModelScope.launch {
             try {

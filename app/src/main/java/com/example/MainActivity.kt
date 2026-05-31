@@ -402,7 +402,7 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
         darkTheme = dark,
         presetType = txType,
         allWorkers = allWorkers,
-        onCreateNewParty = { showWorkerDialog = true },
+        viewModel = viewModel,
         transactionToEdit = viewModel.transactionToEdit,
         onSave = { type, amount, category, description, party, reference, paymentMethod, date ->
             val proj = currentProject

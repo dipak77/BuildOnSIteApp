@@ -80,7 +80,7 @@ fun MoneyScreen(
     }
 
     // List of categories for category filter chips
-    val categories = listOf("All", "Material", "Labor", "Equipment", "Client Advance", "Other")
+    val categories = listOf("All") + COST_CODES
 
     LazyColumn(
         modifier = modifier

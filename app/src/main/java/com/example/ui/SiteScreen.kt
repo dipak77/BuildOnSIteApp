@@ -124,7 +124,7 @@ fun SiteScreen(
     var showAddPartyTxDialog by remember { mutableStateOf(false) }
     var partyTxType          by remember { mutableStateOf("Money Out") }
     var partyTxAmount        by remember { mutableStateOf("") }
-    var partyTxCategory      by remember { mutableStateOf("Labor") }
+    var partyTxCategory      by remember { mutableStateOf("Labour") }
     var partyTxDesc          by remember { mutableStateOf("") }
     var partyTxMethod        by remember { mutableStateOf("Cash") }
     var partyTxDate          by remember { mutableStateOf("2026-05-27") }
@@ -234,7 +234,7 @@ fun SiteScreen(
                     onBack = { selectedPartyDetail = null },
                     onSelectTx = { selectedTxDetail = it },
                     onIPaid = {
-                        partyTxType = "Money Out"; partyTxCategory = "Labor"
+                        partyTxType = "Money Out"; partyTxCategory = "Labour"
                         partyTxAmount = ""; partyTxDesc = "Crew payment"
                         showAddPartyTxDialog = true
                     },
@@ -325,7 +325,6 @@ fun SiteScreen(
     if (showAddPartyTxDialog && activePartyForDialog != null && activeProj != null) {
         PremiumAddTransactionDialog(
             dark = dark,
-            partyName = activePartyForDialog.name,
             partyTxType = partyTxType,
             partyTxAmount = partyTxAmount,
             partyTxDesc = partyTxDesc,
@@ -354,7 +353,10 @@ fun SiteScreen(
                 } else {
                     Toast.makeText(context, "Enter a valid amount!", Toast.LENGTH_SHORT).show()
                 }
-            }
+            },
+            allWorkers = allWorkers,
+            selectedParty = activePartyForDialog,
+            viewModel = viewModel
         )
     }
 
@@ -3143,7 +3145,6 @@ private fun PremiumAttendanceDialog(
 @Composable
 private fun PremiumAddTransactionDialog(
     dark: Boolean,
-    partyName: String,
     partyTxType: String,
     partyTxAmount: String,
     partyTxDesc: String,
@@ -3157,8 +3158,12 @@ private fun PremiumAddTransactionDialog(
     onCategoryChange: (String) -> Unit,
     onMethodChange: (String) -> Unit,
     onDismiss: () -> Unit,
-    onSave: () -> Unit
+    onSave: () -> Unit,
+    allWorkers: List<Worker>,
+    selectedParty: Worker?,
+    viewModel: MainViewModel
 ) {
+    var reference by remember { mutableStateOf("") }
     GlassModalDialog(
         visible = true, onDismiss = onDismiss,
         title = "Record Payment",
@@ -3166,138 +3171,30 @@ private fun PremiumAddTransactionDialog(
         glowColor = if (partyTxType == "Money Out") RoseGlow else EmeraldGlow,
         scrollable = true
     ) {
-        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            // Party label
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(VioletGlow.copy(alpha = 0.08f))
-                    .border(1.dp, VioletGlow.copy(alpha = 0.25f), RoundedCornerShape(10.dp))
-                    .padding(10.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(Icons.Default.Person, null, tint = VioletGlow, modifier = Modifier.size(14.dp))
-                    Text(partyName, fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                        color = if (dark) Color(0xFFE2E8F4) else Color(0xFF1E293B))
-                }
-            }
-
-            // Type selector
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                listOf("Money Out" to RoseGlow, "Money In" to EmeraldGlow).forEach { (type, color) ->
-                    val sel = partyTxType == type
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (sel) Brush.linearGradient(listOf(color.copy(0.2f), color.copy(0.08f)))
-                            else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)))
-                            .border(1.5.dp, if (sel) color else color.copy(0.25f), RoundedCornerShape(12.dp))
-                            .clickable { onTypeChange(type) }
-                            .padding(vertical = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            if (type == "Money Out") "I PAID" else "I RECEIVED",
-                            color = if (sel) color else color.copy(0.5f),
-                            fontWeight = FontWeight.Black, fontSize = 12.sp
-                        )
-                    }
-                }
-            }
-
-            GlassTextField(value = partyTxAmount, onValueChange = onAmountChange,
-                label = "Amount (₹)", isNumeric = true, placeholder = "e.g. 5000", darkTheme = dark)
-            GlassTextField(value = partyTxDesc, onValueChange = onDescChange,
-                label = "Description", placeholder = "e.g. Weekly advance", darkTheme = dark)
-            GlassDatePickerField(
-                value = partyTxDate,
-                onValueChange = onDateChange,
-                label = "Date (YYYY-MM-DD)",
-                darkTheme = dark,
-                focusedStroke = if (partyTxType == "Money Out") RoseGlow else EmeraldGlow
-            )
-
-            // Category
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("CATEGORY", fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp,
-                    color = if (dark) Color(0xFF475569) else Color(0xFF94A3B8))
-                Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf("Labor", "Material", "Equipment", "Client Advance", "Other").forEach { cat ->
-                        val sel = partyTxCategory == cat
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (sel) VioletGlow.copy(alpha = 0.18f) else Color.Transparent)
-                                .border(1.dp, if (sel) VioletGlow else VioletGlow.copy(0.2f), RoundedCornerShape(10.dp))
-                                .clickable { onCategoryChange(cat) }
-                                .padding(horizontal = 12.dp, vertical = 7.dp)
-                        ) {
-                            Text(cat, color = if (sel) VioletGlow else if (dark) Color(0xFF475569) else Color(0xFF94A3B8),
-                                fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-
-            // Method
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("PAYMENT METHOD", fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp,
-                    color = if (dark) Color(0xFF475569) else Color(0xFF94A3B8))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("Cash", "Bank Transfer", "Cheque").forEach { method ->
-                        val sel = partyTxMethod == method
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (sel) AquaGlow.copy(alpha = 0.15f) else Color.Transparent)
-                                .border(1.dp, if (sel) AquaGlow else AquaGlow.copy(0.2f), RoundedCornerShape(10.dp))
-                                .clickable { onMethodChange(method) }
-                                .padding(vertical = 9.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(method, color = if (sel) AquaGlow else if (dark) Color(0xFF475569) else Color(0xFF94A3B8),
-                                fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-
-            // Buttons
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .border(1.dp, RoseGlow.copy(0.5f), RoundedCornerShape(12.dp))
-                        .background(RoseGlow.copy(alpha = 0.08f))
-                        .clickable(onClick = onDismiss)
-                        .padding(vertical = 13.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("CANCEL", color = RoseGlow, fontWeight = FontWeight.Black, fontSize = 12.sp)
-                }
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(GradientEmerald)
-                        .clickable(onClick = onSave)
-                        .padding(vertical = 13.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("SAVE RECORD", color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
-                }
-            }
-        }
+        UnifiedTransactionFormContent(
+            dark = dark,
+            type = partyTxType,
+            onTypeChange = onTypeChange,
+            allWorkers = allWorkers,
+            selectedParty = selectedParty,
+            onPartySelected = {},
+            amountStr = partyTxAmount,
+            onAmountChange = onAmountChange,
+            category = partyTxCategory,
+            onCategoryChange = onCategoryChange,
+            description = partyTxDesc,
+            onDescriptionChange = onDescChange,
+            reference = reference,
+            onReferenceChange = { reference = it },
+            paymentMethod = partyTxMethod,
+            onPaymentMethodChange = onMethodChange,
+            date = partyTxDate,
+            onDateChange = onDateChange,
+            onSave = onSave,
+            onCancel = onDismiss,
+            isPartyLocked = true,
+            viewModel = viewModel
+        )
     }
 }
 
