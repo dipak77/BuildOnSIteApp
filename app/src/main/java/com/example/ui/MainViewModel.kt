@@ -106,7 +106,8 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
     var currentScreen by mutableStateOf(AppScreen.Dashboard)
     var selectedProjectId by mutableStateOf<Int?>(null) // Dynamic first project selector
     var attendanceDate by mutableStateOf(isoFormatter.format(Date())) // Date navigator — uses live date
-    var darkThemeEnabled by mutableStateOf(true) // Premium dark glassmorphism mode toggle
+    var darkThemeEnabled by mutableStateOf(false) // Premium dark glassmorphism mode toggle
+    var transactionToEdit by mutableStateOf<Transaction?>(null)
     var activeSiteTab by mutableStateOf("Party")
     var onlineCloudLinkEnabled by mutableStateOf(true)
 
@@ -408,6 +409,17 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
                 emitEvent(UiEvent.ShowToast("Transaction deleted"))
             } catch (e: Exception) {
                 emitEvent(UiEvent.ShowError("Failed to delete transaction", e))
+            }
+        }
+    }
+
+    fun updateTransaction(transaction: Transaction) {
+        viewModelScope.launch {
+            try {
+                repository.updateTransaction(transaction)
+                emitEvent(UiEvent.ShowToast("Transaction updated!"))
+            } catch (e: Exception) {
+                emitEvent(UiEvent.ShowError("Failed to update transaction", e))
             }
         }
     }

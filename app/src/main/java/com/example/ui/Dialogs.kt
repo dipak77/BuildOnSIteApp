@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.Project
 import com.example.data.Worker
+import com.example.data.Transaction
 import com.example.ui.theme.*
 
 @Composable
@@ -175,7 +176,8 @@ fun TransactionFormDialog(
     presetType: String,
     allWorkers: List<Worker>,
     onCreateNewParty: () -> Unit,
-    onSave: (type: String, amount: Double, category: String, description: String, party: Worker?, reference: String, paymentMethod: String, date: String) -> Unit
+    onSave: (type: String, amount: Double, category: String, description: String, party: Worker?, reference: String, paymentMethod: String, date: String) -> Unit,
+    transactionToEdit: Transaction? = null
 ) {
     var type by remember { mutableStateOf("Money Out") }
     var amountStr by remember { mutableStateOf("") }
@@ -193,25 +195,40 @@ fun TransactionFormDialog(
 
     LaunchedEffect(visible) {
         if (visible) {
-            type = presetType
-            amountStr = ""
-            category = "Material"
-            description = ""
-            selectedParty = null
-            reference = ""
-            paymentMethod = "Cash"
-            partySearchQuery = ""
-            isSearchingParty = false
-            amountError = null
-            descError = null
-            date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+            if (transactionToEdit != null) {
+                type = transactionToEdit.type
+                amountStr = if (transactionToEdit.amount == 0.0) "" else transactionToEdit.amount.toString()
+                category = transactionToEdit.category
+                description = transactionToEdit.description
+                selectedParty = allWorkers.find { it.id == transactionToEdit.partyId || it.name == transactionToEdit.partyName }
+                reference = transactionToEdit.reference
+                paymentMethod = transactionToEdit.paymentMethod
+                partySearchQuery = transactionToEdit.partyName ?: ""
+                isSearchingParty = false
+                amountError = null
+                descError = null
+                date = transactionToEdit.date
+            } else {
+                type = presetType
+                amountStr = ""
+                category = "Material"
+                description = ""
+                selectedParty = null
+                reference = ""
+                paymentMethod = "Cash"
+                partySearchQuery = ""
+                isSearchingParty = false
+                amountError = null
+                descError = null
+                date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+            }
         }
     }
 
     GlassModalDialog(
         visible = visible,
         onDismiss = onDismiss,
-        title = "Register Cash Ledgers",
+        title = if (transactionToEdit != null) "Update Cash Ledger" else "Register Cash Ledgers",
         darkTheme = darkTheme,
         glowColor = if (type == "Money In") NeonGreen else NeonPink,
         scrollable = true
@@ -425,7 +442,7 @@ fun TransactionFormDialog(
                 darkTheme = darkTheme,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("PROCESS TRANSACTION RECORD", fontWeight = FontWeight.Bold)
+                Text(if (transactionToEdit != null) "UPDATE TRANSACTION RECORD" else "PROCESS TRANSACTION RECORD", fontWeight = FontWeight.Bold)
             }
         }
     }

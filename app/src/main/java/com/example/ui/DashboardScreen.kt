@@ -505,6 +505,60 @@ private fun GlowIconButton(
 
 // ─── Greeting Section ────────────────────────────────────────────────────────
 @Composable
+private fun StatusCard(
+    icon: ImageVector,
+    count: Int,
+    label: String,
+    tintColor: Color,
+    bgColor: Color,
+    borderColor: Color,
+    iconBgColor: Color,
+    dark: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(bgColor)
+            .border(1.dp, borderColor, RoundedCornerShape(12.dp))
+            .padding(horizontal = 8.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(iconBgColor),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = tintColor,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+        Column(
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "$count",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (dark) tintColor else Color(0xFF1E293B)
+            )
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B)
+            )
+        }
+    }
+}
+
+@Composable
 private fun GreetingSection(
     session: GoogleUser?,
     dark: Boolean,
@@ -595,76 +649,78 @@ private fun GreetingSection(
             horizontalAlignment = Alignment.End,
             modifier = Modifier.padding(start = 12.dp)
         ) {
-            Text(
-                text = dayOfWeek,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8)
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CalendarToday,
+                    contentDescription = null,
+                    tint = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                    modifier = Modifier.size(12.dp)
+                )
+                Text(
+                    text = dayOfWeek,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                )
+            }
             Spacer(Modifier.height(4.dp))
             Text(
                 text = formattedDate,
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Black,
-                color = if (dark) ElectricBlue else DeepViolet
+                color = if (dark) ElectricBlue else Color(0xFF7C3AED)
             )
         }
     }
     
-    // Status Pills Row
+    // Status Cards Row
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 16.dp, bottom = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Done Pill
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, Color(0xFF00FF87).copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                .background(Color(0xFF00FF87).copy(alpha = 0.05f))
-                .padding(horizontal = 10.dp, vertical = 6.dp)
-        ) {
-            Icon(Icons.Default.Check, contentDescription = "Done", tint = Color(0xFF00FF87), modifier = Modifier.size(14.dp))
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(text = "$doneCount", fontWeight = FontWeight.Black, color = Color(0xFF00FF87), fontSize = 13.sp)
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(text = "Done", color = Color(0xFF00FF87), fontSize = 12.sp)
-        }
-        
-        // Active Pill
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, Color(0xFF00D4FF).copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                .background(Color(0xFF00D4FF).copy(alpha = 0.05f))
-                .padding(horizontal = 10.dp, vertical = 6.dp)
-        ) {
-            Icon(Icons.Default.Autorenew, contentDescription = "Active", tint = Color(0xFF00D4FF), modifier = Modifier.size(14.dp))
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(text = "$activeCount", fontWeight = FontWeight.Black, color = Color(0xFF00D4FF), fontSize = 13.sp)
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(text = "Active", color = Color(0xFF00D4FF), fontSize = 12.sp)
-        }
-        
-        // Overdue Pill
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, Color(0xFFFF6B6B).copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                .background(Color(0xFFFF6B6B).copy(alpha = 0.05f))
-                .padding(horizontal = 10.dp, vertical = 6.dp)
-        ) {
-            Icon(Icons.Default.WarningAmber, contentDescription = "Overdue", tint = Color(0xFFFF6B6B), modifier = Modifier.size(14.dp))
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(text = "$overdueCount", fontWeight = FontWeight.Black, color = Color(0xFFFF6B6B), fontSize = 13.sp)
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(text = "Overdue", color = Color(0xFFFF6B6B), fontSize = 12.sp)
-        }
+        // Done Card
+        StatusCard(
+            icon = Icons.Default.Check,
+            count = doneCount,
+            label = "Done",
+            tintColor = if (dark) Color(0xFF00FF87) else Color(0xFF10B981),
+            bgColor = if (dark) Color(0xFF00FF87).copy(alpha = 0.05f) else Color(0xFFECFDF5),
+            borderColor = if (dark) Color(0xFF00FF87).copy(alpha = 0.2f) else Color(0xFFD1FAE5),
+            iconBgColor = if (dark) Color(0xFF00FF87).copy(alpha = 0.15f) else Color(0xFFD1FAE5),
+            dark = dark,
+            modifier = Modifier.weight(1f)
+        )
+
+        // Active Card
+        StatusCard(
+            icon = Icons.Default.Refresh,
+            count = activeCount,
+            label = "Active",
+            tintColor = if (dark) Color(0xFF00D4FF) else Color(0xFF3B82F6),
+            bgColor = if (dark) Color(0xFF00D4FF).copy(alpha = 0.05f) else Color(0xFFEFF6FF),
+            borderColor = if (dark) Color(0xFF00D4FF).copy(alpha = 0.2f) else Color(0xFFDBEAFE),
+            iconBgColor = if (dark) Color(0xFF00D4FF).copy(alpha = 0.15f) else Color(0xFFDBEAFE),
+            dark = dark,
+            modifier = Modifier.weight(1f)
+        )
+
+        // Overdue Card
+        StatusCard(
+            icon = Icons.Default.WarningAmber,
+            count = overdueCount,
+            label = "Overdue",
+            tintColor = if (dark) Color(0xFFFF6B6B) else Color(0xFFEF4444),
+            bgColor = if (dark) Color(0xFFFF6B6B).copy(alpha = 0.05f) else Color(0xFFFEF2F2),
+            borderColor = if (dark) Color(0xFFFF6B6B).copy(alpha = 0.2f) else Color(0xFFFEE2E2),
+            iconBgColor = if (dark) Color(0xFFFF6B6B).copy(alpha = 0.15f) else Color(0xFFFEE2E2),
+            dark = dark,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -2595,7 +2651,7 @@ private fun DashboardProjectList(
         ) {
             Text(
                 text = "Projects",
-                fontSize = 16.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = if (dark) PlatinumWhite else Color(0xFF0F172A)
             )
@@ -2610,14 +2666,14 @@ private fun DashboardProjectList(
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = null,
-                        tint = accentColor,
+                        tint = if (dark) Color(0xFF818CF8) else Color(0xFF4F46E5),
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = "New",
+                        text = "+ New Project",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = accentColor
+                        color = if (dark) Color(0xFF818CF8) else Color(0xFF4F46E5)
                     )
                 }
             }
@@ -2630,7 +2686,7 @@ private fun DashboardProjectList(
             placeholder = {
                 Text(
                     "Search by name or location…",
-                    fontSize = 13.sp,
+                    fontSize = 14.sp,
                     color = subtextColor
                 )
             },
@@ -2638,63 +2694,74 @@ private fun DashboardProjectList(
                 Icon(Icons.Default.Search, contentDescription = null, tint = subtextColor, modifier = Modifier.size(18.dp))
             },
             trailingIcon = {
-                if (searchQuery.isNotBlank()) {
-                    IconButton(onClick = { searchQuery = "" }) {
-                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = subtextColor, modifier = Modifier.size(16.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(end = 4.dp)
+                ) {
+                    if (searchQuery.isNotBlank()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "Clear", tint = subtextColor, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                    IconButton(onClick = { /* trigger filter or toggle */ }) {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = "Filters",
+                            tint = if (dark) Color(0xFF818CF8) else Color(0xFF4F46E5),
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             },
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
+                .height(54.dp),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = accentColor,
+                focusedBorderColor = if (dark) Color(0xFF818CF8) else Color(0xFF4F46E5),
                 unfocusedBorderColor = if (dark) Color(0xFF1E293B) else Color(0xFFE2E8F0),
                 focusedContainerColor = if (dark) Color(0xFF0C1322) else Color.White,
                 unfocusedContainerColor = if (dark) Color(0xFF0C1322) else Color.White,
                 focusedTextColor = if (dark) PlatinumWhite else Color(0xFF0F172A),
                 unfocusedTextColor = if (dark) PlatinumWhite else Color(0xFF0F172A),
-                cursorColor = accentColor
+                cursorColor = if (dark) Color(0xFF818CF8) else Color(0xFF4F46E5)
             ),
-            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp)
+            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp)
         )
 
         // ── Filter pills ──
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             filterOptions.forEach { opt ->
                 val selected = statusFilter == opt
-                val pillColor = when (opt) {
-                    "Active"    -> if (dark) CyberGreen else Color(0xFF059669)
-                    "Hold"      -> if (dark) NeonOrange else Color(0xFFD97706)
-                    "Completed" -> if (dark) ElectricBlue else DeepViolet
-                    else        -> subtextColor
-                }
+                val activeBg = if (dark) Color(0xFF6366F1).copy(alpha = 0.2f) else Color(0xFF6366F1)
+                val activeText = if (dark) Color(0xFF818CF8) else Color.White
+                val activeBorder = if (dark) Color(0xFF818CF8) else Color(0xFF6366F1)
+                
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .background(
-                            if (selected) pillColor.copy(alpha = 0.18f)
-                            else if (dark) Color(0xFF0C1322) else Color(0xFFF1F5F9)
+                            if (selected) activeBg
+                            else Color.Transparent
                         )
                         .border(
-                            width = if (selected) 1.5.dp else 1.dp,
-                            color = if (selected) pillColor else (if (dark) Color(0xFF1E293B) else Color(0xFFE2E8F0)),
+                            width = 1.dp,
+                            color = if (selected) activeBorder else (if (dark) Color(0xFF1E293B) else Color(0xFFE2E8F0)),
                             shape = RoundedCornerShape(20.dp)
                         )
                         .clickable { statusFilter = opt }
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = opt,
                         fontSize = 12.sp,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (selected) pillColor else subtextColor
+                        color = if (selected) activeText else subtextColor
                     )
                 }
             }
@@ -2716,12 +2783,12 @@ private fun DashboardProjectList(
                 )
             }
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 filteredProjects.forEach { p ->
                     val pTasks = allTasks.filter { it.projectId == p.id }
                     val pDone = pTasks.count { it.status == "Done" }
                     val progressPct = if (pTasks.isNotEmpty()) (pDone.toFloat() / pTasks.size * 100).toInt() else 68
-
+ 
                     val pTransactions = allTransactions.filter { it.projectId == p.id }
                     val pIn = pTransactions.filter { it.type == "Money In" }.sumOf { it.amount }
                     val pOut = pTransactions.filter { it.type == "Money Out" }.sumOf { it.amount }
@@ -2732,7 +2799,7 @@ private fun DashboardProjectList(
                             .clip(RoundedCornerShape(16.dp))
                             .background(
                                 if (dark) Brush.linearGradient(listOf(Color(0xFF0C1322), Color(0xFF060A13)))
-                                else Brush.linearGradient(listOf(Color.White, Color(0xFFF1F5F9)))
+                                else Brush.linearGradient(listOf(Color.White, Color(0xFFFBFDFF)))
                             )
                             .border(
                                 1.dp,
@@ -2740,89 +2807,190 @@ private fun DashboardProjectList(
                                 RoundedCornerShape(16.dp)
                             )
                             .clickable { onProjectSelected(p) }
-                            .padding(16.dp)
+                            .padding(12.dp)
                     ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = p.name,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (dark) PlatinumWhite else Color(0xFF0F172A),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text(
-                                        text = "$progressPct%",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B)
-                                    )
-                                    Icon(
-                                        imageVector = Icons.Default.MoreVert,
-                                        contentDescription = "Options",
-                                        tint = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Left Stylized Building Mockup
+                            Box(
+                                modifier = Modifier
+                                    .width(90.dp)
+                                    .height(130.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(
+                                                if (dark) Color(0xFF1E1B4B) else Color(0xFFEEF2FF),
+                                                if (dark) Color(0xFF312E81) else Color(0xFFC7D2FE)
+                                            )
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Place,
-                                    contentDescription = "Location",
-                                    tint = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Text(
-                                    text = p.location,
-                                    fontSize = 12.sp,
-                                    color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    imageVector = Icons.Default.Business,
+                                    contentDescription = null,
+                                    tint = if (dark) Color(0xFF818CF8) else Color(0xFF4F46E5),
+                                    modifier = Modifier.size(36.dp)
                                 )
                             }
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                            // Right Column Content
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(start = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
+                                // Row 1: Title & Options
                                 Row(
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "₹ " + formatAmountNoDecimals(pIn) + " In",
-                                        fontSize = 13.sp,
+                                        text = p.name,
+                                        fontSize = 15.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = CyberGreen
+                                        color = if (dark) PlatinumWhite else Color(0xFF1E293B),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
                                     )
-                                    Text(
-                                        text = "₹ " + formatAmountNoDecimals(pOut) + " Out",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFFF6B6B)
+                                    Icon(
+                                        imageVector = Icons.Default.MoreHoriz,
+                                        contentDescription = "Options",
+                                        tint = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
-                                Icon(
-                                    imageVector = Icons.Default.ChevronRight,
-                                    contentDescription = "Navigate",
-                                    tint = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
-                                    modifier = Modifier.size(16.dp)
-                                )
+
+                                // Row 2: Location
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Place,
+                                        contentDescription = "Location",
+                                        tint = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Text(
+                                        text = p.location,
+                                        fontSize = 11.sp,
+                                        color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+
+                                // Row 3: Finances and Circular Progress
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Finances (In and Out)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = "₹" + formatAmountNoDecimals(pIn),
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (dark) CyberGreen else Color(0xFF059669)
+                                            )
+                                            Text(
+                                                text = "In",
+                                                fontSize = 10.sp,
+                                                color = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8)
+                                            )
+                                        }
+
+                                        // Vertical divider
+                                        Box(
+                                            modifier = Modifier
+                                                .width(1.dp)
+                                                .height(20.dp)
+                                                .background(if (dark) Color(0xFF1E293B) else Color(0xFFE2E8F0))
+                                        )
+
+                                        Column {
+                                            Text(
+                                                text = "₹" + formatAmountNoDecimals(pOut),
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (dark) Color(0xFFFF6B6B) else Color(0xFFDC2626)
+                                            )
+                                            Text(
+                                                text = "Out",
+                                                fontSize = 10.sp,
+                                                color = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8)
+                                            )
+                                        }
+                                    }
+
+                                    // Circular Progress Ring
+                                    Box(
+                                        modifier = Modifier.size(46.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(
+                                            progress = progressPct / 100f,
+                                            modifier = Modifier.fillMaxSize(),
+                                            strokeWidth = 3.5.dp,
+                                            color = if (dark) NeonPurple else Color(0xFF6366F1),
+                                            trackColor = if (dark) Color(0xFF1E293B) else Color(0xFFEEF2FF)
+                                        )
+                                        Text(
+                                            text = "$progressPct%",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (dark) PlatinumWhite else Color(0xFF1E293B)
+                                        )
+                                    }
+                                }
+
+                                // Linear progress bar
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(4.dp)
+                                        .clip(RoundedCornerShape(2.dp))
+                                        .background(if (dark) Color(0xFF1E293B) else Color(0xFFEEF2FF))
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .fillMaxWidth(progressPct / 100f)
+                                            .background(if (dark) NeonPurple else Color(0xFF6366F1))
+                                    )
+                                }
+
+                                // Status (On Track / etc)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(if (dark) CyberGreen else Color(0xFF10B981))
+                                    )
+                                    Text(
+                                        text = "On Track",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                                    )
+                                }
                             }
                         }
                     }

@@ -212,15 +212,18 @@ fun SiteScreen(
             label = "pageRoute"
         ) { (txDetail, partyDetail, _) ->
             when {
-                txDetail != null -> PremiumPaymentDetailPage(
-                    tx = txDetail,
-                    dark = dark,
-                    currentProject = currentProject,
-                    viewModel = viewModel,
-                    context = context,
-                    onBack = { selectedTxDetail = null },
-                    onShowPdf = { showPdfPreviewDialog = true }
-                )
+                txDetail != null -> {
+                    val freshTx = projectTransactions.find { it.id == txDetail.id } ?: txDetail
+                    PremiumPaymentDetailPage(
+                        tx = freshTx,
+                        dark = dark,
+                        currentProject = currentProject,
+                        viewModel = viewModel,
+                        context = context,
+                        onBack = { selectedTxDetail = null },
+                        onShowPdf = { showPdfPreviewDialog = true }
+                    )
+                }
 
                 partyDetail != null -> PremiumPartyDetailPage(
                     worker = partyDetail,
@@ -1918,7 +1921,11 @@ private fun PremiumPaymentDetailPage(
                 PremiumIconBtn(
                     icon = Icons.Default.Edit,
                     tint = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B), dark = dark,
-                    onClick = { Toast.makeText(context, "Edit mode activated!", Toast.LENGTH_SHORT).show() }
+                    onClick = {
+                        viewModel.transactionToEdit = tx
+                        viewModel.transactionTypePreset = tx.type
+                        viewModel.showTransactionDialog = true
+                    }
                 )
             }
         )

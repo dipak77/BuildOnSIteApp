@@ -395,27 +395,49 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
 
     TransactionFormDialog(
         visible = showTransactionDialog,
-        onDismiss = { showTransactionDialog = false },
+        onDismiss = {
+            showTransactionDialog = false
+            viewModel.transactionToEdit = null
+        },
         darkTheme = dark,
         presetType = txType,
         allWorkers = allWorkers,
         onCreateNewParty = { showWorkerDialog = true },
+        transactionToEdit = viewModel.transactionToEdit,
         onSave = { type, amount, category, description, party, reference, paymentMethod, date ->
             val proj = currentProject
             if (proj != null) {
-                viewModel.addTransaction(
-                    projectId = proj.id,
-                    type = type,
-                    amount = amount,
-                    category = category,
-                    description = description,
-                    date = date,
-                    partyId = party?.id,
-                    partyName = party?.name,
-                    reference = reference,
-                    paymentMethod = paymentMethod
-                )
+                val toEdit = viewModel.transactionToEdit
+                if (toEdit != null) {
+                    viewModel.updateTransaction(
+                        toEdit.copy(
+                            type = type,
+                            amount = amount,
+                            category = category,
+                            description = description,
+                            date = date,
+                            partyId = party?.id,
+                            partyName = party?.name,
+                            reference = reference,
+                            paymentMethod = paymentMethod
+                        )
+                    )
+                } else {
+                    viewModel.addTransaction(
+                        projectId = proj.id,
+                        type = type,
+                        amount = amount,
+                        category = category,
+                        description = description,
+                        date = date,
+                        partyId = party?.id,
+                        partyName = party?.name,
+                        reference = reference,
+                        paymentMethod = paymentMethod
+                    )
+                }
             }
+            viewModel.transactionToEdit = null
         }
     )
 
