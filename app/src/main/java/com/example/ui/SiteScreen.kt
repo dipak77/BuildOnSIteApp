@@ -510,7 +510,8 @@ private fun PremiumSiteHeader(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
             ) {
                 IconButton(
                     onClick = { viewModel.currentScreen = AppScreen.Dashboard },
@@ -523,12 +524,12 @@ private fun PremiumSiteHeader(
                         modifier = Modifier.size(24.dp)
                     )
                 }
-                Spacer(modifier = Modifier.width(4.dp))
-                Column {
-                    // Live indicator dot + project name
+                Spacer(modifier = Modifier.width(2.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    // Live indicator dot
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         PulsatingDot(color = EmeraldGlow)
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "LIVE SITE",
                             fontSize = 9.sp,
@@ -537,22 +538,26 @@ private fun PremiumSiteHeader(
                             color = EmeraldGlow
                         )
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
+                    // Project name – capped to 1 line with ellipsis
                     Text(
-                        text = currentProject?.name ?: "Treasure Garden",
+                        text = currentProject?.name ?: "Project",
                         style = TextStyle(
                             brush = GradientAqua,
-                            fontSize = 22.sp,
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Black,
-                            letterSpacing = (-0.5).sp
-                        )
+                            letterSpacing = (-0.3).sp
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "Site Operations Console",
+                        text = "Site Operations",
                         color = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
-                        fontSize = 11.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
-                        letterSpacing = 0.3.sp
+                        letterSpacing = 0.3.sp,
+                        maxLines = 1
                     )
                 }
             }
@@ -561,12 +566,6 @@ private fun PremiumSiteHeader(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                PremiumIconBtn(
-                    icon = Icons.Default.Notifications,
-                    tint = AmberGlow,
-                    dark = dark,
-                    onClick = { Toast.makeText(context, "Site alerts active!", Toast.LENGTH_SHORT).show() }
-                )
                 PremiumIconBtn(
                     icon = if (viewModel.darkThemeEnabled) Icons.Default.LightMode else Icons.Default.DarkMode,
                     tint = if (dark) AquaGlow else VioletGlow,
@@ -578,12 +577,6 @@ private fun PremiumSiteHeader(
                     tint = RoseGlow,
                     dark = dark,
                     onClick = onShowPdf
-                )
-                PremiumIconBtn(
-                    icon = Icons.Default.MoreVert,
-                    tint = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
-                    dark = dark,
-                    onClick = {}
                 )
             }
         }
@@ -3212,8 +3205,13 @@ private fun PremiumAddTransactionDialog(
                 label = "Amount (₹)", isNumeric = true, placeholder = "e.g. 5000", darkTheme = dark)
             GlassTextField(value = partyTxDesc, onValueChange = onDescChange,
                 label = "Description", placeholder = "e.g. Weekly advance", darkTheme = dark)
-            GlassTextField(value = partyTxDate, onValueChange = onDateChange,
-                label = "Date (YYYY-MM-DD)", placeholder = "2026-05-27", darkTheme = dark)
+            GlassDatePickerField(
+                value = partyTxDate,
+                onValueChange = onDateChange,
+                label = "Date (YYYY-MM-DD)",
+                darkTheme = dark,
+                focusedStroke = if (partyTxType == "Money Out") RoseGlow else EmeraldGlow
+            )
 
             // Category
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -3406,8 +3404,64 @@ private fun PremiumPdfDialog(
                         .clip(RoundedCornerShape(12.dp))
                         .background(GradientAqua)
                         .clickable {
+                            // Build receipt content
+                            val receiptText = buildString {
+                                appendLine("========================================")
+                                appendLine("        CONSTRUCTPRO - SITE RECEIPT     ")
+                                appendLine("========================================")
+                                appendLine()
+                                appendLine("Party   : $name")
+                                appendLine("Amount  : \u20B9 $amount")
+                                appendLine("Date    : $date")
+                                appendLine("Ref ID  : #$txId")
+                                appendLine()
+                                appendLine("----------------------------------------")
+                                appendLine("   Digitally Verified & Authenticated   ")
+                                appendLine("========================================")
+                            }
+                            val fileName = "Receipt_${txId}_${System.currentTimeMillis()}.txt"
+                            try {
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                                    val contentValues = android.content.ContentValues().apply {
+                                        put(android.provider.MediaStore.Downloads.DISPLAY_NAME, fileName)
+                                        put(android.provider.MediaStore.Downloads.MIME_TYPE, "text/plain")
+                                        put(android.provider.MediaStore.Downloads.RELATIVE_PATH,
+                                            android.os.Environment.DIRECTORY_DOWNLOADS + "/ConstructPro")
+                                    }
+                                    val uri = context.contentResolver.insert(
+                                        android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                                        contentValues
+                                    )
+                                    if (uri != null) {
+                                        context.contentResolver.openOutputStream(uri)?.use { out ->
+                                            out.write(receiptText.toByteArray())
+                                        }
+                                        Toast.makeText(context,
+                                            "Saved to Downloads/ConstructPro/$fileName",
+                                            Toast.LENGTH_LONG).show()
+                                    } else {
+                                        Toast.makeText(context,
+                                            "Download failed: could not create file",
+                                            Toast.LENGTH_LONG).show()
+                                    }
+                                } else {
+                                    // Pre-Q fallback: save directly to Downloads
+                                    val dir = android.os.Environment.getExternalStoragePublicDirectory(
+                                        android.os.Environment.DIRECTORY_DOWNLOADS
+                                    )
+                                    val folder = java.io.File(dir, "ConstructPro").also { it.mkdirs() }
+                                    val file = java.io.File(folder, fileName)
+                                    file.writeText(receiptText)
+                                    Toast.makeText(context,
+                                        "Saved to Downloads/ConstructPro/$fileName",
+                                        Toast.LENGTH_LONG).show()
+                                }
+                            } catch (e: Exception) {
+                                Toast.makeText(context,
+                                    "Download failed: ${e.localizedMessage}",
+                                    Toast.LENGTH_LONG).show()
+                            }
                             onDismiss()
-                            Toast.makeText(context, "PDF downloaded successfully!", Toast.LENGTH_LONG).show()
                         }
                         .padding(vertical = 12.dp),
                     contentAlignment = Alignment.Center

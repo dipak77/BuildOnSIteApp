@@ -2490,39 +2490,48 @@ private fun DashboardProjectList(
     onProjectSelected: (Project) -> Unit,
     onAddProjectClick: () -> Unit
 ) {
+    // State: search query and status filter (default "Active" = ongoing projects)
+    var searchQuery by remember { mutableStateOf("") }
+    var statusFilter by remember { mutableStateOf("Active") }
+
+    // Filter logic
+    val filteredProjects = remember(allProjects, searchQuery, statusFilter) {
+        allProjects
+            .filter { p ->
+                when (statusFilter) {
+                    "Active"    -> p.status == "Active"
+                    "Hold"      -> p.status == "On Hold"
+                    "Completed" -> p.status == "Completed"
+                    else        -> true // "All"
+                }
+            }
+            .filter { p ->
+                searchQuery.isBlank() ||
+                    p.name.contains(searchQuery, ignoreCase = true) ||
+                    p.location.contains(searchQuery, ignoreCase = true)
+            }
+    }
+
+    val filterOptions = listOf("Active", "Hold", "Completed", "All")
+    val accentColor = if (dark) ElectricBlue else DeepViolet
+    val subtextColor = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        // ── Header row ──
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = "All",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (dark) PlatinumWhite else Color(0xFF0F172A)
-                )
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = null,
-                    tint = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Search",
-                    tint = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
-                    modifier = Modifier.size(18.dp)
-                )
-            }
+            Text(
+                text = "Projects",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (dark) PlatinumWhite else Color(0xFF0F172A)
+            )
             TextButton(
                 onClick = onAddProjectClick,
                 contentPadding = PaddingValues(0.dp)
@@ -2534,24 +2543,114 @@ private fun DashboardProjectList(
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = null,
-                        tint = if (dark) ElectricBlue else DeepViolet,
+                        tint = accentColor,
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = "Project",
+                        text = "New",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (dark) ElectricBlue else DeepViolet
+                        color = accentColor
                     )
                 }
             }
         }
 
+        // ── Search bar ──
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            placeholder = {
+                Text(
+                    "Search by name or location…",
+                    fontSize = 13.sp,
+                    color = subtextColor
+                )
+            },
+            leadingIcon = {
+                Icon(Icons.Default.Search, contentDescription = null, tint = subtextColor, modifier = Modifier.size(18.dp))
+            },
+            trailingIcon = {
+                if (searchQuery.isNotBlank()) {
+                    IconButton(onClick = { searchQuery = "" }) {
+                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = subtextColor, modifier = Modifier.size(16.dp))
+                    }
+                }
+            },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = accentColor,
+                unfocusedBorderColor = if (dark) Color(0xFF1E293B) else Color(0xFFE2E8F0),
+                focusedContainerColor = if (dark) Color(0xFF0C1322) else Color.White,
+                unfocusedContainerColor = if (dark) Color(0xFF0C1322) else Color.White,
+                focusedTextColor = if (dark) PlatinumWhite else Color(0xFF0F172A),
+                unfocusedTextColor = if (dark) PlatinumWhite else Color(0xFF0F172A),
+                cursorColor = accentColor
+            ),
+            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp)
+        )
+
+        // ── Filter pills ──
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            filterOptions.forEach { opt ->
+                val selected = statusFilter == opt
+                val pillColor = when (opt) {
+                    "Active"    -> if (dark) CyberGreen else Color(0xFF059669)
+                    "Hold"      -> if (dark) NeonOrange else Color(0xFFD97706)
+                    "Completed" -> if (dark) ElectricBlue else DeepViolet
+                    else        -> subtextColor
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(
+                            if (selected) pillColor.copy(alpha = 0.18f)
+                            else if (dark) Color(0xFF0C1322) else Color(0xFFF1F5F9)
+                        )
+                        .border(
+                            width = if (selected) 1.5.dp else 1.dp,
+                            color = if (selected) pillColor else (if (dark) Color(0xFF1E293B) else Color(0xFFE2E8F0)),
+                            shape = RoundedCornerShape(20.dp)
+                        )
+                        .clickable { statusFilter = opt }
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = opt,
+                        fontSize = 12.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (selected) pillColor else subtextColor
+                    )
+                }
+            }
+        }
+
+        // ── Project cards ──
         if (allProjects.isEmpty()) {
             EmptyProjectCard(dark = dark)
+        } else if (filteredProjects.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (searchQuery.isNotBlank()) "No projects match \"$searchQuery\""
+                           else "No $statusFilter projects",
+                    fontSize = 13.sp,
+                    color = subtextColor
+                )
+            }
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                allProjects.forEach { p ->
+                filteredProjects.forEach { p ->
                     val pTasks = allTasks.filter { it.projectId == p.id }
                     val pDone = pTasks.count { it.status == "Done" }
                     val progressPct = if (pTasks.isNotEmpty()) (pDone.toFloat() / pTasks.size * 100).toInt() else 68

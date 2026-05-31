@@ -383,7 +383,7 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
         presetType = txType,
         allWorkers = allWorkers,
         onCreateNewParty = { showWorkerDialog = true },
-        onSave = { type, amount, category, description, party, reference, paymentMethod ->
+        onSave = { type, amount, category, description, party, reference, paymentMethod, date ->
             val proj = currentProject
             if (proj != null) {
                 viewModel.addTransaction(
@@ -392,7 +392,7 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
                     amount = amount,
                     category = category,
                     description = description,
-                    date = viewModel.todayIso(),
+                    date = date,
                     partyId = party?.id,
                     partyName = party?.name,
                     reference = reference,
@@ -450,18 +450,28 @@ private fun TogglePill(
     fontSize: androidx.compose.ui.unit.TextUnit = 12.sp,
     onClick: () -> Unit
 ) {
+    val resolvedColor = if (!darkTheme) {
+        when (selectedColor) {
+            NeonCyan -> Color(0xFF0284C7)
+            NeonPurple -> Color(0xFF6D28D9)
+            NeonGreen -> Color(0xFF047857)
+            NeonPink -> Color(0xFFBE123C)
+            else -> selectedColor
+        }
+    } else selectedColor
+
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(if (selected) selectedColor.copy(alpha = 0.20f) else Color.Transparent)
-            .border(1.dp, if (selected) selectedColor else if (darkTheme) GlassBorderLight.copy(alpha = 0.20f) else GlassBorderLight, RoundedCornerShape(10.dp))
+            .background(if (selected) resolvedColor.copy(alpha = 0.20f) else Color.Transparent)
+            .border(1.dp, if (selected) resolvedColor else if (darkTheme) GlassBorderLight.copy(alpha = 0.20f) else GlassBorderLight, RoundedCornerShape(10.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 6.dp, vertical = 9.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
-            color = if (selected) selectedColor else if (darkTheme) TextSecondary else TextSecondaryLight,
+            color = if (selected) resolvedColor else if (darkTheme) TextSecondary else TextSecondaryLight,
             fontWeight = FontWeight.Bold,
             fontSize = fontSize,
             maxLines = 1,

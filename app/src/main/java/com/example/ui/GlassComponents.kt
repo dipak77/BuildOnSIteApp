@@ -43,6 +43,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CalendarToday
+import android.app.DatePickerDialog
+import java.util.Calendar
+import java.util.Locale
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -56,6 +60,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -397,6 +402,16 @@ fun GlassTextField(
     val textC = if (darkTheme) TextPrimary else TextPrimaryLight
     val labelC = if (darkTheme) TextSecondary else TextSecondaryLight
 
+    val resolvedFocusedStroke = if (!darkTheme) {
+        when (focusedStroke) {
+            NeonCyan -> Color(0xFF0284C7)
+            NeonPurple -> Color(0xFF6D28D9)
+            NeonGreen -> Color(0xFF047857)
+            NeonPink -> Color(0xFFBE123C)
+            else -> focusedStroke
+        }
+    } else focusedStroke
+
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -404,21 +419,22 @@ fun GlassTextField(
         shape = RoundedCornerShape(16.dp),
         textStyle = LocalTextStyle.current.copy(color = textC, fontSize = 15.sp, fontWeight = FontWeight.Medium),
         keyboardOptions = KeyboardOptions(keyboardType = if (isNumeric) KeyboardType.Number else KeyboardType.Text),
-        leadingIcon = if (icon != null) ({ Icon(imageVector = icon, contentDescription = null, tint = focusedStroke) }) else null,
+        leadingIcon = if (icon != null) ({ Icon(imageVector = icon, contentDescription = null, tint = resolvedFocusedStroke) }) else null,
         label = { Text(text = label, color = labelC, fontWeight = FontWeight.SemiBold) },
         placeholder = { Text(text = placeholder, color = labelC.copy(alpha = 0.48f)) },
         singleLine = true,
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = if (darkTheme) Color(0x3B070A13) else Color(0x99FFFFFF),
             unfocusedContainerColor = containerBg,
-            focusedBorderColor = focusedStroke,
+            focusedBorderColor = resolvedFocusedStroke,
             unfocusedBorderColor = if (darkTheme) GlassBorderDark else GlassBorderLight,
-            cursorColor = focusedStroke,
-            focusedLabelColor = focusedStroke,
+            cursorColor = resolvedFocusedStroke,
+            focusedLabelColor = resolvedFocusedStroke,
             unfocusedLabelColor = labelC
         )
     )
 }
+
 
 @Composable
 fun GlassChip(
@@ -520,6 +536,16 @@ fun GlassModalDialog(
 ) {
     if (!visible) return
 
+    val resolvedGlow = if (!darkTheme) {
+        when (glowColor) {
+            NeonCyan -> Color(0xFF0284C7)
+            NeonPurple -> Color(0xFF6D28D9)
+            NeonGreen -> Color(0xFF047857)
+            NeonPink -> Color(0xFFBE123C)
+            else -> glowColor
+        }
+    } else glowColor
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -529,12 +555,12 @@ fun GlassModalDialog(
                 .fillMaxWidth(0.92f)
                 .padding(vertical = 12.dp)
                 .drawBehind {
-                    if (darkTheme) drawCircle(color = glowColor.copy(alpha = 0.15f), radius = size.maxDimension * 0.58f, center = center)
+                    if (darkTheme) drawCircle(color = resolvedGlow.copy(alpha = 0.15f), radius = size.maxDimension * 0.58f, center = center)
                 }
                 .clip(RoundedCornerShape(26.dp))
                 .background(if (darkTheme) Color(0xF2090D1A) else Color(0xFAF8FAFC))
                 .border(
-                    BorderStroke(1.5.dp, Brush.verticalGradient(listOf(glowColor.copy(alpha = 0.65f), if (darkTheme) Color(0x30FFFFFF) else Color(0x30111827)))),
+                    BorderStroke(1.5.dp, Brush.verticalGradient(listOf(resolvedGlow.copy(alpha = 0.65f), if (darkTheme) Color(0x30FFFFFF) else Color(0x30111827)))),
                     RoundedCornerShape(26.dp)
                 )
         ) {
@@ -549,7 +575,7 @@ fun GlassModalDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
-                        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(glowColor))
+                        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(resolvedGlow))
                         Text(
                             text = title,
                             color = if (darkTheme) TextPrimary else TextPrimaryLight,
@@ -716,3 +742,93 @@ fun PremiumStatusBadge(
 }
 
 data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
+
+@Composable
+fun GlassDatePickerField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    darkTheme: Boolean = true,
+    focusedStroke: Color = NeonCyan
+) {
+    val context = LocalContext.current
+
+    val resolvedFocusedStroke = if (!darkTheme) {
+        when (focusedStroke) {
+            NeonCyan -> Color(0xFF0284C7)
+            NeonPurple -> Color(0xFF6D28D9)
+            NeonGreen -> Color(0xFF047857)
+            NeonPink -> Color(0xFFBE123C)
+            else -> focusedStroke
+        }
+    } else focusedStroke
+
+    val showDatePicker = {
+        val calendar = Calendar.getInstance()
+        if (value.isNotEmpty()) {
+            try {
+                val parts = value.split("-")
+                if (parts.size == 3) {
+                    calendar.set(Calendar.YEAR, parts[0].toInt())
+                    calendar.set(Calendar.MONTH, parts[1].toInt() - 1)
+                    calendar.set(Calendar.DAY_OF_MONTH, parts[2].toInt())
+                }
+            } catch (e: java.lang.Exception) {
+                // ignore
+            }
+        }
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                val formattedDate = String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, dayOfMonth)
+                onValueChange(formattedDate)
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        ).show()
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { showDatePicker() }
+    ) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = {},
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            readOnly = true,
+            enabled = false,
+            textStyle = LocalTextStyle.current.copy(
+                color = if (darkTheme) TextPrimary else TextPrimaryLight,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium
+            ),
+            trailingIcon = {
+                Icon(
+                    imageVector = Icons.Default.CalendarToday,
+                    contentDescription = "Select Date",
+                    tint = resolvedFocusedStroke
+                )
+            },
+            label = {
+                Text(
+                    text = label,
+                    color = if (darkTheme) TextSecondary else TextSecondaryLight,
+                    fontWeight = FontWeight.SemiBold
+                )
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                disabledTextColor = if (darkTheme) TextPrimary else TextPrimaryLight,
+                disabledContainerColor = if (darkTheme) Color(0x280B0F19) else Color(0x75FFFFFF),
+                disabledBorderColor = if (darkTheme) GlassBorderDark else GlassBorderLight,
+                disabledLabelColor = if (darkTheme) TextSecondary else TextSecondaryLight,
+                disabledTrailingIconColor = resolvedFocusedStroke
+            )
+        )
+    }
+}
+

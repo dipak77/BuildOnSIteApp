@@ -175,7 +175,7 @@ fun TransactionFormDialog(
     presetType: String,
     allWorkers: List<Worker>,
     onCreateNewParty: () -> Unit,
-    onSave: (type: String, amount: Double, category: String, description: String, party: Worker?, reference: String, paymentMethod: String) -> Unit
+    onSave: (type: String, amount: Double, category: String, description: String, party: Worker?, reference: String, paymentMethod: String, date: String) -> Unit
 ) {
     var type by remember { mutableStateOf("Money Out") }
     var amountStr by remember { mutableStateOf("") }
@@ -186,6 +186,7 @@ fun TransactionFormDialog(
     var paymentMethod by remember { mutableStateOf("Cash") }
     var partySearchQuery by remember { mutableStateOf("") }
     var isSearchingParty by remember { mutableStateOf(false) }
+    var date by remember { mutableStateOf("") }
 
     var amountError by remember { mutableStateOf<String?>(null) }
     var descError by remember { mutableStateOf<String?>(null) }
@@ -203,6 +204,7 @@ fun TransactionFormDialog(
             isSearchingParty = false
             amountError = null
             descError = null
+            date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
         }
     }
 
@@ -367,6 +369,16 @@ fun TransactionFormDialog(
                 }
             }
 
+            Column {
+                GlassDatePickerField(
+                    value = date,
+                    onValueChange = { date = it },
+                    label = "Transaction Date",
+                    darkTheme = darkTheme,
+                    focusedStroke = if (type == "Money In") NeonGreen else NeonPink
+                )
+            }
+
             Text("Payment Method", color = if (darkTheme) TextSecondary else TextSecondaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("Cash", "Bank Transfer", "Cheque").forEach { method ->
@@ -405,7 +417,7 @@ fun TransactionFormDialog(
             GlassButton(
                 onClick = {
                     val amt = amountStr.toDoubleOrNull() ?: 0.0
-                    onSave(type, amt, category, description, selectedParty, reference, paymentMethod)
+                    onSave(type, amt, category, description, selectedParty, reference, paymentMethod, date)
                     onDismiss()
                 },
                 enabled = isValid,
@@ -786,13 +798,23 @@ private fun TogglePill(
     fontSize: androidx.compose.ui.unit.TextUnit = 12.sp,
     onClick: () -> Unit
 ) {
+    val resolvedColor = if (!darkTheme) {
+        when (selectedColor) {
+            NeonCyan -> Color(0xFF0284C7)
+            NeonPurple -> Color(0xFF6D28D9)
+            NeonGreen -> Color(0xFF047857)
+            NeonPink -> Color(0xFFBE123C)
+            else -> selectedColor
+        }
+    } else selectedColor
+
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(if (selected) selectedColor.copy(alpha = 0.20f) else Color.Transparent)
+            .background(if (selected) resolvedColor.copy(alpha = 0.20f) else Color.Transparent)
             .border(
                 1.dp,
-                if (selected) selectedColor else (if (darkTheme) GlassBorderLight.copy(alpha = 0.20f) else GlassBorderLight),
+                if (selected) resolvedColor else (if (darkTheme) GlassBorderLight.copy(alpha = 0.20f) else GlassBorderLight),
                 RoundedCornerShape(10.dp)
             )
             .clickable(onClick = onClick)
@@ -801,7 +823,7 @@ private fun TogglePill(
     ) {
         Text(
             text = text,
-            color = if (selected) selectedColor else (if (darkTheme) TextSecondary else TextSecondaryLight),
+            color = if (selected) resolvedColor else (if (darkTheme) TextSecondary else TextSecondaryLight),
             fontWeight = FontWeight.Bold,
             fontSize = fontSize,
             maxLines = 1,
