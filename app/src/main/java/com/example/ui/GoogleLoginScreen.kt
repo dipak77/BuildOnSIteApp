@@ -68,6 +68,7 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
                 .requestIdToken(com.example.BuildConfig.GOOGLE_OAUTH_CLIENT_ID)
                 .requestEmail()
                 .requestProfile()
+                .requestScopes(com.google.android.gms.common.api.Scope("https://www.googleapis.com/auth/drive.file"))
                 .build()
         } catch (t: Throwable) {
             t.printStackTrace()

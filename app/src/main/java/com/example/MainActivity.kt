@@ -103,6 +103,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val prefs = getSharedPreferences("constructpro_prefs", MODE_PRIVATE)
+        val enabled = prefs.getBoolean("drive_auto_backup_enabled", false)
+        if (enabled) {
+            AutoBackupWorker.schedule(applicationContext)
+        }
         enableEdgeToEdge()
         setContent {
             val dark = viewModel.darkThemeEnabled

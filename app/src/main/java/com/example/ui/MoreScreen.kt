@@ -1543,6 +1543,7 @@ private fun PremiumThemeBackupCard(
     onBackupSystem: () -> Unit,
     onRestoreSystem: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val cloudCyan = getPremiumAccent(AccentCyan, dark)
     val cloudGreen = getPremiumAccent(AccentGreen, dark)
     val cloudPurple = getPremiumAccent(AccentPurple, dark)
@@ -1678,6 +1679,76 @@ private fun PremiumThemeBackupCard(
                     )
                 }
             }
+        }
+
+        // Auto Backup Switch Row
+        var autoBackupEnabled by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            val prefs = context.getSharedPreferences("constructpro_prefs", android.content.Context.MODE_PRIVATE)
+            autoBackupEnabled = prefs.getBoolean("drive_auto_backup_enabled", false)
+        }
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (dark) cloudCyan.copy(0.12f)
+                            else Color(0xFF0EA5E9).copy(0.1f)
+                        )
+                        .border(1.dp,
+                            if (dark) cloudCyan.copy(0.3f) else Color(0xFF0EA5E9).copy(0.3f),
+                            RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CloudUpload,
+                        contentDescription = null,
+                        tint = if (dark) cloudCyan else Color(0xFF0284C7),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Spacer(Modifier.width(14.dp))
+                Column {
+                    Text(
+                        "Midnight Auto Backup",
+                        color = if (dark) Color.White else Color(0xFF0F172A),
+                        fontWeight = FontWeight.Bold, fontSize = 14.sp
+                    )
+                    Text(
+                        "Backup to Google Drive daily at 12:00 AM",
+                        color = if (dark) Color(0xFF64748B) else Color(0xFF475569),
+                        fontSize = 11.sp
+                    )
+                }
+            }
+            Switch(
+                checked = autoBackupEnabled,
+                onCheckedChange = { enabled ->
+                    autoBackupEnabled = enabled
+                    val prefs = context.getSharedPreferences("constructpro_prefs", android.content.Context.MODE_PRIVATE)
+                    prefs.edit().putBoolean("drive_auto_backup_enabled", enabled).apply()
+                    if (enabled) {
+                        com.example.AutoBackupWorker.schedule(context)
+                        Toast.makeText(context, "Midnight auto backup enabled!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        androidx.work.WorkManager.getInstance(context).cancelUniqueWork("GoogleDriveAutoBackup")
+                        Toast.makeText(context, "Auto backup disabled", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = cloudCyan,
+                    checkedTrackColor = cloudCyan.copy(0.25f),
+                    uncheckedThumbColor = Color(0xFF94A3B8),
+                    uncheckedTrackColor = Color(0xFFE2E8F0)
+                )
+            )
         }
 
         // Sync Button
