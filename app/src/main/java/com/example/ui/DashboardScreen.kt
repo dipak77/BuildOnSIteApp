@@ -148,6 +148,12 @@ fun DashboardScreen(
                 )
             }
 
+            // ── Welcome Banner ──
+            item {
+                val session by viewModel.userSession.collectAsState()
+                WelcomeBanner(session = session, dark = dark)
+            }
+
             // ── Live Status Banner ──
             item {
                 LiveStatusBanner(dark = dark)
@@ -467,14 +473,144 @@ private fun GlowIconButton(
     }
 }
 
+// ─── Welcome Banner ───────────────────────────────────────────────────────────
+@Composable
+private fun WelcomeBanner(
+    session: GoogleUser?,
+    dark: Boolean
+) {
+    val userName = session?.displayName ?: "Guest Builder"
+    var visible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        visible = true
+    }
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(1200)) + slideInVertically(
+            initialOffsetY = { it / 2 },
+            animationSpec = tween(1200, easing = EaseOutBack)
+        )
+    ) {
+        val infiniteTransition = rememberInfiniteTransition(label = "welcome_shimmer")
+        val colorShift by infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(6000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "colorShift"
+        )
+
+        // Shifting gradient colors for a vibrant text effect
+        val gradientColors = remember(colorShift) {
+            listOf(
+                Color(0xFF00D4FF), // Electric Blue
+                Color(0xFF7C3AED), // Deep Violet
+                Color(0xFFEC4899), // Pink
+                Color(0xFFFF6B35), // Orange
+                Color(0xFF00D4FF)
+            )
+        }
+
+        val textBrush = Brush.linearGradient(
+            colors = gradientColors,
+            start = Offset(0f, 0f),
+            end = Offset(1000f, 0f)
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(24.dp))
+                .background(
+                    if (dark) Brush.linearGradient(listOf(Color(0x1F0A1628), Color(0x1F111827)))
+                    else Brush.linearGradient(listOf(Color(0xFFF3F4F6), Color(0xFFE5E7EB)))
+                )
+                .border(
+                    1.dp,
+                    if (dark) Color(0x1F00D4FF) else Color(0x1F7C3AED),
+                    RoundedCornerShape(24.dp)
+                )
+                .padding(20.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "WELCOME BACK",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                        color = if (dark) Color(0xFF00D4FF) else Color(0xFF7C3AED),
+                        letterSpacing = 2.sp
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = userName,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Black,
+                        style = TextStyle(brush = textBrush),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Your construction dashboard is active and synced.",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (dark) Color(0xFF64748B) else Color(0xFF475569)
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(if (dark) Color(0xFF1E293B) else Color.White)
+                        .border(
+                            1.5.dp,
+                            Brush.sweepGradient(listOf(Color(0xFF00D4FF), Color(0xFF7C3AED), Color(0xFFEC4899), Color(0xFF00D4FF))),
+                            CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Stars,
+                        contentDescription = "Stars",
+                        tint = RoyalGold,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
 // ─── Animated Avatar Button ───────────────────────────────────────────────────
 @Composable
 private fun AnimatedAvatarButton(
-    session: Any?,
+    session: GoogleUser?,
     dark: Boolean,
     pulseAlpha: Float,
     onClick: () -> Unit
 ) {
+    val initials = remember(session) {
+        if (session != null) {
+            session.displayName.split(" ")
+                .mapNotNull { it.firstOrNull()?.uppercaseChar() }
+                .joinToString("")
+                .take(2)
+                .ifEmpty { "U" }
+        } else {
+            "GU"
+        }
+    }
+
     Box(
         modifier = Modifier
             .size(46.dp)
@@ -495,18 +631,27 @@ private fun AnimatedAvatarButton(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(if (dark) Color(0xFF1E293B) else Color(0xFFE2E8F0)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                "DH",
-                fontWeight = FontWeight.Black,
-                fontSize   = 15.sp,
-                color      = if (dark) ElectricBlue else DeepViolet
+        if (session?.photoUrl != null) {
+            AsyncImage(
+                model = session.photoUrl,
+                contentDescription = "Profile Photo",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
             )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(if (dark) Color(0xFF1E293B) else Color(0xFFE2E8F0)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    initials,
+                    fontWeight = FontWeight.Black,
+                    fontSize   = 14.sp,
+                    color      = if (dark) ElectricBlue else DeepViolet
+                )
+            }
         }
     }
 }
@@ -1854,11 +1999,21 @@ private fun EnhancedQuickActionBtn(
 @Composable
 private fun EnhancedProfileDialog(
     dark: Boolean,
-    session: Any?,
+    session: GoogleUser?,
     activeLocation: String,
     onDismiss: () -> Unit,
     onSettings: () -> Unit
 ) {
+    val displayName = session?.displayName ?: "Guest Builder"
+    val email = session?.email ?: "guest@example.com"
+    val initials = remember(displayName) {
+        displayName.split(" ")
+            .mapNotNull { it.firstOrNull()?.uppercaseChar() }
+            .joinToString("")
+            .take(2)
+            .ifEmpty { "GB" }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor   = if (dark) Color(0xFF0F172A) else Color.White,
@@ -1888,16 +2043,25 @@ private fun EnhancedProfileDialog(
                         .background(if (dark) Color(0xFF1E293B) else Color(0xFFE2E8F0)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        "DH",
-                        fontWeight = FontWeight.Black,
-                        fontSize   = 30.sp,
-                        color      = ElectricBlue
-                    )
+                    if (session?.photoUrl != null) {
+                        AsyncImage(
+                            model = session.photoUrl,
+                            contentDescription = "Profile Photo",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Text(
+                            initials,
+                            fontWeight = FontWeight.Black,
+                            fontSize   = 30.sp,
+                            color      = ElectricBlue
+                        )
+                    }
                 }
 
                 Text(
-                    "Dipak Harane",
+                    displayName,
                     fontSize   = 20.sp,
                     fontWeight = FontWeight.Black,
                     color      = if (dark) PlatinumWhite else Color(0xFF0F172A)
@@ -1907,9 +2071,9 @@ private fun EnhancedProfileDialog(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    ProfileDetailRow(Icons.Default.Email,   "Email",    "haranedipak@gmail.com", dark)
+                    ProfileDetailRow(Icons.Default.Email,   "Email",    email, dark)
                     ProfileDetailRow(Icons.Default.Place,   "Location", activeLocation,          dark)
-                    ProfileDetailRow(Icons.Default.Shield,  "Role",     "Site Manager — PRO",    dark)
+                    ProfileDetailRow(Icons.Default.Shield,  "Role",     if (session?.isGuest == true) "Guest — VIEW" else "Site Manager — PRO",    dark)
                 }
 
                 // Settings Button
