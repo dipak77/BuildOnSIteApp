@@ -150,16 +150,6 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
     // Set selected project automatically if first project loads and selected is null
     init {
         viewModelScope.launch {
-            try {
-                val initialDbProjects = repository.allProjects.first()
-                if (initialDbProjects.isEmpty()) {
-                    repository.seedDatabase()
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                emitEvent(UiEvent.ShowError("Failed to initialize database", e))
-            }
-
             projects.collectLatest { projectList ->
                 if (selectedProjectId == null && projectList.isNotEmpty()) {
                     selectedProjectId = projectList.first().id

@@ -367,53 +367,7 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         suspend fun seedDatabase(dao: ConstructionDao) {
-            // Seed Projects
-            val p1Id = dao.insertProject(Project(name = "Skyline Corporate Tower", location = "Sector 62, City Center", budget = 1250000.0, status = "Active", customBackground = "preset_cyber_blueprint")).toInt()
-            val p2Id = dao.insertProject(Project(name = "Emerald Heights Villa", location = "Hilltop Greens", budget = 450000.0, status = "Active", customBackground = "preset_sunset_construct")).toInt()
-            dao.insertProject(Project(name = "Metro Line Transit", location = "Subway Segment 4", budget = 3200000.0, status = "On Hold", customBackground = "preset_golden_truss"))
-
-            // Seed Workers (Colors packed as ABGR Ints representing beautiful neon shades)
-            val w1Id = dao.insertWorker(Worker(name = "John Carter", role = "Mason Foreman", shift = "Day", wageRate = 350.0, avatarColor = 0xFF3B82F6.toInt())).toInt()
-            val w2Id = dao.insertWorker(Worker(name = "Alice Rivera", role = "Senior Electrician", shift = "Day", wageRate = 420.0, avatarColor = 0xFFEC4899.toInt())).toInt()
-            val w3Id = dao.insertWorker(Worker(name = "Michael Tyson", role = "Site Supervisor", shift = "Day", wageRate = 500.0, avatarColor = 0xFF10B981.toInt())).toInt()
-            val w4Id = dao.insertWorker(Worker(name = "David Kovacs", role = "Plumbing Expert", shift = "Night", wageRate = 380.0, avatarColor = 0xFFF59E0B.toInt())).toInt()
-            val w5Id = dao.insertWorker(Worker(name = "Sarah Connor", role = "Safety Officer", shift = "Day", wageRate = 400.0, avatarColor = 0xFF8B5CF6.toInt())).toInt()
-
-            // Seed Attendance for today YYYY-MM-DD
-            val today = "2026-05-26"
-            dao.insertAttendance(Attendance(workerId = w1Id, projectId = p1Id, date = today, status = "Present", overtimeHours = 0.0))
-            dao.insertAttendance(Attendance(workerId = w2Id, projectId = p1Id, date = today, status = "Present", overtimeHours = 2.0))
-            dao.insertAttendance(Attendance(workerId = w3Id, projectId = p1Id, date = today, status = "Present", overtimeHours = 0.0))
-            dao.insertAttendance(Attendance(workerId = w4Id, projectId = p1Id, date = today, status = "Absent", overtimeHours = 0.0))
-            dao.insertAttendance(Attendance(workerId = w5Id, projectId = p2Id, date = today, status = "Present", overtimeHours = 1.5))
-
-            // Seed Tasks
-            dao.insertTask(Task(projectId = p1Id, title = "Pour foundation concrete slab", priority = "High", status = "Done", dueDate = "2026-05-24", assignee = "John Carter"))
-            dao.insertTask(Task(projectId = p1Id, title = "Conduct structural welding inspection", priority = "High", status = "In Progress", dueDate = "2026-05-28", assignee = "Michael Tyson"))
-            dao.insertTask(Task(projectId = p1Id, title = "Finalize electrical conduit piping", priority = "Medium", status = "To Do", dueDate = "2026-05-30", assignee = "Alice Rivera"))
-            dao.insertTask(Task(projectId = p2Id, title = "Install master bedroom plumbing lines", priority = "Medium", status = "In Progress", dueDate = "2026-05-27", assignee = "David Kovacs"))
-            dao.insertTask(Task(projectId = p2Id, title = "Review exterior facade safety rigging", priority = "Low", status = "To Do", dueDate = "2026-06-02", assignee = "Sarah Connor"))
-
-            // Seed Transactions
-            dao.insertTransaction(Transaction(projectId = p1Id, type = "Money In", amount = 850000.0, category = "Client Advance", description = "Initial milestone payment received", date = "2026-05-15"))
-            dao.insertTransaction(Transaction(projectId = p1Id, type = "Money Out", amount = 120000.0, category = "Material", description = "Super Grade Portland Cement (400 Bags)", date = "2026-05-18"))
-            dao.insertTransaction(Transaction(projectId = p1Id, type = "Money Out", amount = 45000.0, category = "Labour", description = "Worker weekly salary payout", date = "2026-05-22"))
-            dao.insertTransaction(Transaction(projectId = p2Id, type = "Money In", amount = 300000.0, category = "Client Advance", description = "Phase-1 booking advance received", date = "2026-05-10"))
-            dao.insertTransaction(Transaction(projectId = p2Id, type = "Money Out", amount = 35000.0, category = "Equipment", description = "Excavator rental for foundation dig", date = "2026-05-12"))
-
-            // Seed MOMs
-            dao.insertMOM(MOM(projectId = p1Id, title = "Slab Casting Briefing", content = "Checked cement inventory. Approved slump test protocol. Discussed rain precautions and worker scheduling.", date = "2026-05-23"))
-            dao.insertMOM(MOM(projectId = p1Id, title = "Weekly Architecture Alignment", content = "Aligned on layout modifications for the HVAC shaft on 3rd floor. Verified load bearing calculations.", date = "2026-05-20"))
-
-            // Seed Payroll
-            dao.insertPayroll(Payroll(workerId = w1Id, projectId = p1Id, date = "2026-05-25", wagesPaid = 2450.0, status = "Paid"))
-            dao.insertPayroll(Payroll(workerId = w2Id, projectId = p1Id, date = "2026-05-25", wagesPaid = 2940.0, status = "Paid"))
-            dao.insertPayroll(Payroll(workerId = w3Id, projectId = p1Id, date = "2026-05-25", wagesPaid = 3500.0, status = "Pending"))
-
-            // Seed Estimates
-            dao.insertEstimate(Estimate(projectId = p1Id, itemName = "Grade 500 TMT Steel Bars", quantity = 15.0, unit = "Tons", rate = 850.0, totalCost = 12750.0))
-            dao.insertEstimate(Estimate(projectId = p1Id, itemName = "ReadyMix Concrete M25 Grade", quantity = 120.0, unit = "CuM", rate = 95.0, totalCost = 11400.0))
-            dao.insertEstimate(Estimate(projectId = p2Id, itemName = "Bricks Red Fine Burned", quantity = 25000.0, unit = "Pcs", rate = 0.15, totalCost = 3750.0))
+            // Seeding disabled for production ready clean database
         }
     }
 }
