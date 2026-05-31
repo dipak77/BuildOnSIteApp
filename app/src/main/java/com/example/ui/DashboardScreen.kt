@@ -106,32 +106,52 @@ fun DashboardScreen(
                 if (dark) Brush.radialGradient(
                     colors = listOf(Color(0xFF0D1B2A), Color(0xFF020817), Color(0xFF0D0D1A)),
                     center = Offset(0.3f, 0.1f), radius = 1200f
-                ) else Brush.verticalGradient(
-                    listOf(Color(0xFFF0F4FF), Color(0xFFE8EDF8), Color(0xFFF5F7FF))
+                ) else Brush.radialGradient(
+                    colors = listOf(Color(0xFFFAFCFF), Color(0xFFF1F5F9), Color(0xFFE2E8F0)),
+                    center = Offset(0.3f, 0.1f), radius = 1500f
                 )
             )
             .then(
-                if (dark) Modifier.drawBehind {
+                Modifier.drawBehind {
                     rotate(degrees = rotationAnim) {
                         val w = size.width; val h = size.height
                         // Large ambient orbs
-                        drawCircle(
-                            brush  = Brush.radialGradient(listOf(Color(0x1400D4FF), Color.Transparent)),
-                            radius = w * 0.55f,
-                            center = Offset(w * 0.1f, h * 0.15f)
-                        )
-                        drawCircle(
-                            brush  = Brush.radialGradient(listOf(Color(0x107C3AED), Color.Transparent)),
-                            radius = w * 0.65f,
-                            center = Offset(w * 0.9f, h * 0.7f)
-                        )
-                        drawCircle(
-                            brush  = Brush.radialGradient(listOf(Color(0x0D00FF87), Color.Transparent)),
-                            radius = w * 0.4f,
-                            center = Offset(w * 0.5f, h * 0.45f)
-                        )
+                        if (dark) {
+                            drawCircle(
+                                brush  = Brush.radialGradient(listOf(Color(0x1400D4FF), Color.Transparent)),
+                                radius = w * 0.55f,
+                                center = Offset(w * 0.1f, h * 0.15f)
+                            )
+                            drawCircle(
+                                brush  = Brush.radialGradient(listOf(Color(0x107C3AED), Color.Transparent)),
+                                radius = w * 0.65f,
+                                center = Offset(w * 0.9f, h * 0.7f)
+                            )
+                            drawCircle(
+                                brush  = Brush.radialGradient(listOf(Color(0x0D00FF87), Color.Transparent)),
+                                radius = w * 0.4f,
+                                center = Offset(w * 0.2f, h * 0.9f)
+                            )
+                        } else {
+                            // Premium light mode orbs
+                            drawCircle(
+                                brush  = Brush.radialGradient(listOf(Color(0x2800D4FF), Color.Transparent)),
+                                radius = w * 0.55f,
+                                center = Offset(w * 0.1f, h * 0.15f)
+                            )
+                            drawCircle(
+                                brush  = Brush.radialGradient(listOf(Color(0x207C3AED), Color.Transparent)),
+                                radius = w * 0.65f,
+                                center = Offset(w * 0.9f, h * 0.7f)
+                            )
+                            drawCircle(
+                                brush  = Brush.radialGradient(listOf(Color(0x1F00FF87), Color.Transparent)),
+                                radius = w * 0.4f,
+                                center = Offset(w * 0.2f, h * 0.9f)
+                            )
+                        }
                     }
-                } else Modifier
+                }
             )
     ) {
         LazyColumn(
@@ -153,7 +173,10 @@ fun DashboardScreen(
             // ── Greeting Section ──
             item {
                 val session by viewModel.userSession.collectAsState()
-                GreetingSection(session = session, dark = dark)
+                val doneCount = allProjects.count { it.status.equals("Completed", true) }
+                val activeCount = allProjects.count { it.status.equals("Active", true) }
+                val overdueCount = allProjects.count { it.status.equals("Hold", true) || it.status.equals("On Hold", true) }
+                GreetingSection(session = session, dark = dark, doneCount = doneCount, activeCount = activeCount, overdueCount = overdueCount)
             }
 
             // ── Main Content: Active Project and Site Overview ──
@@ -218,21 +241,6 @@ fun DashboardScreen(
                         }
                     }
                 }
-            }
-
-            // ── Financial Snapshot ──
-            item {
-                FinancialSnapshotCard(
-                    dark = dark,
-                    revenue = if (moneyIn <= 0) 850_000.0 else moneyIn,
-                    expenses = if (moneyOut <= 0) 465_000.0 else moneyOut,
-                    netProfit = if (netBalance == 0.0) 385_000.0 else netBalance,
-                    pendingPayments = 120_000.0,
-                    selectedFilter = selectedFilter,
-                    showFilterDropdown = showFilterDropdown,
-                    onFilterExpand = { showFilterDropdown = !showFilterDropdown },
-                    onFilterSelect = { selectedFilter = it; showFilterDropdown = false }
-                )
             }
 
             // ── Recent Activity & Quick Actions ──
@@ -499,7 +507,10 @@ private fun GlowIconButton(
 @Composable
 private fun GreetingSection(
     session: GoogleUser?,
-    dark: Boolean
+    dark: Boolean,
+    doneCount: Int,
+    activeCount: Int,
+    overdueCount: Int
 ) {
     val userName = session?.displayName ?: "Guest Builder"
     val parsedDate = remember {
@@ -597,6 +608,62 @@ private fun GreetingSection(
                 fontWeight = FontWeight.Black,
                 color = if (dark) ElectricBlue else DeepViolet
             )
+        }
+    }
+    
+    // Status Pills Row
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp, bottom = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Done Pill
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .border(1.dp, Color(0xFF00FF87).copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                .background(Color(0xFF00FF87).copy(alpha = 0.05f))
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+        ) {
+            Icon(Icons.Default.Check, contentDescription = "Done", tint = Color(0xFF00FF87), modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(text = "$doneCount", fontWeight = FontWeight.Black, color = Color(0xFF00FF87), fontSize = 13.sp)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(text = "Done", color = Color(0xFF00FF87), fontSize = 12.sp)
+        }
+        
+        // Active Pill
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .border(1.dp, Color(0xFF00D4FF).copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                .background(Color(0xFF00D4FF).copy(alpha = 0.05f))
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+        ) {
+            Icon(Icons.Default.Autorenew, contentDescription = "Active", tint = Color(0xFF00D4FF), modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(text = "$activeCount", fontWeight = FontWeight.Black, color = Color(0xFF00D4FF), fontSize = 13.sp)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(text = "Active", color = Color(0xFF00D4FF), fontSize = 12.sp)
+        }
+        
+        // Overdue Pill
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .border(1.dp, Color(0xFFFF6B6B).copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                .background(Color(0xFFFF6B6B).copy(alpha = 0.05f))
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+        ) {
+            Icon(Icons.Default.WarningAmber, contentDescription = "Overdue", tint = Color(0xFFFF6B6B), modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(text = "$overdueCount", fontWeight = FontWeight.Black, color = Color(0xFFFF6B6B), fontSize = 13.sp)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(text = "Overdue", color = Color(0xFFFF6B6B), fontSize = 12.sp)
         }
     }
 }

@@ -49,14 +49,7 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
     // ==========================================
     // GOOGLE USER SESSION
     // ==========================================
-    private val _userSession = MutableStateFlow<GoogleUser?>(
-        GoogleUser(
-            displayName = "Dipak Harane",
-            email = "haranedipak@gmail.com",
-            photoUrl = null,
-            isGuest = true
-        )
-    )
+    private val _userSession = MutableStateFlow<GoogleUser?>(null)
     val userSession: StateFlow<GoogleUser?> = _userSession.asStateFlow()
 
     fun handleGoogleSignIn(user: GoogleUser, context: Context) {
@@ -95,13 +88,7 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
                 isGuest = isGuest
             )
         } else {
-            // Auto sign in with a default profile for friction-free developer/demo experience in the streaming emulator!
-            _userSession.value = GoogleUser(
-                displayName = "Dipak Harane",
-                email = "haranedipak@gmail.com",
-                photoUrl = null,
-                isGuest = true
-            )
+            _userSession.value = null
         }
     }
 

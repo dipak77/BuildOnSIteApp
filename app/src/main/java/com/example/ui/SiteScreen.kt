@@ -1430,19 +1430,16 @@ private fun PremiumPartyDetailPage(
                     onClick = {
                         val amountStr = formatIndianRupees(diff.absoluteValue)
                         val statusText = if (diff >= 0) "Advance Paid" else "Pending to Pay"
-                        val shareTxt = """
-                            Party Project Balance:
-                            Party: ${worker.name}
-                            Project: ${currentProject?.name ?: "Treasure Garden"}
-                            Balance: $amountStr ($statusText)
-                            Received: ${formatIndianRupees(totalReceived)}
-                            Paid: ${formatIndianRupees(totalPaid)}
-                        """.trimIndent()
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, shareTxt)
-                        }
-                        context.startActivity(Intent.createChooser(intent, "Share Balance Review"))
+                        val pdfFile = PdfUtils.generateBalanceReviewPdfFile(
+                            context = context,
+                            partyName = worker.name,
+                            projectName = currentProject?.name ?: "Treasure Garden",
+                            balance = amountStr,
+                            statusText = statusText,
+                            received = formatIndianRupees(totalReceived),
+                            paid = formatIndianRupees(totalPaid)
+                        )
+                        PdfUtils.sharePdfFile(context, pdfFile, "Share Balance Review")
                     }
                 )
                 HeaderActionButton(
@@ -1907,13 +1904,15 @@ private fun PremiumPaymentDetailPage(
                     icon = Icons.Default.Share,
                     tint = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B), dark = dark,
                     onClick = {
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_SUBJECT, "Payment Receipt")
-                            putExtra(Intent.EXTRA_TEXT,
-                                "Payment: $amountStr | To: ${tx.partyName ?: "Company"} | Date: ${tx.date} | Method: ${tx.paymentMethod}")
-                        }
-                        context.startActivity(Intent.createChooser(intent, "Share receipt"))
+                        val amountStr = formatIndianRupees(tx.amount)
+                        val pdfFile = PdfUtils.generateReceiptPdfFile(
+                            context = context,
+                            txId = tx.id,
+                            name = tx.partyName ?: "Company",
+                            amount = amountStr,
+                            date = tx.date
+                        )
+                        PdfUtils.sharePdfFile(context, pdfFile, "Share Receipt")
                     }
                 )
                 PremiumIconBtn(
@@ -2062,11 +2061,14 @@ private fun PremiumPaymentDetailPage(
                     )
                     .background(VioletGlow.copy(alpha = 0.1f))
                     .clickable {
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, "Payment: $amountStr | ID: ${tx.id}")
-                        }
-                        context.startActivity(Intent.createChooser(intent, "Share"))
+                        val pdfFile = PdfUtils.generateReceiptPdfFile(
+                            context = context,
+                            txId = tx.id,
+                            name = tx.partyName ?: "Company",
+                            amount = amountStr,
+                            date = tx.date
+                        )
+                        PdfUtils.sharePdfFile(context, pdfFile, "Share Receipt PDF")
                     }
                     .padding(vertical = 14.dp),
                 contentAlignment = Alignment.Center
@@ -2076,7 +2078,7 @@ private fun PremiumPaymentDetailPage(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(Icons.Default.Share, null, tint = VioletGlow, modifier = Modifier.size(15.dp))
-                    Text("SHARE LINK", fontSize = 11.sp, fontWeight = FontWeight.Black,
+                    Text("SHARE PDF", fontSize = 11.sp, fontWeight = FontWeight.Black,
                         color = VioletGlow, letterSpacing = 0.5.sp)
                 }
             }
@@ -3404,27 +3406,19 @@ private fun PremiumPdfDialog(
                         .clip(RoundedCornerShape(12.dp))
                         .background(GradientAqua)
                         .clickable {
-                            // Build receipt content
-                            val receiptText = buildString {
-                                appendLine("========================================")
-                                appendLine("        CONSTRUCTPRO - SITE RECEIPT     ")
-                                appendLine("========================================")
-                                appendLine()
-                                appendLine("Party   : $name")
-                                appendLine("Amount  : \u20B9 $amount")
-                                appendLine("Date    : $date")
-                                appendLine("Ref ID  : #$txId")
-                                appendLine()
-                                appendLine("----------------------------------------")
-                                appendLine("   Digitally Verified & Authenticated   ")
-                                appendLine("========================================")
-                            }
-                            val fileName = "Receipt_${txId}_${System.currentTimeMillis()}.txt"
                             try {
+                                val pdfFile = PdfUtils.generateReceiptPdfFile(
+                                    context = context,
+                                    txId = txId,
+                                    name = name,
+                                    amount = formatIndianRupees(amount),
+                                    date = date
+                                )
+                                val fileName = pdfFile.name
                                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
                                     val contentValues = android.content.ContentValues().apply {
                                         put(android.provider.MediaStore.Downloads.DISPLAY_NAME, fileName)
-                                        put(android.provider.MediaStore.Downloads.MIME_TYPE, "text/plain")
+                                        put(android.provider.MediaStore.Downloads.MIME_TYPE, "application/pdf")
                                         put(android.provider.MediaStore.Downloads.RELATIVE_PATH,
                                             android.os.Environment.DIRECTORY_DOWNLOADS + "/ConstructPro")
                                     }
@@ -3434,7 +3428,7 @@ private fun PremiumPdfDialog(
                                     )
                                     if (uri != null) {
                                         context.contentResolver.openOutputStream(uri)?.use { out ->
-                                            out.write(receiptText.toByteArray())
+                                            pdfFile.inputStream().use { input -> input.copyTo(out) }
                                         }
                                         Toast.makeText(context,
                                             "Saved to Downloads/ConstructPro/$fileName",
@@ -3450,8 +3444,8 @@ private fun PremiumPdfDialog(
                                         android.os.Environment.DIRECTORY_DOWNLOADS
                                     )
                                     val folder = java.io.File(dir, "ConstructPro").also { it.mkdirs() }
-                                    val file = java.io.File(folder, fileName)
-                                    file.writeText(receiptText)
+                                    val dest = java.io.File(folder, fileName)
+                                    pdfFile.copyTo(dest, overwrite = true)
                                     Toast.makeText(context,
                                         "Saved to Downloads/ConstructPro/$fileName",
                                         Toast.LENGTH_LONG).show()
