@@ -173,7 +173,7 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
     // ==========================================
 
     // Projects
-    fun addProject(name: String, location: String, budget: Double) {
+    fun addProject(name: String, location: String, budget: Double, customBackground: String? = null) {
         val nameResult = FormValidator.validateProjectName(name)
         val locResult = FormValidator.validateLocation(location)
         if (!nameResult.isValid) { emitEvent(UiEvent.ShowToast(nameResult.errorMessage ?: "Invalid name")); return }
@@ -181,7 +181,7 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
 
         viewModelScope.launch {
             try {
-                val id = repository.insertProject(Project(name = name, location = location, budget = budget, status = "Active"))
+                val id = repository.insertProject(Project(name = name, location = location, budget = budget, status = "Active", customBackground = customBackground))
                 selectedProjectId = id.toInt()
                 emitEvent(UiEvent.ShowToast("Project \"$name\" created!"))
             } catch (e: Exception) {

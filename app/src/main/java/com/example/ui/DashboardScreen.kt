@@ -154,13 +154,16 @@ fun DashboardScreen(
                 }
             )
     ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 120.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            // ── Header ──
-            item {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        if (dark) Color(0xFF020817).copy(alpha = 0.85f)
+                        else Color(0xFFFAFCFF).copy(alpha = 0.85f)
+                    )
+                    .padding(horizontal = 18.dp)
+            ) {
                 EnhancedDashboardHeader(
                     dark        = dark,
                     onMenuClick = onMenuClick,
@@ -169,6 +172,12 @@ fun DashboardScreen(
                     viewModel   = viewModel
                 )
             }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 120.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
 
             // ── Greeting Section ──
             item {
@@ -301,6 +310,7 @@ fun DashboardScreen(
             }
         }
     }
+}
 
     // ── Dialogs ──
     val proj = currentProject
@@ -567,15 +577,19 @@ private fun GreetingSection(
     overdueCount: Int
 ) {
     val userName = session?.displayName ?: "Guest Builder"
-    val parsedDate = remember {
-        try {
-            SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(DASHBOARD_TODAY_ISO)
-        } catch (e: Exception) {
-            Date()
-        }
-    }
+    val parsedDate = remember { Date() }
     val dayOfWeek = remember(parsedDate) { SimpleDateFormat("EEEE", Locale.US).format(parsedDate) }
     val formattedDate = remember(parsedDate) { SimpleDateFormat("d MMMM yyyy", Locale.US).format(parsedDate) }
+
+    val greeting = remember {
+        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        when (hour) {
+            in 5..11 -> "Good Morning 👋"
+            in 12..16 -> "Good Afternoon 👋"
+            in 17..21 -> "Good Evening 👋"
+            else -> "Good Night 👋"
+        }
+    }
 
     val infiniteTransition = rememberInfiniteTransition(label = "live_pulse")
     val pulseAlpha by infiniteTransition.animateFloat(
@@ -593,7 +607,7 @@ private fun GreetingSection(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Good Morning 👋",
+                text = greeting,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B)
@@ -2829,12 +2843,21 @@ private fun DashboardProjectList(
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Business,
-                                    contentDescription = null,
-                                    tint = if (dark) Color(0xFF818CF8) else Color(0xFF4F46E5),
-                                    modifier = Modifier.size(36.dp)
-                                )
+                                if (!p.customBackground.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = p.customBackground,
+                                        contentDescription = "Project Cover Image",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Business,
+                                        contentDescription = null,
+                                        tint = if (dark) Color(0xFF818CF8) else Color(0xFF4F46E5),
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
                             }
 
                             // Right Column Content

@@ -169,6 +169,7 @@ fun MoreScreen(
     var projLocation by remember { mutableStateOf("") }
     var projBudget by remember { mutableStateOf("") }
     var projStatus by remember { mutableStateOf("Active") }
+    var projBg by remember { mutableStateOf("") }
     var showDeleteProjectConfirmForObj by remember { mutableStateOf<Project?>(null) }
     var showingPartyForm by remember { mutableStateOf(false) }
     var editingWorker by remember { mutableStateOf<Worker?>(null) }
@@ -371,6 +372,7 @@ fun MoreScreen(
                         onClick = {
                             editingProject = null
                             projName = ""; projLocation = ""; projBudget = ""; projStatus = "Active"
+                            projBg = ""
                             showProjectModal = true
                         }
                     )
@@ -388,6 +390,7 @@ fun MoreScreen(
                         editingProject = proj
                         projName = proj.name; projLocation = proj.location
                         projBudget = proj.budget.toString(); projStatus = proj.status
+                        projBg = proj.customBackground ?: ""
                         showProjectModal = true
                     },
                     onDelete = { showDeleteProjectConfirmForObj = proj }
@@ -625,19 +628,21 @@ fun MoreScreen(
                 dark = dark,
                 projName = projName, projLocation = projLocation,
                 projBudget = projBudget, projStatus = projStatus,
+                projBg = projBg,
                 editingProject = editingProject,
                 onNameChange = { projName = it },
                 onLocationChange = { projLocation = it },
                 onBudgetChange = { projBudget = it },
                 onStatusChange = { projStatus = it },
+                onBgChange = { projBg = it },
                 onCancel = { showProjectModal = false; editingProject = null },
                 onSave = {
                     val bud = projBudget.toDoubleOrNull() ?: 0.0
                     if (projName.isNotBlank() && projLocation.isNotBlank()) {
-                        if (editingProject == null) viewModel.addProject(projName, projLocation, bud)
+                        if (editingProject == null) viewModel.addProject(projName, projLocation, bud, projBg)
                         else viewModel.updateProject(editingProject!!.copy(
                             name = projName, location = projLocation,
-                            budget = bud, status = projStatus))
+                            budget = bud, status = projStatus, customBackground = projBg))
                         showProjectModal = false; editingProject = null
                     }
                 }
@@ -1383,12 +1388,14 @@ private fun PremiumAccountCard(
             )
             .padding(18.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 // Avatar
                 Box(
                     modifier = Modifier
@@ -1408,12 +1415,14 @@ private fun PremiumAccountCard(
                     )
                 }
                 Spacer(Modifier.width(14.dp))
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = user.displayName,
                             color = if (dark) Color.White else Color(0xFF1E1B4B),
-                            fontWeight = FontWeight.Bold, fontSize = 15.sp
+                            fontWeight = FontWeight.Bold, fontSize = 15.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Spacer(Modifier.width(8.dp))
                         // Online dot
@@ -1426,7 +1435,9 @@ private fun PremiumAccountCard(
                     Text(
                         text = user.email,
                         color = if (dark) Color(0xFF64748B) else Color(0xFF475569),
-                        fontSize = 11.sp
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Spacer(Modifier.height(4.dp))
                     Box(
@@ -1442,11 +1453,15 @@ private fun PremiumAccountCard(
                 }
             }
             // Action buttons row
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
                 // Change PIN button
                 val context = LocalContext.current
                 Box(
                     modifier = Modifier
+                        .weight(1f)
                         .clip(RoundedCornerShape(10.dp))
                         .background(Color(0xFF7C3AED).copy(0.12f))
                         .border(1.dp, Color(0xFF7C3AED).copy(0.35f), RoundedCornerShape(10.dp))
@@ -1458,33 +1473,33 @@ private fun PremiumAccountCard(
                                 "PIN cleared. You will set a new PIN next time you open the app.",
                                 android.widget.Toast.LENGTH_LONG).show()
                         }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(vertical = 12.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                         Icon(Icons.Default.Lock, null, tint = Color(0xFF7C3AED), modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("CHANGE PIN", color = Color(0xFF7C3AED), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
+                        Spacer(Modifier.width(6.dp))
+                        Text("CHANGE PIN", color = Color(0xFF7C3AED), fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
                     }
                 }
                 // Sign out button
                 Box(
                     modifier = Modifier
+                        .weight(1f)
                         .clip(RoundedCornerShape(10.dp))
                         .background(pinkRes.copy(0.12f))
                         .border(1.dp, pinkRes.copy(0.35f), RoundedCornerShape(10.dp))
                         .clickable(onClick = onSignOut)
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(vertical = 12.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                         Icon(Icons.Default.Logout, null, tint = pinkRes, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("SIGN OUT", color = pinkRes, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
+                        Spacer(Modifier.width(6.dp))
+                        Text("SIGN OUT", color = pinkRes, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
                     }
                 }
             }
-
         }
     }
 }
@@ -2650,9 +2665,10 @@ private fun PremiumDeveloperContent(
 @Composable
 private fun PremiumProjectFormContent(
     dark: Boolean, projName: String, projLocation: String,
-    projBudget: String, projStatus: String, editingProject: Project?,
+    projBudget: String, projStatus: String, projBg: String, editingProject: Project?,
     onNameChange: (String) -> Unit, onLocationChange: (String) -> Unit,
     onBudgetChange: (String) -> Unit, onStatusChange: (String) -> Unit,
+    onBgChange: (String) -> Unit,
     onCancel: () -> Unit, onSave: () -> Unit
 ) {
     Column(
@@ -2666,6 +2682,8 @@ private fun PremiumProjectFormContent(
         GlassTextField(value = projBudget, onValueChange = onBudgetChange,
             label = "Base Budget (₹)", isNumeric = true,
             placeholder = "e.g. 15000000 (1.5 Cr)", darkTheme = dark)
+        GlassTextField(value = projBg, onValueChange = onBgChange,
+            label = "Project Image URL / Path", placeholder = "https://images.unsplash.com/... or path", darkTheme = dark)
 
         val parsedBudget = projBudget.toDoubleOrNull() ?: 0.0
         if (parsedBudget > 0.0) {
