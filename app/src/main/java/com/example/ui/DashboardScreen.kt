@@ -361,6 +361,14 @@ private fun EnhancedDashboardHeader(
     viewModel: MainViewModel
 ) {
     val session by viewModel.userSession.collectAsState()
+    val displayName = session?.displayName ?: "Guest Builder"
+    val initials = remember(displayName) {
+        displayName.split(" ")
+            .mapNotNull { it.firstOrNull()?.uppercaseChar() }
+            .joinToString("")
+            .take(2)
+            .ifEmpty { "GB" }
+    }
 
     val infiniteTransition = rememberInfiniteTransition(label = "header_shimmer")
     val shimmerOff by infiniteTransition.animateFloat(
@@ -450,8 +458,7 @@ private fun EnhancedDashboardHeader(
                 onClick     = onThemeToggle
             )
 
-            // Notification Bell with badge 3
-            val context = LocalContext.current
+            // User Profile Image / Initials Button
             Box(
                 modifier = Modifier
                     .size(46.dp)
@@ -460,33 +467,27 @@ private fun EnhancedDashboardHeader(
                         if (dark) Brush.radialGradient(listOf(Color(0xFF1E293B), Color(0xFF0F172A)))
                         else Brush.radialGradient(listOf(Color.White, Color(0xFFF1F5F9)))
                     )
-                    .border(1.dp, GlassBorder.copy(alpha = 0.35f), CircleShape)
-                    .clickable {
-                        Toast.makeText(context, "Notifications: 3 pending alerts", Toast.LENGTH_SHORT).show()
-                    },
+                    .border(
+                        1.dp,
+                        Brush.sweepGradient(listOf(ElectricBlue, DeepViolet, Color(0xFFEC4899), ElectricBlue)),
+                        CircleShape
+                    )
+                    .clickable(onClick = onProfileClick),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Notifications,
-                    contentDescription = "Notifications",
-                    tint = if (dark) Color.White else Color(0xFF334155),
-                    modifier = Modifier.size(20.dp)
-                )
-                // Red badge
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 4.dp, end = 4.dp)
-                        .size(16.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFEF4444)),
-                    contentAlignment = Alignment.Center
-                ) {
+                if (session?.photoUrl != null) {
+                    AsyncImage(
+                        model = session?.photoUrl,
+                        contentDescription = "Profile Photo",
+                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
                     Text(
-                        text = "3",
-                        fontSize = 9.sp,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
+                        text = initials,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Black,
+                        color = if (dark) ElectricBlue else DeepViolet
                     )
                 }
             }
