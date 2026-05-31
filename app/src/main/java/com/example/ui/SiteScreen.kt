@@ -440,6 +440,7 @@ private fun PremiumMainPage(
                     )
                     "Transaction" -> TransactionTab(
                         dark = dark,
+                        viewModel = viewModel,
                         projectTransactions = projectTransactions,
                         onSelectTx = onSelectTx
                     )
@@ -507,36 +508,53 @@ private fun PremiumSiteHeader(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
-                // Live indicator dot + project name
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    PulsatingDot(color = EmeraldGlow)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "LIVE SITE",
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 2.sp,
-                        color = EmeraldGlow
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                IconButton(
+                    onClick = { viewModel.currentScreen = AppScreen.Dashboard },
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back to Dashboard",
+                        tint = if (dark) Color.White else Color(0xFF1E293B),
+                        modifier = Modifier.size(24.dp)
                     )
                 }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = currentProject?.name ?: "Treasure Garden",
-                    style = TextStyle(
-                        brush = GradientAqua,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = (-0.5).sp
+                Spacer(modifier = Modifier.width(4.dp))
+                Column {
+                    // Live indicator dot + project name
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        PulsatingDot(color = EmeraldGlow)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "LIVE SITE",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 2.sp,
+                            color = EmeraldGlow
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = currentProject?.name ?: "Treasure Garden",
+                        style = TextStyle(
+                            brush = GradientAqua,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = (-0.5).sp
+                        )
                     )
-                )
-                Text(
-                    text = "Site Operations Console",
-                    color = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 0.3.sp
-                )
+                    Text(
+                        text = "Site Operations Console",
+                        color = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 0.3.sp
+                    )
+                }
             }
 
             Row(
@@ -883,6 +901,7 @@ private fun PartyTab(
 @Composable
 private fun TransactionTab(
     dark: Boolean,
+    viewModel: MainViewModel,
     projectTransactions: List<Transaction>,
     onSelectTx: (Transaction) -> Unit
 ) {
@@ -890,69 +909,152 @@ private fun TransactionTab(
     val totalOut = projectTransactions.filter { it.type == "Money Out" }.sumOf { it.amount }
     val net      = totalIn - totalOut
 
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
-    ) {
-        // Summary Banner
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    if (dark)
-                        Brush.horizontalGradient(listOf(Color(0xFF0D1B3E), Color(0xFF111827)))
-                    else
-                        Brush.horizontalGradient(listOf(Color(0xFFEEF2FF), Color(0xFFF8FAFF)))
-                )
-                .padding(horizontal = 18.dp, vertical = 14.dp)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            // Summary Banner
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        if (dark)
+                            Brush.horizontalGradient(listOf(Color(0xFF0D1B3E), Color(0xFF111827)))
+                        else
+                            Brush.horizontalGradient(listOf(Color(0xFFEEF2FF), Color(0xFFF8FAFF)))
+                    )
+                    .padding(horizontal = 18.dp, vertical = 14.dp)
             ) {
-                MiniFinanceStat(
-                    dark = dark, label = "IN",
-                    value = formatIndianRupees(totalIn),
-                    color = EmeraldGlow, modifier = Modifier.weight(1f)
-                )
-                MiniFinanceStat(
-                    dark = dark, label = "OUT",
-                    value = formatIndianRupees(totalOut),
-                    color = RoseGlow, modifier = Modifier.weight(1f)
-                )
-                MiniFinanceStat(
-                    dark = dark, label = "NET",
-                    value = formatIndianRupees(net.absoluteValue),
-                    color = if (net >= 0) EmeraldGlow else RoseGlow,
-                    modifier = Modifier.weight(1f)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    MiniFinanceStat(
+                        dark = dark, label = "IN",
+                        value = formatIndianRupees(totalIn),
+                        color = EmeraldGlow, modifier = Modifier.weight(1f)
+                    )
+                    MiniFinanceStat(
+                        dark = dark, label = "OUT",
+                        value = formatIndianRupees(totalOut),
+                        color = RoseGlow, modifier = Modifier.weight(1f)
+                    )
+                    MiniFinanceStat(
+                        dark = dark, label = "NET",
+                        value = formatIndianRupees(net.absoluteValue),
+                        color = if (net >= 0) EmeraldGlow else RoseGlow,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            if (projectTransactions.isEmpty()) {
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    PremiumEmptyState(dark = dark, message = "No transactions logged yet")
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 90.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    item {
+                        Text(
+                            text = "All Receipts  ·  ${projectTransactions.size}",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                            letterSpacing = 0.3.sp,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                    }
+                    items(projectTransactions, key = { it.id }) { tx ->
+                        PremiumTransactionCard(tx = tx, dark = dark, onClick = { onSelectTx(tx) })
+                    }
+                }
             }
         }
 
-        if (projectTransactions.isEmpty()) {
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                PremiumEmptyState(dark = dark, message = "No transactions logged yet")
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+        // Bottom Action Bar
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.Transparent,
+                            if (dark) PremiumNavy.copy(alpha = 0.95f) else Color(0xFAF0F4FF)
+                        )
+                    )
+                )
+                .padding(horizontal = 16.dp, vertical = 16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                item {
+                // Payment In Button
+                Button(
+                    onClick = {
+                        viewModel.transactionTypePreset = "Money In"
+                        viewModel.showTransactionDialog = true
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F766E)), // Green/Teal
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                ) {
                     Text(
-                        text = "All Receipts  ·  ${projectTransactions.size}",
-                        fontSize = 13.sp,
+                        text = "Payment In",
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
-                        letterSpacing = 0.3.sp,
-                        modifier = Modifier.padding(bottom = 4.dp)
+                        color = Color.White
                     )
                 }
-                items(projectTransactions, key = { it.id }) { tx ->
-                    PremiumTransactionCard(tx = tx, dark = dark, onClick = { onSelectTx(tx) })
+
+                // Plus Button
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(NeonPurple)
+                        .clickable {
+                            viewModel.transactionTypePreset = "Money Out"
+                            viewModel.showTransactionDialog = true
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Transaction",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
-                item { Spacer(modifier = Modifier.height(80.dp)) }
+
+                // Payment Out Button
+                Button(
+                    onClick = {
+                        viewModel.transactionTypePreset = "Money Out"
+                        viewModel.showTransactionDialog = true
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48)), // Red/Pink
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                ) {
+                    Text(
+                        text = "Payment Out",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
             }
         }
     }

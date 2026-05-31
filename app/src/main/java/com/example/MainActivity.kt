@@ -301,54 +301,58 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
                         }
                     }
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 8.dp)
-                            .height(66.dp)
-                            .background(if (dark) Color(0x7D0B0F19) else Color(0xDDF8FAFC), RoundedCornerShape(24.dp))
-                            .border(BorderStroke(1.dp, if (dark) GlassBorderDark else Color(0x1F6366F1)), RoundedCornerShape(24.dp)),
-                        horizontalArrangement = Arrangement.SpaceAround,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        BottomBarNavItem(Icons.Default.Dashboard, currentTab == AppScreen.Dashboard, dark, "Dashboard") { viewModel.currentScreen = AppScreen.Dashboard }
-                        BottomBarNavItem(Icons.Default.AccountBalanceWallet, currentTab == AppScreen.Money, dark, "Money") { viewModel.currentScreen = AppScreen.Money }
-                        BottomBarNavItem(Icons.Default.TaskAlt, currentTab == AppScreen.Tasks, dark, "Tasks") { viewModel.currentScreen = AppScreen.Tasks }
-                        BottomBarNavItem(Icons.Default.EventAvailable, currentTab == AppScreen.Site, dark, "Site") { viewModel.currentScreen = AppScreen.Site }
-                        BottomBarNavItem(Icons.Default.Menu, currentTab == AppScreen.More, dark, "More") { viewModel.currentScreen = AppScreen.More }
+                    if (currentTab != AppScreen.Site) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 8.dp)
+                                .height(66.dp)
+                                .background(if (dark) Color(0x7D0B0F19) else Color(0xDDF8FAFC), RoundedCornerShape(24.dp))
+                                .border(BorderStroke(1.dp, if (dark) GlassBorderDark else Color(0x1F6366F1)), RoundedCornerShape(24.dp)),
+                            horizontalArrangement = Arrangement.SpaceAround,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            BottomBarNavItem(Icons.Default.Dashboard, currentTab == AppScreen.Dashboard, dark, "Dashboard") { viewModel.currentScreen = AppScreen.Dashboard }
+                            BottomBarNavItem(Icons.Default.AccountBalanceWallet, currentTab == AppScreen.Money, dark, "Money") { viewModel.currentScreen = AppScreen.Money }
+                            BottomBarNavItem(Icons.Default.TaskAlt, currentTab == AppScreen.Tasks, dark, "Tasks") { viewModel.currentScreen = AppScreen.Tasks }
+                            BottomBarNavItem(Icons.Default.EventAvailable, currentTab == AppScreen.Site, dark, "Site") { viewModel.currentScreen = AppScreen.Site }
+                            BottomBarNavItem(Icons.Default.Menu, currentTab == AppScreen.More, dark, "More") { viewModel.currentScreen = AppScreen.More }
+                        }
                     }
                 }
             }
         }
 
-        FloatingActionButton(
-            onClick = {
-                when (currentTab) {
-                    AppScreen.Dashboard -> showQuickDialog = true
-                    AppScreen.Money -> showTransactionDialog = true
-                    AppScreen.Tasks -> showTaskDialog = true
-                    AppScreen.Site -> {
-                        when (viewModel.activeSiteTab) {
-                            "Party" -> showWorkerDialog = true
-                            "Transaction" -> showTransactionDialog = true
-                            "Task" -> showTaskDialog = true
-                            "Attendance" -> showWorkerDialog = true
-                            "Site" -> showProjectDialog = true
-                            else -> showWorkerDialog = true
+        if (currentTab != AppScreen.Site) {
+            FloatingActionButton(
+                onClick = {
+                    when (currentTab) {
+                        AppScreen.Dashboard -> showQuickDialog = true
+                        AppScreen.Money -> showTransactionDialog = true
+                        AppScreen.Tasks -> showTaskDialog = true
+                        AppScreen.Site -> {
+                            when (viewModel.activeSiteTab) {
+                                "Party" -> showWorkerDialog = true
+                                "Transaction" -> showTransactionDialog = true
+                                "Task" -> showTaskDialog = true
+                                "Attendance" -> showWorkerDialog = true
+                                "Site" -> showProjectDialog = true
+                                else -> showWorkerDialog = true
+                            }
                         }
+                        AppScreen.More -> showProjectDialog = true
                     }
-                    AppScreen.More -> showProjectDialog = true
-                }
-            },
-            containerColor = NeonPurple,
-            contentColor = Color.Black,
-            shape = CircleShape,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(bottom = if (isDesktopWidth) 24.dp else 94.dp, end = 24.dp)
-                .size(56.dp)
-        ) {
-            Icon(Icons.Default.Add, contentDescription = "New Record action", modifier = Modifier.size(28.dp))
+                },
+                containerColor = NeonPurple,
+                contentColor = Color.Black,
+                shape = CircleShape,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = if (isDesktopWidth) 24.dp else 94.dp, end = 24.dp)
+                    .size(56.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "New Record action", modifier = Modifier.size(28.dp))
+            }
         }
     }
 

@@ -166,33 +166,18 @@ fun DashboardScreen(
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             Box(modifier = Modifier.weight(1f)) {
-                                val proj = currentProject
-                                if (proj != null) {
-                                    EnhancedProjectHeroCard(
-                                        proj = proj,
-                                        dark = dark,
-                                        netBalance = netBalance,
-                                        allProjects = allProjects,
-                                        allWorkersCount = allWorkers.size,
-                                        showProjectSwitcher = showProjectSwitcher,
-                                        onProjectSwitcherChange = { showProjectSwitcher = it },
-                                        onProjectSelected = { p ->
-                                            viewModel.selectedProjectId = p.id
-                                            showProjectSwitcher = false
-                                            Toast.makeText(context, "Switched to: ${p.name}", Toast.LENGTH_SHORT).show()
-                                        },
-                                        onCycleProject = {
-                                            if (allProjects.isNotEmpty()) {
-                                                val idx = allProjects.indexOfFirst { it.id == currentProject?.id }
-                                                val next = ((idx.takeIf { it >= 0 } ?: 0) + 1) % allProjects.size
-                                                viewModel.selectedProjectId = allProjects[next].id
-                                            }
-                                        },
-                                        onCustomizeClick = { showBackgroundPicker = true }
-                                    )
-                                } else {
-                                    EmptyProjectCard(dark = dark)
-                                }
+                                DashboardProjectList(
+                                    allProjects = allProjects,
+                                    allTransactions = allTransactions,
+                                    allTasks = allTasks,
+                                    dark = dark,
+                                    onProjectSelected = { p ->
+                                        viewModel.selectedProjectId = p.id
+                                        viewModel.activeSiteTab = "Transaction"
+                                        viewModel.currentScreen = AppScreen.Site
+                                    },
+                                    onAddProjectClick = { viewModel.showProjectDialog = true }
+                                )
                             }
                             Box(modifier = Modifier.weight(1f)) {
                                 SiteOverviewCard(
@@ -208,33 +193,18 @@ fun DashboardScreen(
                         }
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            val proj = currentProject
-                            if (proj != null) {
-                                EnhancedProjectHeroCard(
-                                    proj = proj,
-                                    dark = dark,
-                                    netBalance = netBalance,
-                                    allProjects = allProjects,
-                                    allWorkersCount = allWorkers.size,
-                                    showProjectSwitcher = showProjectSwitcher,
-                                    onProjectSwitcherChange = { showProjectSwitcher = it },
-                                    onProjectSelected = { p ->
-                                        viewModel.selectedProjectId = p.id
-                                        showProjectSwitcher = false
-                                        Toast.makeText(context, "Switched to: ${p.name}", Toast.LENGTH_SHORT).show()
-                                    },
-                                    onCycleProject = {
-                                        if (allProjects.isNotEmpty()) {
-                                            val idx = allProjects.indexOfFirst { it.id == currentProject?.id }
-                                            val next = ((idx.takeIf { it >= 0 } ?: 0) + 1) % allProjects.size
-                                            viewModel.selectedProjectId = allProjects[next].id
-                                        }
-                                    },
-                                    onCustomizeClick = { showBackgroundPicker = true }
-                                )
-                            } else {
-                                EmptyProjectCard(dark = dark)
-                            }
+                            DashboardProjectList(
+                                allProjects = allProjects,
+                                allTransactions = allTransactions,
+                                allTasks = allTasks,
+                                dark = dark,
+                                onProjectSelected = { p ->
+                                    viewModel.selectedProjectId = p.id
+                                    viewModel.activeSiteTab = "Transaction"
+                                    viewModel.currentScreen = AppScreen.Site
+                                },
+                                onAddProjectClick = { viewModel.showProjectDialog = true }
+                            )
                             
                             SiteOverviewCard(
                                 dark = dark,
@@ -2509,4 +2479,196 @@ fun formatRupees(value: Double): String {
 
 fun scaffoldStateToast(context: Context, message: String) {
     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+}
+
+@Composable
+private fun DashboardProjectList(
+    allProjects: List<Project>,
+    allTransactions: List<Transaction>,
+    allTasks: List<Task>,
+    dark: Boolean,
+    onProjectSelected: (Project) -> Unit,
+    onAddProjectClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = "All",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (dark) PlatinumWhite else Color(0xFF0F172A)
+                )
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            TextButton(
+                onClick = onAddProjectClick,
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        tint = if (dark) ElectricBlue else DeepViolet,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Project",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (dark) ElectricBlue else DeepViolet
+                    )
+                }
+            }
+        }
+
+        if (allProjects.isEmpty()) {
+            EmptyProjectCard(dark = dark)
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                allProjects.forEach { p ->
+                    val pTasks = allTasks.filter { it.projectId == p.id }
+                    val pDone = pTasks.count { it.status == "Done" }
+                    val progressPct = if (pTasks.isNotEmpty()) (pDone.toFloat() / pTasks.size * 100).toInt() else 68
+
+                    val pTransactions = allTransactions.filter { it.projectId == p.id }
+                    val pIn = pTransactions.filter { it.type == "Money In" }.sumOf { it.amount }
+                    val pOut = pTransactions.filter { it.type == "Money Out" }.sumOf { it.amount }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(
+                                if (dark) Brush.linearGradient(listOf(Color(0xFF0C1322), Color(0xFF060A13)))
+                                else Brush.linearGradient(listOf(Color.White, Color(0xFFF1F5F9)))
+                            )
+                            .border(
+                                1.dp,
+                                if (dark) Color(0xFF1E293B) else Color(0xFFE2E8F0),
+                                RoundedCornerShape(16.dp)
+                            )
+                            .clickable { onProjectSelected(p) }
+                            .padding(16.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = p.name,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (dark) PlatinumWhite else Color(0xFF0F172A),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "$progressPct%",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.MoreVert,
+                                        contentDescription = "Options",
+                                        tint = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Place,
+                                    contentDescription = "Location",
+                                    tint = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = p.location,
+                                    fontSize = 12.sp,
+                                    color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "₹ " + formatAmountNoDecimals(pIn) + " In",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = CyberGreen
+                                    )
+                                    Text(
+                                        text = "₹ " + formatAmountNoDecimals(pOut) + " Out",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFFF6B6B)
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.Default.ChevronRight,
+                                    contentDescription = "Navigate",
+                                    tint = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun formatAmountNoDecimals(value: Double): String {
+    val fmt = NumberFormat.getNumberInstance(Locale("en", "IN"))
+    fmt.maximumFractionDigits = 0
+    fmt.minimumFractionDigits = 0
+    return fmt.format(value)
 }
