@@ -52,7 +52,7 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
 
     LaunchedEffect(isConnecting) {
         if (isConnecting) {
-            kotlinx.coroutines.delay(4000)
+            kotlinx.coroutines.delay(30000)
             if (isConnecting) {
                 isConnecting = false
                 showAccountChooser = true
@@ -414,10 +414,10 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text("Debug SHA-1:", fontSize = 8.sp, color = Color.Gray)
-                                        Text("16:32:70:61:0E:4D:E9:9B:C8:3D:22:C3:8E:38:45:D3:10:37:15:49", fontSize = 9.sp, fontWeight = FontWeight.SemiBold, color = if (dark) Color.White else Color.Black)
+                                        Text("BD:71:A8:AF:84:43:19:DE:83:EA:43:D0:40:95:89:A9:4B:9D:5F:23", fontSize = 9.sp, fontWeight = FontWeight.SemiBold, color = if (dark) Color.White else Color.Black)
                                     }
                                     TextButton(onClick = {
-                                        clipboard.setText(androidx.compose.ui.text.AnnotatedString("16:32:70:61:0E:4D:E9:9B:C8:3D:22:C3:8E:38:45:D3:10:37:15:49"))
+                                        clipboard.setText(androidx.compose.ui.text.AnnotatedString("BD:71:A8:AF:84:43:19:DE:83:EA:43:D0:40:95:89:A9:4B:9D:5F:23"))
                                         Toast.makeText(context, "Copied SHA-1 Certificate!", Toast.LENGTH_SHORT).show()
                                     }) {
                                         Text("Copy", fontSize = 10.sp, color = NeonCyan)
