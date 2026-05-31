@@ -1441,22 +1441,50 @@ private fun PremiumAccountCard(
                     }
                 }
             }
-            // Sign out button
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(pinkRes.copy(0.12f))
-                    .border(1.dp, pinkRes.copy(0.35f), RoundedCornerShape(10.dp))
-                    .clickable(onClick = onSignOut)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Logout, null, tint = pinkRes, modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("SIGN OUT", color = pinkRes, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
+            // Action buttons row
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Change PIN button
+                val context = LocalContext.current
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF7C3AED).copy(0.12f))
+                        .border(1.dp, Color(0xFF7C3AED).copy(0.35f), RoundedCornerShape(10.dp))
+                        .clickable {
+                            // Clear stored PIN so setup runs again on next app open
+                            context.getSharedPreferences("constructpro_prefs", android.content.Context.MODE_PRIVATE)
+                                .edit().remove("app_security_pin").apply()
+                            android.widget.Toast.makeText(context,
+                                "PIN cleared. You will set a new PIN next time you open the app.",
+                                android.widget.Toast.LENGTH_LONG).show()
+                        }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Lock, null, tint = Color(0xFF7C3AED), modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("CHANGE PIN", color = Color(0xFF7C3AED), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
+                    }
+                }
+                // Sign out button
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(pinkRes.copy(0.12f))
+                        .border(1.dp, pinkRes.copy(0.35f), RoundedCornerShape(10.dp))
+                        .clickable(onClick = onSignOut)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Logout, null, tint = pinkRes, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("SIGN OUT", color = pinkRes, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
+                    }
                 }
             }
+
         }
     }
 }

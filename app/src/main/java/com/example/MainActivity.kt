@@ -148,10 +148,27 @@ class MainActivity : ComponentActivity() {
             MyApplicationTheme(darkTheme = dark) {
                 GlassAtmosphereBox(darkTheme = dark) {
                     val userSession by viewModel.userSession.collectAsState()
-                    if (userSession == null) {
-                        GoogleLoginScreen(viewModel = viewModel)
-                    } else {
-                        ScaffoldFrame(viewModel = viewModel)
+
+                    // PIN verification state — resets on every cold app open (not persisted)
+                    var pinVerified by remember { mutableStateOf(false) }
+
+                    when {
+                        userSession == null -> {
+                            // Step 1: not signed in → Google login
+                            GoogleLoginScreen(viewModel = viewModel)
+                        }
+                        !pinVerified -> {
+                            // Step 2: signed in but PIN not yet verified this session
+                            PinScreen(
+                                dark = dark,
+                                userName = userSession?.displayName ?: "User",
+                                onPinVerified = { pinVerified = true }
+                            )
+                        }
+                        else -> {
+                            // Step 3: fully authenticated → app
+                            ScaffoldFrame(viewModel = viewModel)
+                        }
                     }
                 }
             }
