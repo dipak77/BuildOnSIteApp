@@ -61,6 +61,9 @@ fun DashboardScreen(
     val allTasks          by viewModel.tasks.collectAsState()
     val allProjects       by viewModel.projects.collectAsState()
     val allWorkers        by viewModel.workers.collectAsState()
+    val attendance        by viewModel.attendance.collectAsState()
+    val moms              by viewModel.moms.collectAsState()
+    val payroll           by viewModel.payroll.collectAsState()
     val context           = LocalContext.current
 
     var showBackgroundPicker    by remember { mutableStateOf(false) }
@@ -71,11 +74,13 @@ fun DashboardScreen(
     var showProfileDetailsDialog by remember { mutableStateOf(false) }
 
     // ── Computed metrics ──
-    val projectTransactions = remember(allTransactions, currentProject) {
-        allTransactions.filter { it.projectId == currentProject?.id }
+    val todayIsoStr   = remember { viewModel.todayIso() }
+    val project = currentProject
+    val projectTransactions = remember(allTransactions, project) {
+        allTransactions.filter { it.projectId == project?.id }
     }
-    val projectTasks = remember(allTasks, currentProject) {
-        allTasks.filter { it.projectId == currentProject?.id }
+    val projectTasks = remember(allTasks, project) {
+        allTasks.filter { it.projectId == project?.id }
     }
     val moneyIn       = projectTransactions.filter { it.type == "Money In"  }.sumOf { it.amount }
     val moneyOut      = projectTransactions.filter { it.type == "Money Out" }.sumOf { it.amount }
@@ -84,13 +89,149 @@ fun DashboardScreen(
     val doneTasks     = projectTasks.count { it.status == "Done" }
     val inProgressTasks = projectTasks.count { it.status == "In Progress" }
     val pendingTasks  = projectTasks.count { it.status == "To Do" }
-    val overdueTasks  = projectTasks.count { it.status != "Done" && it.dueDate < DASHBOARD_TODAY_ISO }
+    val overdueTasks  = projectTasks.count { it.status != "Done" && it.dueDate < todayIsoStr }
     val taskPct       = if (totalTasks > 0) doneTasks.toFloat() / totalTasks else 0f
-    val totalBudget   = currentProject?.budget ?: 1_250_000.0
+    val totalBudget   = project?.budget ?: 0.0
     val totalSpent    = moneyOut
     val remaining     = (totalBudget - totalSpent).coerceAtLeast(0.0)
     val spendPct      = if (totalBudget > 0) (totalSpent / totalBudget).toFloat() else 0f
     val budgetPct     = (spendPct * 100).toInt().coerceIn(0, 100)
+
+    val workersPresent = remember(attendance, project, todayIsoStr) {
+        if (project == null) 0 else {
+            attendance.count { 
+                it.projectId == project.id && 
+                it.date == todayIsoStr && 
+                (it.status == "Present" || it.status == "Overtime") 
+            }
+        }
+    }
+
+    val equipmentActive = remember(attendance, allWorkers, project, projectTransactions, todayIsoStr) {
+        if (project == null) 0 else {
+            val operatorsPresent = attendance.filter { 
+                it.projectId == project.id && 
+                it.date == todayIsoStr && 
+                (it.status == "Present" || it.status == "Overtime") 
+            }.count { att ->
+                val w = allWorkers.find { it.id == att.workerId }
+                w?.role?.contains("Operator", ignoreCase = true) == true || 
+                w?.role?.contains("Driver", ignoreCase = true) == true ||
+                w?.role?.contains("Machinery", ignoreCase = true) == true ||
+                w?.role?.contains("Helper", ignoreCase = true) == true
+            }
+            val equipmentTxCount = projectTransactions.count { it.category.equals("Equipment", ignoreCase = true) }
+            operatorsPresent + (if (equipmentTxCount > 0) 1 else 0)
+        }
+    }
+
+    val materialStockPct = remember(projectTransactions, projectTasks, project) {
+        if (project == null) 0 else {
+            val materialSpent = projectTransactions.filter { it.category.equals("Material", ignoreCase = true) }.sumOf { it.amount }
+            if (materialSpent == 0.0) {
+                0
+            } else {
+                val totalB = project.budget
+                val materialBudget = if (totalB > 0) totalB * 0.40 else 500000.0
+                val purchasedPct = (materialSpent / materialBudget * 100).toInt().coerceIn(10, 100)
+                val doneCount = projectTasks.count { it.status == "Done" }
+                val totalCount = projectTasks.size
+                val consumedPct = if (totalCount > 0) (doneCount.toFloat() / totalCount * 50).toInt() else 0
+                (purchasedPct - consumedPct).coerceIn(0, 100)
+            }
+        }
+    }
+
+    val pendingBillsCount = remember(payroll, projectTasks, project) {
+        if (project == null) 0 else {
+            val pendingPayroll = payroll.count { it.projectId == project.id && it.status.equals("Pending", ignoreCase = true) }
+            val pendingBillTasks = projectTasks.count { 
+                it.status != "Done" && (
+                    it.title.contains("bill", ignoreCase = true) || 
+                    it.title.contains("invoice", ignoreCase = true) || 
+                    it.title.contains("payment", ignoreCase = true) || 
+                    it.title.contains("pay ", ignoreCase = true)
+                )
+            }
+            pendingPayroll + pendingBillTasks
+        }
+    }
+
+    val safetyScorePct = remember(projectTasks, project, todayIsoStr) {
+        if (project == null) 100 else {
+            val highPriorityUndone = projectTasks.count { it.status != "Done" && it.priority.equals("High", ignoreCase = true) }
+            val overdueCount = projectTasks.count { it.status != "Done" && it.dueDate < todayIsoStr }
+            (100 - (highPriorityUndone * 8) - (overdueCount * 5)).coerceIn(50, 100)
+        }
+    }
+
+    val projectProgressPct = remember(projectTasks, project) {
+        if (project == null) 0 else {
+            val total = projectTasks.size
+            val done = projectTasks.count { it.status == "Done" }
+            if (total > 0) (done * 100) / total else 0
+        }
+    }
+
+    val activities = remember(project, allTransactions, allTasks, moms, payroll, allWorkers, todayIsoStr) {
+        if (project == null) {
+            emptyList<ActivityItem>()
+        } else {
+            val projId = project.id
+            val items = mutableListOf<Pair<ActivityItem, String>>()
+
+            allTransactions.filter { it.projectId == projId }.forEach { tx ->
+                val icon = if (tx.type == "Money In") Icons.Default.TrendingUp else Icons.Default.TrendingDown
+                val color = if (tx.type == "Money In") CyberGreen else Color(0xFFFF6B6B)
+                val title = if (tx.type == "Money In") "Payment Received" else "Expense: ${tx.category}"
+                val subtitle = tx.description.ifBlank { "Transaction for ${tx.partyName ?: "Party"}" }
+                val time = formatActivityDate(tx.date, todayIsoStr)
+                val rightText = if (tx.type == "Money In") "+₹${formatAmountNoDecimals(tx.amount)}" else "-₹${formatAmountNoDecimals(tx.amount)}"
+                val positive = if (tx.type == "Money In") true else false
+                items.add(ActivityItem(icon, color, title, subtitle, time, rightText, positive) to tx.date)
+            }
+
+            allTasks.filter { it.projectId == projId }.forEach { task ->
+                val icon = Icons.Default.Assignment
+                val color = when (task.status) {
+                    "Done" -> CyberGreen
+                    "In Progress" -> ElectricBlue
+                    else -> DeepViolet
+                }
+                val title = if (task.status == "Done") "Task Completed" else "Task Assigned"
+                val subtitle = "${task.title} — ${task.assignee}"
+                val time = formatActivityDate(task.dueDate, todayIsoStr)
+                val rightText = task.status
+                val positive = if (task.status == "Done") true else null
+                items.add(ActivityItem(icon, color, title, subtitle, time, rightText, positive) to task.dueDate)
+            }
+
+            moms.filter { it.projectId == projId }.forEach { mom ->
+                val icon = Icons.Default.Description
+                val color = RoyalGold
+                val title = "Meeting Minutes"
+                val subtitle = mom.title
+                val time = formatActivityDate(mom.date, todayIsoStr)
+                val rightText = "MOM Saved"
+                items.add(ActivityItem(icon, color, title, subtitle, time, rightText, null) to mom.date)
+            }
+
+            payroll.filter { it.projectId == projId }.forEach { pay ->
+                val icon = Icons.Default.Payments
+                val color = ElectricBlue
+                val title = "Payroll: ${if (pay.status == "Paid") "Wages Paid" else "Wages Pending"}"
+                val workerName = allWorkers.find { it.id == pay.workerId }?.name ?: "Worker"
+                val subtitle = "$workerName — ${pay.status}"
+                val time = formatActivityDate(pay.date, todayIsoStr)
+                val rightText = "₹${formatAmountNoDecimals(pay.wagesPaid)}"
+                val positive = if (pay.status == "Paid") true else false
+                items.add(ActivityItem(icon, color, title, subtitle, time, rightText, positive) to pay.date)
+            }
+
+            items.sortByDescending { it.second }
+            items.map { it.first }.take(4)
+        }
+    }
 
     val infiniteTransition = rememberInfiniteTransition(label = "orbs_rotation")
     val rotationAnim by infiniteTransition.animateFloat(
@@ -214,12 +355,12 @@ fun DashboardScreen(
                             Box(modifier = Modifier.weight(1f)) {
                                 SiteOverviewCard(
                                     dark = dark,
-                                    workersPresent = if (allWorkers.isNotEmpty()) allWorkers.size else 45,
-                                    equipmentActive = if (allWorkers.isNotEmpty()) allWorkers.size / 3 else 12,
-                                    materialStockPct = 87,
-                                    pendingBillsCount = 5,
-                                    safetyScorePct = 98,
-                                    projectProgressPct = 68
+                                    workersPresent = workersPresent,
+                                    equipmentActive = equipmentActive,
+                                    materialStockPct = materialStockPct,
+                                    pendingBillsCount = pendingBillsCount,
+                                    safetyScorePct = safetyScorePct,
+                                    projectProgressPct = projectProgressPct
                                 )
                             }
                         }
@@ -240,12 +381,12 @@ fun DashboardScreen(
                             
                             SiteOverviewCard(
                                 dark = dark,
-                                workersPresent = if (allWorkers.isNotEmpty()) allWorkers.size else 45,
-                                equipmentActive = if (allWorkers.isNotEmpty()) allWorkers.size / 3 else 12,
-                                materialStockPct = 87,
-                                pendingBillsCount = 5,
-                                safetyScorePct = 98,
-                                projectProgressPct = 68
+                                workersPresent = workersPresent,
+                                equipmentActive = equipmentActive,
+                                materialStockPct = materialStockPct,
+                                pendingBillsCount = pendingBillsCount,
+                                safetyScorePct = safetyScorePct,
+                                projectProgressPct = projectProgressPct
                             )
                         }
                     }
@@ -278,7 +419,7 @@ fun DashboardScreen(
                                     }
                                 )
                                 Spacer(Modifier.height(10.dp))
-                                EnhancedActivityFeed(dark = dark, context = context)
+                                EnhancedActivityFeed(activities = activities, dark = dark, context = context)
                             }
                             Column(modifier = Modifier.weight(1f)) {
                                 EnhancedQuickActions(dark = dark, viewModel = viewModel)
@@ -301,7 +442,7 @@ fun DashboardScreen(
                                     }
                                 }
                             )
-                            EnhancedActivityFeed(dark = dark, context = context)
+                            EnhancedActivityFeed(activities = activities, dark = dark, context = context)
                             
                             EnhancedQuickActions(dark = dark, viewModel = viewModel)
                         }
@@ -1688,14 +1829,7 @@ private fun SiteOverviewItem(
 
 // ─── Enhanced Activity Feed ───────────────────────────────────────────────────
 @Composable
-private fun EnhancedActivityFeed(dark: Boolean, context: Context) {
-    val activities = listOf(
-        ActivityItem(Icons.Default.CreditCard, CyberGreen,         "Payment Received",       "Metro Rail Corp",        "Today, 10:30 AM", "+₹2,50,000",  true),
-        ActivityItem(Icons.Default.Layers,     ElectricBlue,        "Inventory Updated",      "Cement stock — 120 bags","Today, 09:15 AM", "120 Bags",    null),
-        ActivityItem(Icons.Default.Build,      DeepViolet,          "Task Completed",         "Electrical work #EL-245","Yesterday",       "Task Done",   true),
-        ActivityItem(Icons.Default.Person,     RoyalGold,           "Worker Check-in",        "Rajesh Kumar joined",    "Yesterday",       "48 Active",   null)
-    )
-
+private fun EnhancedActivityFeed(activities: List<ActivityItem>, dark: Boolean, context: Context) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -1707,14 +1841,41 @@ private fun EnhancedActivityFeed(dark: Boolean, context: Context) {
             .border(1.dp, if (dark) Color(0xFF1E293B) else Color(0xFFE2E8F0), RoundedCornerShape(28.dp))
             .padding(6.dp)
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            activities.forEachIndexed { index, item ->
-                EnhancedActivityRow(
-                    item    = item,
-                    dark    = dark,
-                    isLast  = index == activities.lastIndex,
-                    onClick = { Toast.makeText(context, "Viewing: ${item.title}", Toast.LENGTH_SHORT).show() }
-                )
+        if (activities.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.History,
+                        contentDescription = null,
+                        tint = if (dark) Color(0xFF334155) else Color(0xFFCBD5E1),
+                        modifier = Modifier.size(36.dp)
+                    )
+                    Text(
+                        text = "No Recent Activity",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8)
+                    )
+                }
+            }
+        } else {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                activities.forEachIndexed { index, item ->
+                    EnhancedActivityRow(
+                        item    = item,
+                        dark    = dark,
+                        isLast  = index == activities.lastIndex,
+                        onClick = { Toast.makeText(context, "Viewing: ${item.title}", Toast.LENGTH_SHORT).show() }
+                    )
+                }
             }
         }
     }
@@ -2801,7 +2962,7 @@ private fun DashboardProjectList(
                 filteredProjects.forEach { p ->
                     val pTasks = allTasks.filter { it.projectId == p.id }
                     val pDone = pTasks.count { it.status == "Done" }
-                    val progressPct = if (pTasks.isNotEmpty()) (pDone.toFloat() / pTasks.size * 100).toInt() else 68
+                    val progressPct = if (pTasks.isNotEmpty()) (pDone.toFloat() / pTasks.size * 100).toInt() else 0
  
                     val pTransactions = allTransactions.filter { it.projectId == p.id }
                     val pIn = pTransactions.filter { it.type == "Money In" }.sumOf { it.amount }
@@ -3028,4 +3189,30 @@ private fun formatAmountNoDecimals(value: Double): String {
     fmt.maximumFractionDigits = 0
     fmt.minimumFractionDigits = 0
     return fmt.format(value)
+}
+
+private fun formatActivityDate(dateStr: String, todayIso: String): String {
+    return try {
+        val cal = java.util.Calendar.getInstance()
+        val format = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val today = format.parse(todayIso)
+        cal.time = today ?: Date()
+        cal.add(java.util.Calendar.DAY_OF_YEAR, -1)
+        val yesterdayIso = format.format(cal.time)
+        
+        when (dateStr) {
+            todayIso -> "Today"
+            yesterdayIso -> "Yesterday"
+            else -> {
+                val date = format.parse(dateStr)
+                if (date != null) {
+                    SimpleDateFormat("d MMM yyyy", Locale.US).format(date)
+                } else {
+                    dateStr
+                }
+            }
+        }
+    } catch (e: Exception) {
+        dateStr
+    }
 }
