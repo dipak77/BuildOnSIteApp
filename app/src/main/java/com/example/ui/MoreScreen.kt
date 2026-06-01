@@ -33,39 +33,42 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import java.text.NumberFormat
 import java.util.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import kotlinx.coroutines.launch
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PREMIUM DESIGN TOKENS
 // ─────────────────────────────────────────────────────────────────────────────
 
-private val PremiumDark = Color(0xFF050A14)
-private val PremiumCard = Color(0xFF0D1526)
-private val PremiumCardAlt = Color(0xFF111D35)
-private val PremiumBorder = Color(0xFF1E3A5F)
-private val PremiumBorderLight = Color(0xFFCBD5E1)
+private val PremiumDark        = DarkBg0
+private val PremiumCard        = DarkBg2
+private val PremiumCardAlt     = DarkBg3
+private val PremiumBorder      = GlassBorderDark
+private val PremiumBorderLight = GlassBorderLight
 
-private val AccentCyan = Color(0xFF00D4FF)
-private val AccentPurple = Color(0xFF7C3AED)
-private val AccentGreen = Color(0xFF00FF88)
-private val AccentAmber = Color(0xFFFBBF24)
-private val AccentPink = Color(0xFFFF2D78)
-private val AccentBlue = Color(0xFF3B82F6)
-private val AccentOrange = Color(0xFFFF6B35)
+private val AccentCyan         = NeonCyan
+private val AccentPurple       = NeonPurple
+private val AccentGreen        = NeonGreen
+private val AccentAmber        = NeonAmber
+private val AccentPink         = NeonPink
+private val AccentBlue         = NeonBlue
+private val AccentOrange       = NeonOrange
 
 private val GradientCyan = Brush.linearGradient(
-    listOf(Color(0xFF00D4FF), Color(0xFF0077FF))
+    listOf(NeonCyan, Color(0xFF0077FF))
 )
 private val GradientPurple = Brush.linearGradient(
-    listOf(Color(0xFF7C3AED), Color(0xFFDB2777))
+    listOf(NeonPurple, Color(0xFFDB2777))
 )
 private val GradientGreen = Brush.linearGradient(
-    listOf(Color(0xFF00FF88), Color(0xFF00C4FF))
+    listOf(NeonGreen, Color(0xFF00C4FF))
 )
 private val GradientAmber = Brush.linearGradient(
-    listOf(Color(0xFFFBBF24), Color(0xFFFF6B35))
+    listOf(NeonAmber, NeonOrange)
 )
 private val GradientPink = Brush.linearGradient(
-    listOf(Color(0xFFFF2D78), Color(0xFF7C3AED))
+    listOf(NeonPink, NeonPurple)
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -75,13 +78,13 @@ private val GradientPink = Brush.linearGradient(
 private fun getPremiumAccent(color: Color, dark: Boolean): Color {
     if (dark) return color
     return when (color) {
-        AccentCyan -> Color(0xFF0284C7)    // Sky-700
-        AccentGreen -> Color(0xFF047857)   // Emerald-700
-        AccentPurple -> Color(0xFF6D28D9)  // Violet-700
-        AccentAmber -> Color(0xFFB45309)   // Amber-700
-        AccentPink -> Color(0xFFBE185D)    // Pink-700
-        AccentBlue -> Color(0xFF1D4ED8)    // Blue-700
-        AccentOrange -> Color(0xFFC2410C)  // Orange-700
+        AccentCyan -> LightCyan
+        AccentGreen -> LightGreen
+        AccentPurple -> LightPurple
+        AccentAmber -> LightAmber
+        AccentPink -> LightPink
+        AccentBlue -> LightBlue
+        AccentOrange -> LightOrange
         else -> color
     }
 }
@@ -89,11 +92,11 @@ private fun getPremiumAccent(color: Color, dark: Boolean): Color {
 private fun getPremiumGradient(gradient: Brush, dark: Boolean): Brush {
     if (dark) return gradient
     return when (gradient) {
-        GradientCyan -> Brush.linearGradient(listOf(Color(0xFF0EA5E9), Color(0xFF0284C7)))
-        GradientPurple -> Brush.linearGradient(listOf(Color(0xFF8B5CF6), Color(0xFF6D28D9)))
-        GradientGreen -> Brush.linearGradient(listOf(Color(0xFF10B981), Color(0xFF047857)))
-        GradientAmber -> Brush.linearGradient(listOf(Color(0xFFFBBF24), Color(0xFFD97706)))
-        GradientPink -> Brush.linearGradient(listOf(Color(0xFFEC4899), Color(0xFFBE185D)))
+        GradientCyan -> Brush.linearGradient(listOf(Color(0xFF0EA5E9), LightCyan))
+        GradientPurple -> Brush.linearGradient(listOf(LightPurple, Color(0xFF6D28D9)))
+        GradientGreen -> Brush.linearGradient(listOf(LightGreen, Color(0xFF047857)))
+        GradientAmber -> Brush.linearGradient(listOf(LightAmber, LightOrange))
+        GradientPink -> Brush.linearGradient(listOf(LightPink, LightPurple))
         else -> gradient
     }
 }
@@ -137,7 +140,58 @@ fun MoreScreen(
     var projLocation by remember { mutableStateOf("") }
     var projBudget by remember { mutableStateOf("") }
     var projStatus by remember { mutableStateOf("Active") }
+    var projBg by remember { mutableStateOf("") }
     var showDeleteProjectConfirmForObj by remember { mutableStateOf<Project?>(null) }
+
+    val projectImportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            try {
+                val jsonString = context.contentResolver.openInputStream(it)?.bufferedReader()?.use { reader -> reader.readText() }
+                if (jsonString != null) {
+                    viewModel.importProjectBackup(context, jsonString)
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to read backup file", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val projectImagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            try {
+                val inputStream = context.contentResolver.openInputStream(it)
+                val dir = java.io.File(context.filesDir, "project_images")
+                if (!dir.exists()) dir.mkdirs()
+                val file = java.io.File(dir, "proj_${System.currentTimeMillis()}.jpg")
+                file.outputStream().use { outputStream ->
+                    inputStream?.copyTo(outputStream)
+                }
+                projBg = file.absolutePath
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to copy image: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val systemRestoreLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            try {
+                val jsonString = context.contentResolver.openInputStream(it)?.bufferedReader()?.use { reader -> reader.readText() }
+                if (jsonString != null) {
+                    viewModel.importFullBackup(context, jsonString)
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to read backup file", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     var showingPartyForm by remember { mutableStateOf(false) }
     var editingWorker by remember { mutableStateOf<Worker?>(null) }
     var pName by remember { mutableStateOf("") }
@@ -281,7 +335,7 @@ fun MoreScreen(
                             try {
                                 val gso = GoogleSignInOptions
                                     .Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                                    .requestIdToken("970298420983-bin5cqqcqgdoi9r256p7a78bvpi6c0hs.apps.googleusercontent.com")
+                                    .requestIdToken(com.example.BuildConfig.GOOGLE_OAUTH_CLIENT_ID)
                                     .requestEmail().build()
                                 GoogleSignIn.getClient(context, gso).signOut()
                             } catch (t: Throwable) { t.printStackTrace() }
@@ -314,9 +368,9 @@ fun MoreScreen(
                         driveSyncSuccess = true
                     },
                     onExportProject = { viewModel.exportProjectBackup(context, currentProject!!) },
-                    onImportProject = { viewModel.importProjectBackup(context, SEED_PROJECT_JSON) },
+                    onImportProject = { projectImportLauncher.launch("*/*") },
                     onBackupSystem = { viewModel.exportFullBackup(context) },
-                    onRestoreSystem = { viewModel.importFullBackup(context, SEED_FULL_JSON) }
+                    onRestoreSystem = { systemRestoreLauncher.launch("*/*") }
                 )
             }
 
@@ -339,6 +393,7 @@ fun MoreScreen(
                         onClick = {
                             editingProject = null
                             projName = ""; projLocation = ""; projBudget = ""; projStatus = "Active"
+                            projBg = ""
                             showProjectModal = true
                         }
                     )
@@ -356,6 +411,7 @@ fun MoreScreen(
                         editingProject = proj
                         projName = proj.name; projLocation = proj.location
                         projBudget = proj.budget.toString(); projStatus = proj.status
+                        projBg = proj.customBackground ?: ""
                         showProjectModal = true
                     },
                     onDelete = { showDeleteProjectConfirmForObj = proj }
@@ -593,19 +649,22 @@ fun MoreScreen(
                 dark = dark,
                 projName = projName, projLocation = projLocation,
                 projBudget = projBudget, projStatus = projStatus,
+                projBg = projBg,
                 editingProject = editingProject,
                 onNameChange = { projName = it },
                 onLocationChange = { projLocation = it },
                 onBudgetChange = { projBudget = it },
                 onStatusChange = { projStatus = it },
+                onBgChange = { projBg = it },
+                onUploadImageClick = { projectImagePickerLauncher.launch("image/*") },
                 onCancel = { showProjectModal = false; editingProject = null },
                 onSave = {
                     val bud = projBudget.toDoubleOrNull() ?: 0.0
                     if (projName.isNotBlank() && projLocation.isNotBlank()) {
-                        if (editingProject == null) viewModel.addProject(projName, projLocation, bud)
+                        if (editingProject == null) viewModel.addProject(projName, projLocation, bud, projBg)
                         else viewModel.updateProject(editingProject!!.copy(
                             name = projName, location = projLocation,
-                            budget = bud, status = projStatus))
+                            budget = bud, status = projStatus, customBackground = projBg))
                         showProjectModal = false; editingProject = null
                     }
                 }
@@ -1351,12 +1410,14 @@ private fun PremiumAccountCard(
             )
             .padding(18.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 // Avatar
                 Box(
                     modifier = Modifier
@@ -1376,12 +1437,14 @@ private fun PremiumAccountCard(
                     )
                 }
                 Spacer(Modifier.width(14.dp))
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = user.displayName,
                             color = if (dark) Color.White else Color(0xFF1E1B4B),
-                            fontWeight = FontWeight.Bold, fontSize = 15.sp
+                            fontWeight = FontWeight.Bold, fontSize = 15.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Spacer(Modifier.width(8.dp))
                         // Online dot
@@ -1394,7 +1457,9 @@ private fun PremiumAccountCard(
                     Text(
                         text = user.email,
                         color = if (dark) Color(0xFF64748B) else Color(0xFF475569),
-                        fontSize = 11.sp
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Spacer(Modifier.height(4.dp))
                     Box(
@@ -1409,20 +1474,52 @@ private fun PremiumAccountCard(
                     }
                 }
             }
-            // Sign out button
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(pinkRes.copy(0.12f))
-                    .border(1.dp, pinkRes.copy(0.35f), RoundedCornerShape(10.dp))
-                    .clickable(onClick = onSignOut)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center
+            // Action buttons row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Logout, null, tint = pinkRes, modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("SIGN OUT", color = pinkRes, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
+                // Change PIN button
+                val context = LocalContext.current
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF7C3AED).copy(0.12f))
+                        .border(1.dp, Color(0xFF7C3AED).copy(0.35f), RoundedCornerShape(10.dp))
+                        .clickable {
+                            // Clear stored PIN so setup runs again on next app open
+                            context.getSharedPreferences("constructpro_prefs", android.content.Context.MODE_PRIVATE)
+                                .edit().remove("app_security_pin").apply()
+                            android.widget.Toast.makeText(context,
+                                "PIN cleared. You will set a new PIN next time you open the app.",
+                                android.widget.Toast.LENGTH_LONG).show()
+                        }
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                        Icon(Icons.Default.Lock, null, tint = Color(0xFF7C3AED), modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("CHANGE PIN", color = Color(0xFF7C3AED), fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
+                    }
+                }
+                // Sign out button
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(pinkRes.copy(0.12f))
+                        .border(1.dp, pinkRes.copy(0.35f), RoundedCornerShape(10.dp))
+                        .clickable(onClick = onSignOut)
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                        Icon(Icons.Default.Logout, null, tint = pinkRes, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("SIGN OUT", color = pinkRes, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
+                    }
                 }
             }
         }
@@ -1447,6 +1544,7 @@ private fun PremiumThemeBackupCard(
     onBackupSystem: () -> Unit,
     onRestoreSystem: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val cloudCyan = getPremiumAccent(AccentCyan, dark)
     val cloudGreen = getPremiumAccent(AccentGreen, dark)
     val cloudPurple = getPremiumAccent(AccentPurple, dark)
@@ -1546,50 +1644,421 @@ private fun PremiumThemeBackupCard(
         // Cloud Sync Section
         PremiumSubSectionHeader("Cloud Sync & Backup", Icons.Default.CloudSync, cloudCyan, dark)
 
-        // Drive info card
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(cloudCyan.copy(0.05f))
-                .border(1.dp, cloudCyan.copy(0.2f), RoundedCornerShape(14.dp))
-                .padding(14.dp)
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        // Google Sign-In & Scope Check
+        val account = GoogleSignIn.getLastSignedInAccount(context)
+        var hasDrivePermission by remember { mutableStateOf(false) }
+
+        fun checkPermissions() {
+            val acc = GoogleSignIn.getLastSignedInAccount(context)
+            hasDrivePermission = acc != null && GoogleSignIn.hasPermissions(
+                acc,
+                com.google.android.gms.common.api.Scope("https://www.googleapis.com/auth/drive.file")
+            )
+        }
+
+        LaunchedEffect(Unit) {
+            checkPermissions()
+        }
+
+        val googleSignInClient = remember {
+            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(com.example.BuildConfig.GOOGLE_OAUTH_CLIENT_ID)
+                .requestEmail()
+                .requestProfile()
+                .requestScopes(com.google.android.gms.common.api.Scope("https://www.googleapis.com/auth/drive.file"))
+                .build()
+            GoogleSignIn.getClient(context, gso)
+        }
+
+        val driveScopeLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            checkPermissions()
+        }
+
+        if (account == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xFFFFB300).copy(0.1f))
+                    .border(1.dp, Color(0xFFFFB300).copy(0.3f), RoundedCornerShape(14.dp))
+                    .padding(14.dp)
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CloudQueue, null, tint = cloudCyan, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Google Drive Integration", color = if (dark) Color.White else Color(0xFF0F172A),
-                        fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                }
-                Text("/My Drive/ConstructPro_Backups/",
-                    color = if (dark) Color(0xFF94A3B8) else Color(0xFF475569), fontSize = 10.sp)
-                Spacer(Modifier.height(2.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(cloudGreen.copy(0.08f))
-                        .border(1.dp, cloudGreen.copy(0.2f), RoundedCornerShape(8.dp))
-                        .padding(8.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Text("💡 ", fontSize = 11.sp)
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = "Warning",
+                        tint = Color(0xFFFFB300),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(12.dp))
                     Text(
-                        "Tap SYNC → select \"Drive\" from the share sheet to securely export CSV + JSON to your Google Account.",
-                        color = if (dark) cloudGreen.copy(0.9f) else Color(0xFF047857),
-                        fontSize = 10.sp, lineHeight = 14.sp, fontWeight = FontWeight.Medium
+                        text = "Google Account not found. Please log in above to use Google Drive backup features.",
+                        color = if (dark) Color.White else Color(0xFF334155),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        } else if (!hasDrivePermission) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xFFF59E0B).copy(0.1f))
+                    .border(1.dp, Color(0xFFF59E0B).copy(0.3f), RoundedCornerShape(14.dp))
+                    .padding(14.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Permission Info",
+                            tint = Color(0xFFF59E0B),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            text = "Google Drive scope permission required for auto-backup uploads.",
+                            color = if (dark) Color.White else Color(0xFF334155),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Button(
+                        onClick = {
+                            try {
+                                driveScopeLauncher.launch(googleSignInClient.signInIntent)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFF59E0B),
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("GRANT DRIVE PERMISSION", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(cloudGreen.copy(0.08f))
+                    .border(1.dp, cloudGreen.copy(0.2f), RoundedCornerShape(14.dp))
+                    .padding(12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Connected",
+                        tint = cloudGreen,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "Google Drive Connected Successfully",
+                        color = cloudGreen,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
         }
 
-        // Sync Button
+        // Auto Backup Switch Row
+        var autoBackupEnabled by remember { mutableStateOf(false) }
+        var selectedFrequency by remember { mutableStateOf("Daily") }
+        var customHours by remember { mutableStateOf(12) }
+
+        LaunchedEffect(Unit) {
+            val prefs = context.getSharedPreferences("constructpro_prefs", android.content.Context.MODE_PRIVATE)
+            autoBackupEnabled = prefs.getBoolean("drive_auto_backup_enabled", false)
+            selectedFrequency = prefs.getString("drive_auto_backup_frequency", "Daily") ?: "Daily"
+            customHours = prefs.getInt("drive_auto_backup_custom_hours", 12)
+        }
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (dark) cloudCyan.copy(0.12f)
+                            else Color(0xFF0EA5E9).copy(0.1f)
+                        )
+                        .border(1.dp,
+                            if (dark) cloudCyan.copy(0.3f) else Color(0xFF0EA5E9).copy(0.3f),
+                            RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CloudUpload,
+                        contentDescription = null,
+                        tint = if (dark) cloudCyan else Color(0xFF0284C7),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Spacer(Modifier.width(14.dp))
+                Column {
+                    Text(
+                        "Auto Backup to Drive",
+                        color = if (dark) Color.White else Color(0xFF0F172A),
+                        fontWeight = FontWeight.Bold, fontSize = 14.sp
+                    )
+                    Text(
+                        "Automatically sync data in background",
+                        color = if (dark) Color.White.copy(0.6f) else Color(0xFF475569),
+                        fontSize = 11.sp
+                    )
+                }
+            }
+            Switch(
+                checked = autoBackupEnabled,
+                onCheckedChange = { enabled ->
+                    autoBackupEnabled = enabled
+                    val prefs = context.getSharedPreferences("constructpro_prefs", android.content.Context.MODE_PRIVATE)
+                    prefs.edit().putBoolean("drive_auto_backup_enabled", enabled).apply()
+                    if (enabled) {
+                        com.example.AutoBackupWorker.schedule(context)
+                        Toast.makeText(context, "Auto backup enabled!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        androidx.work.WorkManager.getInstance(context).cancelUniqueWork("GoogleDriveAutoBackup")
+                        Toast.makeText(context, "Auto backup disabled", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = cloudCyan,
+                    checkedTrackColor = cloudCyan.copy(0.25f),
+                    uncheckedThumbColor = Color(0xFF94A3B8),
+                    uncheckedTrackColor = Color(0xFFE2E8F0)
+                )
+            )
+        }
+
+        if (autoBackupEnabled) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    "BACKUP FREQUENCY",
+                    color = if (dark) Color.White.copy(0.5f) else Color(0xFF475569),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp,
+                    letterSpacing = 1.sp
+                )
+
+                // Segmented selector row
+                val frequencies = listOf("Hourly", "Daily", "Weekly", "Custom")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    frequencies.forEach { freq ->
+                        val isSelected = selectedFrequency == freq
+                        val activeColor = if (dark) AccentCyan else Color(0xFF0284C7)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isSelected) activeColor.copy(alpha = 0.15f) else Color.Transparent)
+                                .border(1.dp, if (isSelected) activeColor else (if (dark) Color(0xFF1E293B) else Color(0xFFE2E8F0)), RoundedCornerShape(10.dp))
+                                .clickable {
+                                    selectedFrequency = freq
+                                    val prefs = context.getSharedPreferences("constructpro_prefs", android.content.Context.MODE_PRIVATE)
+                                    prefs.edit().putString("drive_auto_backup_frequency", freq).apply()
+                                    com.example.AutoBackupWorker.schedule(context)
+                                }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = freq,
+                                color = if (isSelected) activeColor else (if (dark) Color(0xFF94A3B8) else Color(0xFF475569)),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
+
+                if (selectedFrequency == "Custom") {
+                    var customHoursText by remember { mutableStateOf(customHours.toString()) }
+                    OutlinedTextField(
+                        value = customHoursText,
+                        onValueChange = { newValue ->
+                            val digits = newValue.filter { it.isDigit() }.take(3)
+                            customHoursText = digits
+                            val hours = digits.toIntOrNull() ?: 12
+                            customHours = hours
+                            val prefs = context.getSharedPreferences("constructpro_prefs", android.content.Context.MODE_PRIVATE)
+                            prefs.edit().putInt("drive_auto_backup_custom_hours", hours).apply()
+                            com.example.AutoBackupWorker.schedule(context)
+                        },
+                        label = { Text("Interval in Hours", color = if (dark) Color(0xFF94A3B8) else Color(0xFF475569)) },
+                        placeholder = { Text("e.g. 12") },
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                        ),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = if (dark) AccentCyan else Color(0xFF0284C7),
+                            unfocusedBorderColor = if (dark) Color(0xFF1E293B) else Color(0xFFE2E8F0),
+                            focusedLabelColor = if (dark) AccentCyan else Color(0xFF0284C7),
+                            focusedTextColor = if (dark) Color.White else Color(0xFF0F172A),
+                            unfocusedTextColor = if (dark) Color.White else Color(0xFF0F172A)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+
+        // Direct Sync & Local Sync Buttons
+        if (hasDrivePermission) {
+            var manualSyncing by remember { mutableStateOf(false) }
+            val coroutineScope = rememberCoroutineScope()
+            var logsList by remember { mutableStateOf<List<com.example.BackupLogItem>>(emptyList()) }
+
+            LaunchedEffect(Unit) {
+                logsList = com.example.BackupLogger.readLogs(context)
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                if (manualSyncing) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(cloudCyan.copy(0.12f))
+                            .border(1.dp, cloudCyan.copy(0.35f), RoundedCornerShape(12.dp))
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            color = cloudCyan,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            "Uploading backup to Google Drive...",
+                            color = cloudCyan,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                } else {
+                    PremiumGradientButton(
+                        label = "RUN DIRECT SYNC NOW",
+                        icon = Icons.Default.CloudSync,
+                        gradient = getPremiumGradient(GradientCyan, dark),
+                        onClick = {
+                            coroutineScope.launch {
+                                manualSyncing = true
+                                val res = com.example.AutoBackupWorker.performBackupUpload(context)
+                                manualSyncing = false
+                                logsList = com.example.BackupLogger.readLogs(context)
+                                if (res.success) {
+                                    Toast.makeText(context, "Google Drive Sync Successful!", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "Sync Failed: ${res.message}", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Activity logs container
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "SYNC ACTIVITY LOGS (LAST WEEK, MAX 10)",
+                        color = if (dark) Color.White.copy(0.5f) else Color(0xFF475569),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp,
+                        letterSpacing = 1.sp
+                    )
+
+                    if (logsList.isEmpty()) {
+                        Text(
+                            "No sync activity logs found.",
+                            color = if (dark) Color.White.copy(0.4f) else Color(0xFF94A3B8),
+                            fontSize = 11.sp,
+                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                        )
+                    } else {
+                        logsList.forEach { logItem ->
+                            val isSuccess = logItem.status.equals("Success", ignoreCase = true)
+                            val statusColor = if (isSuccess) cloudGreen else Color(0xFFEF4444)
+                            val statusBg = if (isSuccess) cloudGreen.copy(0.12f) else Color(0xFFEF4444).copy(0.12f)
+                            
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (dark) Color(0xFF0F172A) else Color(0xFFF1F5F9))
+                                    .border(1.dp, if (dark) Color(0xFF1E293B) else Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
+                                    .padding(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = logItem.details,
+                                            color = if (dark) Color.White else Color(0xFF0F172A),
+                                            fontWeight = FontWeight.Medium,
+                                            fontSize = 12.sp
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            text = logItem.dateString,
+                                            color = if (dark) Color.White.copy(0.5f) else Color(0xFF475569),
+                                            fontSize = 10.sp
+                                        )
+                                    }
+                                    Spacer(Modifier.width(10.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(statusBg)
+                                            .border(1.dp, statusColor.copy(0.4f), RoundedCornerShape(6.dp))
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = logItem.status.uppercase(),
+                                            color = statusColor,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Local sharing sheets (Share database to device applications)
         if (googleDriveSyncing) {
             PremiumSyncingIndicator(dark = dark, onComplete = onSyncComplete)
         } else {
             PremiumGradientButton(
-                label = "SYNC TO GOOGLE DRIVE (CSV + JSON)",
+                label = "SHARE / EXPORT LOCAL DATABASE",
                 icon = Icons.Default.Sync,
                 gradient = getPremiumGradient(GradientCyan, dark),
                 onClick = onSync,
@@ -1610,7 +2079,7 @@ private fun PremiumThemeBackupCard(
                 Icon(Icons.Default.CheckCircle, null, tint = cloudGreen, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Sync complete — CSV & JSON written to /My Drive/ConstructPro_Backups/",
+                    "Export complete — files prepared for system share sheets.",
                     color = cloudGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold
                 )
             }
@@ -2590,9 +3059,11 @@ private fun PremiumDeveloperContent(
 @Composable
 private fun PremiumProjectFormContent(
     dark: Boolean, projName: String, projLocation: String,
-    projBudget: String, projStatus: String, editingProject: Project?,
+    projBudget: String, projStatus: String, projBg: String, editingProject: Project?,
     onNameChange: (String) -> Unit, onLocationChange: (String) -> Unit,
     onBudgetChange: (String) -> Unit, onStatusChange: (String) -> Unit,
+    onBgChange: (String) -> Unit,
+    onUploadImageClick: () -> Unit,
     onCancel: () -> Unit, onSave: () -> Unit
 ) {
     Column(
@@ -2606,6 +3077,27 @@ private fun PremiumProjectFormContent(
         GlassTextField(value = projBudget, onValueChange = onBudgetChange,
             label = "Base Budget (₹)", isNumeric = true,
             placeholder = "e.g. 15000000 (1.5 Cr)", darkTheme = dark)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                GlassTextField(value = projBg, onValueChange = onBgChange,
+                    label = "Project Image URL / Path", placeholder = "https://images.unsplash.com/... or path", darkTheme = dark)
+            }
+            IconButton(
+                onClick = onUploadImageClick,
+                modifier = Modifier
+                    .padding(top = 16.dp)
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (dark) Color(0xFF1E293B) else Color(0xFFF1F5F9))
+                    .border(1.dp, AccentPurple.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+            ) {
+                Icon(Icons.Default.Image, contentDescription = "Upload Image", tint = AccentPurple)
+            }
+        }
 
         val parsedBudget = projBudget.toDoubleOrNull() ?: 0.0
         if (parsedBudget > 0.0) {

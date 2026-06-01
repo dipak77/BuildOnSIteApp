@@ -52,7 +52,7 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
 
     LaunchedEffect(isConnecting) {
         if (isConnecting) {
-            kotlinx.coroutines.delay(4000)
+            kotlinx.coroutines.delay(30000)
             if (isConnecting) {
                 isConnecting = false
                 showAccountChooser = true
@@ -65,9 +65,10 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
     val gso = remember {
         try {
             GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken("970298420983-bin5cqqcqgdoi9r256p7a78bvpi6c0hs.apps.googleusercontent.com")
+                .requestIdToken(com.example.BuildConfig.GOOGLE_OAUTH_CLIENT_ID)
                 .requestEmail()
                 .requestProfile()
+                .requestScopes(com.google.android.gms.common.api.Scope("https://www.googleapis.com/auth/drive.file"))
                 .build()
         } catch (t: Throwable) {
             t.printStackTrace()
@@ -92,30 +93,39 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         isConnecting = false
-        if (result.resultCode == Activity.RESULT_OK) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-            try {
-                val account: GoogleSignInAccount? = task.getResult(ApiException::class.java)
-                if (account != null) {
-                    val user = GoogleUser(
-                        displayName = account.displayName ?: "Google Builder",
-                        email = account.email ?: "developer@gmail.com",
-                        photoUrl = account.photoUrl?.toString(),
-                        idToken = account.idToken,
-                        isGuest = false
-                    )
-                    viewModel.handleGoogleSignIn(user, context)
-                    Toast.makeText(context, "Welcome, ${user.displayName}!", Toast.LENGTH_SHORT).show()
-                }
-            } catch (e: ApiException) {
-                // If GMS framework throws exception (common on emulate layers lacking Play Services Account integrations),
-                // we gracefully fall back to custom selection to keep it fully operational!
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account: GoogleSignInAccount? = task.getResult(ApiException::class.java)
+            if (account != null) {
+                val user = GoogleUser(
+                    displayName = account.displayName ?: "Google Builder",
+                    email = account.email ?: "developer@gmail.com",
+                    photoUrl = account.photoUrl?.toString(),
+                    idToken = account.idToken,
+                    isGuest = false
+                )
+                viewModel.handleGoogleSignIn(user, context)
+                Toast.makeText(context, "Welcome, ${user.displayName}!", Toast.LENGTH_SHORT).show()
+            } else {
                 showAccountChooser = true
-                Toast.makeText(context, "GMS Session: Initializing fallback chooser", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Sign-in returned no account", Toast.LENGTH_SHORT).show()
             }
-        } else {
-            // Failed/Cancelled - fallback to custom chooser
+        } catch (e: ApiException) {
             showAccountChooser = true
+            val errMsg = when (e.statusCode) {
+                10 -> "Google Sign-In failed (code 10: DEVELOPER_ERROR). Please register the new SHA-1 in your Firebase Console."
+                7 -> "Google Sign-In failed (code 7: NETWORK_ERROR). Please check your internet connection."
+                12500 -> "Google Sign-In failed (code 12500: SIGN_IN_FAILED). Make sure Google Play Services is installed and updated."
+                12501 -> "Google Sign-In cancelled."
+                else -> "Google Sign-In failed (code ${e.statusCode}): ${e.localizedMessage}"
+            }
+            android.util.Log.e("GoogleSignIn", errMsg, e)
+            Toast.makeText(context, errMsg, Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            showAccountChooser = true
+            val errMsg = "Google Sign-In error: ${e.localizedMessage}"
+            android.util.Log.e("GoogleSignIn", errMsg, e)
+            Toast.makeText(context, errMsg, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -414,10 +424,10 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text("Debug SHA-1:", fontSize = 8.sp, color = Color.Gray)
-                                        Text("16:32:70:61:0E:4D:E9:9B:C8:3D:22:C3:8E:38:45:D3:10:37:15:49", fontSize = 9.sp, fontWeight = FontWeight.SemiBold, color = if (dark) Color.White else Color.Black)
+                                        Text("BD:71:A8:AF:84:43:19:DE:83:EA:43:D0:40:95:89:A9:4B:9D:5F:23", fontSize = 9.sp, fontWeight = FontWeight.SemiBold, color = if (dark) Color.White else Color.Black)
                                     }
                                     TextButton(onClick = {
-                                        clipboard.setText(androidx.compose.ui.text.AnnotatedString("16:32:70:61:0E:4D:E9:9B:C8:3D:22:C3:8E:38:45:D3:10:37:15:49"))
+                                        clipboard.setText(androidx.compose.ui.text.AnnotatedString("BD:71:A8:AF:84:43:19:DE:83:EA:43:D0:40:95:89:A9:4B:9D:5F:23"))
                                         Toast.makeText(context, "Copied SHA-1 Certificate!", Toast.LENGTH_SHORT).show()
                                     }) {
                                         Text("Copy", fontSize = 10.sp, color = NeonCyan)

@@ -12,7 +12,13 @@ import kotlinx.coroutines.launch
 // 1. DATABASE ENTITIES
 // ==========================================
 
-@Entity(tableName = "projects")
+@Entity(
+    tableName = "projects",
+    indices = [
+        Index(value = ["status"]),
+        Index(value = ["name"])
+    ]
+)
 data class Project(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
@@ -41,7 +47,15 @@ data class Worker(
     val reference: String = "" // given reference field
 )
 
-@Entity(tableName = "attendance")
+@Entity(
+    tableName = "attendance",
+    indices = [
+        Index(value = ["workerId", "date"], unique = true),
+        Index(value = ["projectId"]),
+        Index(value = ["date"]),
+        Index(value = ["status"])
+    ]
+)
 data class Attendance(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val workerId: Int,
@@ -51,7 +65,14 @@ data class Attendance(
     val overtimeHours: Double
 )
 
-@Entity(tableName = "tasks")
+@Entity(
+    tableName = "tasks",
+    indices = [
+        Index(value = ["projectId"]),
+        Index(value = ["status"]),
+        Index(value = ["priority"])
+    ]
+)
 data class Task(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val projectId: Int,
@@ -62,7 +83,16 @@ data class Task(
     val assignee: String
 )
 
-@Entity(tableName = "transactions")
+@Entity(
+    tableName = "transactions",
+    indices = [
+        Index(value = ["projectId"]),
+        Index(value = ["type"]),
+        Index(value = ["date"]),
+        Index(value = ["partyId"]),
+        Index(value = ["category"])
+    ]
+)
 data class Transaction(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val projectId: Int,
@@ -77,7 +107,10 @@ data class Transaction(
     val paymentMethod: String = "Cash" // "Cash", "Bank Transfer", "Cheque"
 )
 
-@Entity(tableName = "mom")
+@Entity(
+    tableName = "mom",
+    indices = [Index(value = ["projectId"])]
+)
 data class MOM(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val projectId: Int,
@@ -86,7 +119,14 @@ data class MOM(
     val date: String // YYYY-MM-DD
 )
 
-@Entity(tableName = "payroll")
+@Entity(
+    tableName = "payroll",
+    indices = [
+        Index(value = ["workerId"]),
+        Index(value = ["projectId"]),
+        Index(value = ["date"])
+    ]
+)
 data class Payroll(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val workerId: Int,
@@ -96,7 +136,10 @@ data class Payroll(
     val status: String // "Paid", "Pending"
 )
 
-@Entity(tableName = "estimates")
+@Entity(
+    tableName = "estimates",
+    indices = [Index(value = ["projectId"])]
+)
 data class Estimate(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val projectId: Int,
@@ -225,6 +268,63 @@ interface ConstructionDao {
 
     @Delete
     suspend fun deleteEstimate(estimate: Estimate)
+
+    // ── Bulk Insert Methods (for 10K-record JSON imports) ──
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllProjects(projects: List<Project>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllWorkers(workers: List<Worker>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllAttendance(attendance: List<Attendance>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllTasks(tasks: List<Task>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllTransactions(transactions: List<Transaction>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllMOMs(moms: List<MOM>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllPayroll(payroll: List<Payroll>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllEstimates(estimates: List<Estimate>)
+
+    // ── Count queries for UI stats ──
+    @Query("SELECT COUNT(*) FROM transactions WHERE projectId = :projectId")
+    suspend fun getTransactionCount(projectId: Int): Int
+
+    @Query("SELECT COUNT(*) FROM workers")
+    suspend fun getWorkerCount(): Int
+
+    // ── Clear all tables (for full restore) ──
+    @Query("DELETE FROM projects")
+    suspend fun clearProjects()
+
+    @Query("DELETE FROM workers")
+    suspend fun clearWorkers()
+
+    @Query("DELETE FROM attendance")
+    suspend fun clearAttendance()
+
+    @Query("DELETE FROM tasks")
+    suspend fun clearTasks()
+
+    @Query("DELETE FROM transactions")
+    suspend fun clearTransactions()
+
+    @Query("DELETE FROM mom")
+    suspend fun clearMOMs()
+
+    @Query("DELETE FROM payroll")
+    suspend fun clearPayroll()
+
+    @Query("DELETE FROM estimates")
+    suspend fun clearEstimates()
 }
 
 // ==========================================
@@ -242,7 +342,7 @@ interface ConstructionDao {
         Payroll::class,
         Estimate::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -267,53 +367,7 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         suspend fun seedDatabase(dao: ConstructionDao) {
-            // Seed Projects
-            val p1Id = dao.insertProject(Project(name = "Skyline Corporate Tower", location = "Sector 62, City Center", budget = 1250000.0, status = "Active", customBackground = "preset_cyber_blueprint")).toInt()
-            val p2Id = dao.insertProject(Project(name = "Emerald Heights Villa", location = "Hilltop Greens", budget = 450000.0, status = "Active", customBackground = "preset_sunset_construct")).toInt()
-            dao.insertProject(Project(name = "Metro Line Transit", location = "Subway Segment 4", budget = 3200000.0, status = "On Hold", customBackground = "preset_golden_truss"))
-
-            // Seed Workers (Colors packed as ABGR Ints representing beautiful neon shades)
-            val w1Id = dao.insertWorker(Worker(name = "John Carter", role = "Mason Foreman", shift = "Day", wageRate = 350.0, avatarColor = 0xFF3B82F6.toInt())).toInt()
-            val w2Id = dao.insertWorker(Worker(name = "Alice Rivera", role = "Senior Electrician", shift = "Day", wageRate = 420.0, avatarColor = 0xFFEC4899.toInt())).toInt()
-            val w3Id = dao.insertWorker(Worker(name = "Michael Tyson", role = "Site Supervisor", shift = "Day", wageRate = 500.0, avatarColor = 0xFF10B981.toInt())).toInt()
-            val w4Id = dao.insertWorker(Worker(name = "David Kovacs", role = "Plumbing Expert", shift = "Night", wageRate = 380.0, avatarColor = 0xFFF59E0B.toInt())).toInt()
-            val w5Id = dao.insertWorker(Worker(name = "Sarah Connor", role = "Safety Officer", shift = "Day", wageRate = 400.0, avatarColor = 0xFF8B5CF6.toInt())).toInt()
-
-            // Seed Attendance for today YYYY-MM-DD
-            val today = "2026-05-26"
-            dao.insertAttendance(Attendance(workerId = w1Id, projectId = p1Id, date = today, status = "Present", overtimeHours = 0.0))
-            dao.insertAttendance(Attendance(workerId = w2Id, projectId = p1Id, date = today, status = "Present", overtimeHours = 2.0))
-            dao.insertAttendance(Attendance(workerId = w3Id, projectId = p1Id, date = today, status = "Present", overtimeHours = 0.0))
-            dao.insertAttendance(Attendance(workerId = w4Id, projectId = p1Id, date = today, status = "Absent", overtimeHours = 0.0))
-            dao.insertAttendance(Attendance(workerId = w5Id, projectId = p2Id, date = today, status = "Present", overtimeHours = 1.5))
-
-            // Seed Tasks
-            dao.insertTask(Task(projectId = p1Id, title = "Pour foundation concrete slab", priority = "High", status = "Done", dueDate = "2026-05-24", assignee = "John Carter"))
-            dao.insertTask(Task(projectId = p1Id, title = "Conduct structural welding inspection", priority = "High", status = "In Progress", dueDate = "2026-05-28", assignee = "Michael Tyson"))
-            dao.insertTask(Task(projectId = p1Id, title = "Finalize electrical conduit piping", priority = "Medium", status = "To Do", dueDate = "2026-05-30", assignee = "Alice Rivera"))
-            dao.insertTask(Task(projectId = p2Id, title = "Install master bedroom plumbing lines", priority = "Medium", status = "In Progress", dueDate = "2026-05-27", assignee = "David Kovacs"))
-            dao.insertTask(Task(projectId = p2Id, title = "Review exterior facade safety rigging", priority = "Low", status = "To Do", dueDate = "2026-06-02", assignee = "Sarah Connor"))
-
-            // Seed Transactions
-            dao.insertTransaction(Transaction(projectId = p1Id, type = "Money In", amount = 850000.0, category = "Client Advance", description = "Initial milestone payment received", date = "2026-05-15"))
-            dao.insertTransaction(Transaction(projectId = p1Id, type = "Money Out", amount = 120000.0, category = "Material", description = "Super Grade Portland Cement (400 Bags)", date = "2026-05-18"))
-            dao.insertTransaction(Transaction(projectId = p1Id, type = "Money Out", amount = 45000.0, category = "Labor", description = "Worker weekly salary payout", date = "2026-05-22"))
-            dao.insertTransaction(Transaction(projectId = p2Id, type = "Money In", amount = 300000.0, category = "Client Advance", description = "Phase-1 booking advance received", date = "2026-05-10"))
-            dao.insertTransaction(Transaction(projectId = p2Id, type = "Money Out", amount = 35000.0, category = "Equipment", description = "Excavator rental for foundation dig", date = "2026-05-12"))
-
-            // Seed MOMs
-            dao.insertMOM(MOM(projectId = p1Id, title = "Slab Casting Briefing", content = "Checked cement inventory. Approved slump test protocol. Discussed rain precautions and worker scheduling.", date = "2026-05-23"))
-            dao.insertMOM(MOM(projectId = p1Id, title = "Weekly Architecture Alignment", content = "Aligned on layout modifications for the HVAC shaft on 3rd floor. Verified load bearing calculations.", date = "2026-05-20"))
-
-            // Seed Payroll
-            dao.insertPayroll(Payroll(workerId = w1Id, projectId = p1Id, date = "2026-05-25", wagesPaid = 2450.0, status = "Paid"))
-            dao.insertPayroll(Payroll(workerId = w2Id, projectId = p1Id, date = "2026-05-25", wagesPaid = 2940.0, status = "Paid"))
-            dao.insertPayroll(Payroll(workerId = w3Id, projectId = p1Id, date = "2026-05-25", wagesPaid = 3500.0, status = "Pending"))
-
-            // Seed Estimates
-            dao.insertEstimate(Estimate(projectId = p1Id, itemName = "Grade 500 TMT Steel Bars", quantity = 15.0, unit = "Tons", rate = 850.0, totalCost = 12750.0))
-            dao.insertEstimate(Estimate(projectId = p1Id, itemName = "ReadyMix Concrete M25 Grade", quantity = 120.0, unit = "CuM", rate = 95.0, totalCost = 11400.0))
-            dao.insertEstimate(Estimate(projectId = p2Id, itemName = "Bricks Red Fine Burned", quantity = 25000.0, unit = "Pcs", rate = 0.15, totalCost = 3750.0))
+            // Seeding disabled for production ready clean database
         }
     }
 }

@@ -39,6 +39,7 @@ fun MoneyScreen(
     val allTransactions by viewModel.transactions.collectAsState()
 
     val selectedTxForDetails = viewModel.sharedSelectedTxDetails
+    var showDeleteConfirmForTx by remember { mutableStateOf<Transaction?>(null) }
 
     // Filters & search state
     val query = viewModel.transactionSearchQuery
@@ -79,7 +80,7 @@ fun MoneyScreen(
     }
 
     // List of categories for category filter chips
-    val categories = listOf("All", "Material", "Labor", "Equipment", "Client Advance", "Other")
+    val categories = listOf("All") + COST_CODES
 
     LazyColumn(
         modifier = modifier
@@ -295,7 +296,7 @@ fun MoneyScreen(
                 }
             }
         } else {
-            items(filteredTransactions) { tx ->
+            items(filteredTransactions, key = { it.id }) { tx ->
                 val accentBorder = if (tx.type == "Money In") NeonGreen else NeonPink
                 
                 GlassCard(
@@ -376,7 +377,7 @@ fun MoneyScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             // Simple quick delete option
                             IconButton(
-                                onClick = { viewModel.deleteTransaction(tx) },
+                                onClick = { showDeleteConfirmForTx = tx },
                                 modifier = Modifier.size(28.dp)
                             ) {
                                 Icon(
@@ -525,6 +526,58 @@ fun MoneyScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("CLOSE DETAILS", fontWeight = FontWeight.Bold, color = Color.Black)
+                    }
+                }
+            }
+        }
+    }
+
+    if (showDeleteConfirmForTx != null) {
+        val tx = showDeleteConfirmForTx!!
+        GlassModalDialog(
+            visible = true,
+            onDismiss = { showDeleteConfirmForTx = null },
+            title = "⚠ Confirm Deletion",
+            darkTheme = dark,
+            glowColor = NeonPink
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    "Are you sure you want to delete this transaction record? This action cannot be undone.",
+                    color = if (dark) TextSecondary else TextSecondaryLight,
+                    fontSize = 13.sp
+                )
+                Text(
+                    "${tx.type}: ${currencyFormatter.format(tx.amount)}\n${tx.description}",
+                    color = if (dark) TextPrimary else TextPrimaryLight,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    GlassButton(
+                        onClick = { showDeleteConfirmForTx = null },
+                        darkTheme = dark,
+                        outlineMode = true,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Cancel", fontWeight = FontWeight.Bold)
+                    }
+                    GlassButton(
+                        onClick = {
+                            viewModel.deleteTransaction(tx)
+                            showDeleteConfirmForTx = null
+                        },
+                        darkTheme = dark,
+                        glowColor = NeonPink,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Delete", fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             }

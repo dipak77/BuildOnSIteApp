@@ -47,29 +47,45 @@ import java.util.*
 import kotlin.math.absoluteValue
 
 // ─────────────────────────────────────────────
-// PREMIUM COLOR PALETTE
+// PREMIUM THEME COMPATIBILITY MAPPINGS
 // ─────────────────────────────────────────────
-private val PremiumNavy        = Color(0xFF0A0E1A)
-private val PremiumDeepBlue    = Color(0xFF0D1B3E)
-private val PremiumCard        = Color(0xFF111827)
-private val PremiumCardLight   = Color(0xFFF8FAFF)
-private val PremiumBorder      = Color(0xFF1E2D4A)
-private val PremiumBorderLight = Color(0xFFE2E8F4)
+private val PremiumNavy        = DarkBg0
+private val PremiumDeepBlue    = DarkBg2
+private val PremiumCard        = DarkBg1
+private val PremiumCardLight   = LightBg2
+private val PremiumBorder      = GlassBorderDark
+private val PremiumBorderLight = GlassBorderLight
 
-private val AquaGlow     = Color(0xFF00D4FF)
-private val VioletGlow   = Color(0xFF7C3AED)
-private val EmeraldGlow  = Color(0xFF10B981)
-private val RoseGlow     = Color(0xFFF43F5E)
-private val AmberGlow    = Color(0xFFF59E0B)
-private val IndigoGlow   = Color(0xFF6366F1)
+private val AquaGlow @Composable get() = MaterialTheme.colorScheme.ext.accentPrimary
+private val VioletGlow @Composable get() = MaterialTheme.colorScheme.ext.accentSecondary
+private val EmeraldGlow @Composable get() = MaterialTheme.colorScheme.ext.accentSuccess
+private val RoseGlow @Composable get() = MaterialTheme.colorScheme.ext.accentDanger
+private val AmberGlow @Composable get() = MaterialTheme.colorScheme.ext.accentWarning
+private val IndigoGlow @Composable get() = if (MaterialTheme.colorScheme.ext.isDark) NeonBlue else LightBlue
 
-private val GradientAqua    = Brush.linearGradient(listOf(Color(0xFF00D4FF), Color(0xFF0099CC)))
-private val GradientViolet  = Brush.linearGradient(listOf(Color(0xFF7C3AED), Color(0xFF4F46E5)))
-private val GradientEmerald = Brush.linearGradient(listOf(Color(0xFF10B981), Color(0xFF059669)))
-private val GradientRose    = Brush.linearGradient(listOf(Color(0xFFF43F5E), Color(0xFFBE185D)))
-private val GradientAmber   = Brush.linearGradient(listOf(Color(0xFFF59E0B), Color(0xFFD97706)))
-private val GradientPremium = Brush.linearGradient(
-    listOf(Color(0xFF00D4FF), Color(0xFF7C3AED), Color(0xFFF43F5E))
+private val GradientAqua @Composable get() = Brush.linearGradient(
+    if (MaterialTheme.colorScheme.ext.isDark) listOf(NeonCyan, NeonCyanDim)
+    else listOf(LightCyan, Color(0xFF0284C7))
+)
+private val GradientViolet @Composable get() = Brush.linearGradient(
+    if (MaterialTheme.colorScheme.ext.isDark) listOf(NeonPurple, NeonPurpleDim)
+    else listOf(LightPurple, Color(0xFF6D28D9))
+)
+private val GradientEmerald @Composable get() = Brush.linearGradient(
+    if (MaterialTheme.colorScheme.ext.isDark) listOf(NeonGreen, NeonGreenDim)
+    else listOf(LightGreen, Color(0xFF047857))
+)
+private val GradientRose @Composable get() = Brush.linearGradient(
+    if (MaterialTheme.colorScheme.ext.isDark) listOf(NeonPink, NeonPinkDim)
+    else listOf(LightPink, Color(0xFFBE185D))
+)
+private val GradientAmber @Composable get() = Brush.linearGradient(
+    if (MaterialTheme.colorScheme.ext.isDark) listOf(NeonAmber, NeonAmberDim)
+    else listOf(LightAmber, Color(0xFFB45309))
+)
+private val GradientPremium @Composable get() = Brush.linearGradient(
+    if (MaterialTheme.colorScheme.ext.isDark) listOf(NeonCyan, NeonPurple, NeonPink)
+    else listOf(LightCyan, LightPurple, LightPink)
 )
 
 // ─────────────────────────────────────────────
@@ -108,7 +124,7 @@ fun SiteScreen(
     var showAddPartyTxDialog by remember { mutableStateOf(false) }
     var partyTxType          by remember { mutableStateOf("Money Out") }
     var partyTxAmount        by remember { mutableStateOf("") }
-    var partyTxCategory      by remember { mutableStateOf("Labor") }
+    var partyTxCategory      by remember { mutableStateOf("Labour") }
     var partyTxDesc          by remember { mutableStateOf("") }
     var partyTxMethod        by remember { mutableStateOf("Cash") }
     var partyTxDate          by remember { mutableStateOf("2026-05-27") }
@@ -196,15 +212,18 @@ fun SiteScreen(
             label = "pageRoute"
         ) { (txDetail, partyDetail, _) ->
             when {
-                txDetail != null -> PremiumPaymentDetailPage(
-                    tx = txDetail,
-                    dark = dark,
-                    currentProject = currentProject,
-                    viewModel = viewModel,
-                    context = context,
-                    onBack = { selectedTxDetail = null },
-                    onShowPdf = { showPdfPreviewDialog = true }
-                )
+                txDetail != null -> {
+                    val freshTx = projectTransactions.find { it.id == txDetail.id } ?: txDetail
+                    PremiumPaymentDetailPage(
+                        tx = freshTx,
+                        dark = dark,
+                        currentProject = currentProject,
+                        viewModel = viewModel,
+                        context = context,
+                        onBack = { selectedTxDetail = null },
+                        onShowPdf = { showPdfPreviewDialog = true }
+                    )
+                }
 
                 partyDetail != null -> PremiumPartyDetailPage(
                     worker = partyDetail,
@@ -215,7 +234,7 @@ fun SiteScreen(
                     onBack = { selectedPartyDetail = null },
                     onSelectTx = { selectedTxDetail = it },
                     onIPaid = {
-                        partyTxType = "Money Out"; partyTxCategory = "Labor"
+                        partyTxType = "Money Out"; partyTxCategory = "Labour"
                         partyTxAmount = ""; partyTxDesc = "Crew payment"
                         showAddPartyTxDialog = true
                     },
@@ -306,7 +325,6 @@ fun SiteScreen(
     if (showAddPartyTxDialog && activePartyForDialog != null && activeProj != null) {
         PremiumAddTransactionDialog(
             dark = dark,
-            partyName = activePartyForDialog.name,
             partyTxType = partyTxType,
             partyTxAmount = partyTxAmount,
             partyTxDesc = partyTxDesc,
@@ -335,7 +353,10 @@ fun SiteScreen(
                 } else {
                     Toast.makeText(context, "Enter a valid amount!", Toast.LENGTH_SHORT).show()
                 }
-            }
+            },
+            allWorkers = allWorkers,
+            selectedParty = activePartyForDialog,
+            viewModel = viewModel
         )
     }
 
@@ -424,6 +445,7 @@ private fun PremiumMainPage(
                     )
                     "Transaction" -> TransactionTab(
                         dark = dark,
+                        viewModel = viewModel,
                         projectTransactions = projectTransactions,
                         onSelectTx = onSelectTx
                     )
@@ -491,48 +513,64 @@ private fun PremiumSiteHeader(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
-                // Live indicator dot + project name
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    PulsatingDot(color = EmeraldGlow)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "LIVE SITE",
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 2.sp,
-                        color = EmeraldGlow
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                IconButton(
+                    onClick = { viewModel.currentScreen = AppScreen.Dashboard },
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back to Dashboard",
+                        tint = if (dark) Color.White else Color(0xFF1E293B),
+                        modifier = Modifier.size(24.dp)
                     )
                 }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = currentProject?.name ?: "Treasure Garden",
-                    style = TextStyle(
-                        brush = GradientAqua,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = (-0.5).sp
+                Spacer(modifier = Modifier.width(2.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    // Live indicator dot
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        PulsatingDot(color = EmeraldGlow)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "LIVE SITE",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 2.sp,
+                            color = EmeraldGlow
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                    // Project name – capped to 1 line with ellipsis
+                    Text(
+                        text = currentProject?.name ?: "Project",
+                        style = TextStyle(
+                            brush = GradientAqua,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = (-0.3).sp
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-                )
-                Text(
-                    text = "Site Operations Console",
-                    color = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 0.3.sp
-                )
+                    Text(
+                        text = "Site Operations",
+                        color = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 0.3.sp,
+                        maxLines = 1
+                    )
+                }
             }
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                PremiumIconBtn(
-                    icon = Icons.Default.Notifications,
-                    tint = AmberGlow,
-                    dark = dark,
-                    onClick = { Toast.makeText(context, "Site alerts active!", Toast.LENGTH_SHORT).show() }
-                )
                 PremiumIconBtn(
                     icon = if (viewModel.darkThemeEnabled) Icons.Default.LightMode else Icons.Default.DarkMode,
                     tint = if (dark) AquaGlow else VioletGlow,
@@ -544,12 +582,6 @@ private fun PremiumSiteHeader(
                     tint = RoseGlow,
                     dark = dark,
                     onClick = onShowPdf
-                )
-                PremiumIconBtn(
-                    icon = Icons.Default.MoreVert,
-                    tint = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
-                    dark = dark,
-                    onClick = {}
                 )
             }
         }
@@ -844,7 +876,7 @@ private fun PartyTab(
         if (searchedWorkers.isEmpty()) {
             item { PremiumEmptyState(dark = dark, message = "No matching workers found") }
         } else {
-            items(searchedWorkers) { worker ->
+            items(searchedWorkers, key = { it.id }) { worker ->
                 val txs = projectTransactions.filter { it.partyId == worker.id || it.partyName == worker.name }
                 val diff = txs.filter { it.type == "Money Out" }.sumOf { it.amount } -
                            txs.filter { it.type == "Money In" }.sumOf { it.amount }
@@ -867,6 +899,7 @@ private fun PartyTab(
 @Composable
 private fun TransactionTab(
     dark: Boolean,
+    viewModel: MainViewModel,
     projectTransactions: List<Transaction>,
     onSelectTx: (Transaction) -> Unit
 ) {
@@ -874,69 +907,152 @@ private fun TransactionTab(
     val totalOut = projectTransactions.filter { it.type == "Money Out" }.sumOf { it.amount }
     val net      = totalIn - totalOut
 
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
-    ) {
-        // Summary Banner
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    if (dark)
-                        Brush.horizontalGradient(listOf(Color(0xFF0D1B3E), Color(0xFF111827)))
-                    else
-                        Brush.horizontalGradient(listOf(Color(0xFFEEF2FF), Color(0xFFF8FAFF)))
-                )
-                .padding(horizontal = 18.dp, vertical = 14.dp)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            // Summary Banner
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        if (dark)
+                            Brush.horizontalGradient(listOf(Color(0xFF0D1B3E), Color(0xFF111827)))
+                        else
+                            Brush.horizontalGradient(listOf(Color(0xFFEEF2FF), Color(0xFFF8FAFF)))
+                    )
+                    .padding(horizontal = 18.dp, vertical = 14.dp)
             ) {
-                MiniFinanceStat(
-                    dark = dark, label = "IN",
-                    value = formatIndianRupees(totalIn),
-                    color = EmeraldGlow, modifier = Modifier.weight(1f)
-                )
-                MiniFinanceStat(
-                    dark = dark, label = "OUT",
-                    value = formatIndianRupees(totalOut),
-                    color = RoseGlow, modifier = Modifier.weight(1f)
-                )
-                MiniFinanceStat(
-                    dark = dark, label = "NET",
-                    value = formatIndianRupees(net.absoluteValue),
-                    color = if (net >= 0) EmeraldGlow else RoseGlow,
-                    modifier = Modifier.weight(1f)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    MiniFinanceStat(
+                        dark = dark, label = "IN",
+                        value = formatIndianRupees(totalIn),
+                        color = EmeraldGlow, modifier = Modifier.weight(1f)
+                    )
+                    MiniFinanceStat(
+                        dark = dark, label = "OUT",
+                        value = formatIndianRupees(totalOut),
+                        color = RoseGlow, modifier = Modifier.weight(1f)
+                    )
+                    MiniFinanceStat(
+                        dark = dark, label = "NET",
+                        value = formatIndianRupees(net.absoluteValue),
+                        color = if (net >= 0) EmeraldGlow else RoseGlow,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            if (projectTransactions.isEmpty()) {
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    PremiumEmptyState(dark = dark, message = "No transactions logged yet")
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 90.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    item {
+                        Text(
+                            text = "All Receipts  ·  ${projectTransactions.size}",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                            letterSpacing = 0.3.sp,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                    }
+                    items(projectTransactions, key = { it.id }) { tx ->
+                        PremiumTransactionCard(tx = tx, dark = dark, onClick = { onSelectTx(tx) })
+                    }
+                }
             }
         }
 
-        if (projectTransactions.isEmpty()) {
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                PremiumEmptyState(dark = dark, message = "No transactions logged yet")
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+        // Bottom Action Bar
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.Transparent,
+                            if (dark) PremiumNavy.copy(alpha = 0.95f) else Color(0xFAF0F4FF)
+                        )
+                    )
+                )
+                .padding(horizontal = 16.dp, vertical = 16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                item {
+                // Payment In Button
+                Button(
+                    onClick = {
+                        viewModel.transactionTypePreset = "Money In"
+                        viewModel.showTransactionDialog = true
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F766E)), // Green/Teal
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                ) {
                     Text(
-                        text = "All Receipts  ·  ${projectTransactions.size}",
-                        fontSize = 13.sp,
+                        text = "Payment In",
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
-                        letterSpacing = 0.3.sp,
-                        modifier = Modifier.padding(bottom = 4.dp)
+                        color = Color.White
                     )
                 }
-                items(projectTransactions) { tx ->
-                    PremiumTransactionCard(tx = tx, dark = dark, onClick = { onSelectTx(tx) })
+
+                // Plus Button
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(NeonPurple)
+                        .clickable {
+                            viewModel.transactionTypePreset = "Money Out"
+                            viewModel.showTransactionDialog = true
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Transaction",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
-                item { Spacer(modifier = Modifier.height(80.dp)) }
+
+                // Payment Out Button
+                Button(
+                    onClick = {
+                        viewModel.transactionTypePreset = "Money Out"
+                        viewModel.showTransactionDialog = true
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48)), // Red/Pink
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                ) {
+                    Text(
+                        text = "Payment Out",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
             }
         }
     }
@@ -1092,7 +1208,7 @@ private fun TaskTab(
                 contentPadding = PaddingValues(18.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(projTasks) { t ->
+                items(projTasks, key = { it.id }) { t ->
                     PremiumTaskCard(task = t, dark = dark, onCycle = { viewModel.cycleTaskStatus(t) })
                 }
                 item { Spacer(modifier = Modifier.height(80.dp)) }
@@ -1220,7 +1336,7 @@ private fun AttendanceTab(
         if (allWorkers.isEmpty()) {
             item { PremiumEmptyState(dark = dark, message = "No workers registered yet") }
         } else {
-            items(allWorkers) { worker ->
+            items(allWorkers, key = { it.id }) { worker ->
                 val record = activeDateAttendance.find { it.workerId == worker.id }
                 PremiumAttendanceCard(
                     worker = worker,
@@ -1259,13 +1375,16 @@ private fun PremiumPartyDetailPage(
     val totalPaid     = matchedTxs.filter { it.type == "Money In" }.sumOf { it.amount }
     val diff          = totalReceived - totalPaid
 
-    var selectedHistoryTab by remember { mutableStateOf("Received") }
+    val receivedCount = remember(matchedTxs) { matchedTxs.count { it.type == "Money In" } }
+    val paidCount     = remember(matchedTxs) { matchedTxs.count { it.type == "Money Out" } }
+
+    var selectedHistoryTab by remember { mutableStateOf("All") }
 
     val historyTxs = remember(matchedTxs, selectedHistoryTab) {
-        if (selectedHistoryTab == "Received") {
-            matchedTxs.filter { it.type == "Money Out" }
-        } else {
-            matchedTxs.filter { it.type == "Money In" }
+        when (selectedHistoryTab) {
+            "Received" -> matchedTxs.filter { it.type == "Money In" }
+            "Paid"     -> matchedTxs.filter { it.type == "Money Out" }
+            else       -> matchedTxs
         }
     }
 
@@ -1279,7 +1398,7 @@ private fun PremiumPartyDetailPage(
             .fillMaxSize()
             .background(bgBrush)
     ) {
-        // Center-aligned visual header mimicking the screenshot
+        // Left-aligned visual header matching the reference screenshot
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1288,26 +1407,30 @@ private fun PremiumPartyDetailPage(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.size(40.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
             ) {
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowLeft,
-                    contentDescription = "Back",
-                    tint = if (dark) Color.White else Color(0xFF1E293B),
-                    modifier = Modifier.size(28.dp)
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = if (dark) Color.White else Color(0xFF1E293B),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                Text(
+                    text = "Party Project Balance",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (dark) Color.White else Color(0xFF131F3C)
                 )
             }
-
-            Text(
-                text = "Party Project Balance",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (dark) Color.White else Color(0xFF131F3C),
-                modifier = Modifier.weight(1f),
-                textAlign = TextAlign.Center
-            )
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1319,19 +1442,16 @@ private fun PremiumPartyDetailPage(
                     onClick = {
                         val amountStr = formatIndianRupees(diff.absoluteValue)
                         val statusText = if (diff >= 0) "Advance Paid" else "Pending to Pay"
-                        val shareTxt = """
-                            Party Project Balance:
-                            Party: ${worker.name}
-                            Project: ${currentProject?.name ?: "Treasure Garden"}
-                            Balance: $amountStr ($statusText)
-                            Received: ${formatIndianRupees(totalReceived)}
-                            Paid: ${formatIndianRupees(totalPaid)}
-                        """.trimIndent()
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, shareTxt)
-                        }
-                        context.startActivity(Intent.createChooser(intent, "Share Balance Review"))
+                        val pdfFile = PdfUtils.generateBalanceReviewPdfFile(
+                            context = context,
+                            partyName = worker.name,
+                            projectName = currentProject?.name ?: "Treasure Garden",
+                            balance = amountStr,
+                            statusText = statusText,
+                            received = formatIndianRupees(totalReceived),
+                            paid = formatIndianRupees(totalPaid)
+                        )
+                        PdfUtils.sharePdfFile(context, pdfFile, "Share Balance Review")
                     }
                 )
                 HeaderActionButton(
@@ -1406,71 +1526,121 @@ private fun PremiumPartyDetailPage(
             }
         }
 
-        // Tab-wise received vs paid summary
+        // Static Balance Summary Card (Party Received & Party Paid)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(if (dark) Color(0xFF111827) else Color.White)
+                .border(
+                    1.dp,
+                    if (dark) Color(0xFF1E2D4A) else Color(0xFFE2E8F4),
+                    RoundedCornerShape(12.dp)
+                )
+                .padding(vertical = 12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Left Column: Party Received
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Party Received",
+                        fontSize = 12.sp,
+                        color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = formatIndianRupees(totalReceived),
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (dark) Color.White else Color(0xFF0F172A)
+                    )
+                }
+
+                // Vertical Divider
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(36.dp)
+                        .background(if (dark) Color(0xFF2D3F5E) else Color(0xFFE2E8F0))
+                )
+
+                // Right Column: Party Paid
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Party Paid",
+                        fontSize = 12.sp,
+                        color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = formatIndianRupees(totalPaid),
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (dark) Color.White else Color(0xFF0F172A)
+                    )
+                }
+            }
+        }
+
+        // 3-way Horizontal Tab Bar Selector
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 12.dp, bottom = 4.dp),
+                .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val leftActive = selectedHistoryTab == "Received"
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { selectedHistoryTab = "Received" }
-                    .padding(vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Party Received",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = if (dark) (if (leftActive) Color.White else Color(0xFF64748B)) else (if (leftActive) Color(0xFF1E293B) else Color(0xFF64748B))
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = formatIndianRupees(totalReceived),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (dark) (if (leftActive) Color.White else Color(0xFF94A3B8)) else (if (leftActive) Color(0xFF0F172A) else Color(0xFF475569))
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .height(2.dp)
-                        .background(if (leftActive) (if (dark) AquaGlow else Color(0xFF4F46E5)) else Color.Transparent)
-                )
-            }
+            val tabs = listOf(
+                "All" to "All Transactions",
+                "Received" to "Received ($receivedCount)",
+                "Paid" to "Paid ($paidCount)"
+            )
 
-            val rightActive = selectedHistoryTab == "Paid"
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { selectedHistoryTab = "Paid" }
-                    .padding(vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Party Paid",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = if (dark) (if (rightActive) Color.White else Color(0xFF64748B)) else (if (rightActive) Color(0xFF1E293B) else Color(0xFF64748B))
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = formatIndianRupees(totalPaid),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (dark) (if (rightActive) Color.White else Color(0xFF94A3B8)) else (if (rightActive) Color(0xFF0F172A) else Color(0xFF475569))
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Box(
+            tabs.forEach { (tabKey, tabLabel) ->
+                val isActive = selectedHistoryTab == tabKey
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .height(2.dp)
-                        .background(if (rightActive) (if (dark) AquaGlow else Color(0xFF4F46E5)) else Color.Transparent)
-                )
+                        .weight(1f)
+                        .clickable { selectedHistoryTab = tabKey }
+                        .padding(vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = tabLabel,
+                        fontSize = 13.sp,
+                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isActive) {
+                            if (dark) Color.White else Color(0xFF5D53EA)
+                        } else {
+                            if (dark) Color(0xFF64748B) else Color(0xFF94A3B8)
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.7f)
+                            .height(3.dp)
+                            .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                            .background(
+                                if (isActive) {
+                                    if (dark) Color(0xFF818CF8) else Color(0xFF5D53EA)
+                                } else {
+                                    Color.Transparent
+                                }
+                            )
+                    )
+                }
             }
         }
 
@@ -1536,7 +1706,7 @@ private fun PremiumPartyDetailPage(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 84.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(historyTxs) { tx ->
+                    items(historyTxs, key = { it.id }) { tx ->
                         PartyTransactionCard(
                             tx = tx,
                             dark = dark,
@@ -1657,101 +1827,7 @@ private fun PartyTransactionCard(
     workerName: String,
     onClick: () -> Unit
 ) {
-    val dateParts = tx.date.split("-")
-    val months = listOf("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
-    val dayStr = dateParts.getOrNull(2) ?: "27"
-    val monStr = months.getOrElse((dateParts.getOrNull(1)?.toIntOrNull() ?: 1) - 1) { "May" }
-    val yearStr = dateParts.getOrNull(0) ?: "2026"
-
-    val topBg = if (dark) Color(0xFF7C3AED) else Color(0xFF4F46E5)
-    val botBg = if (dark) Color(0xFF7C3AED).copy(alpha = 0.15f) else Color(0xFFEEF2FF)
-    val botTextColor = if (dark) Color(0xFFC084FC) else Color(0xFF312E81)
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (dark) Color(0xFF111827) else Color.White)
-            .border(
-                1.dp,
-                if (dark) Color(0xFF1E2D4A) else Color(0xFFE2E8F0),
-                RoundedCornerShape(8.dp)
-            )
-            .clickable(onClick = onClick)
-            .padding(12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Split Date Badge
-                Column(
-                    modifier = Modifier
-                        .width(60.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(
-                            1.dp,
-                            if (dark) Color(0xFF7C3AED).copy(alpha = 0.4f) else Color(0xFFE0E7FF),
-                            RoundedCornerShape(8.dp)
-                        )
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(topBg)
-                            .padding(vertical = 3.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = yearStr,
-                            fontSize = 10.sp,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(botBg)
-                            .padding(vertical = 5.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "$dayStr $monStr",
-                            fontSize = 11.sp,
-                            color = botTextColor,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                val directionText = if (tx.type == "Money Out") {
-                    "Company  >  $workerName"
-                } else {
-                    "$workerName  >  Company"
-                }
-
-                Text(
-                    text = directionText,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (dark) Color(0xFFE2E8F4) else Color(0xFF1E293B)
-                )
-            }
-
-            Text(
-                text = formatIndianRupees(tx.amount),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (dark) Color.White else Color(0xFF0F172A)
-            )
-        }
-    }
+    TransactionCardLayout(tx = tx, dark = dark, workerName = workerName, onClick = onClick)
 }
 
 // ─────────────────────────────────────────────
@@ -1796,19 +1872,25 @@ private fun PremiumPaymentDetailPage(
                     icon = Icons.Default.Share,
                     tint = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B), dark = dark,
                     onClick = {
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_SUBJECT, "Payment Receipt")
-                            putExtra(Intent.EXTRA_TEXT,
-                                "Payment: $amountStr | To: ${tx.partyName ?: "Company"} | Date: ${tx.date} | Method: ${tx.paymentMethod}")
-                        }
-                        context.startActivity(Intent.createChooser(intent, "Share receipt"))
+                        val amountStr = formatIndianRupees(tx.amount)
+                        val pdfFile = PdfUtils.generateReceiptPdfFile(
+                            context = context,
+                            txId = tx.id,
+                            name = tx.partyName ?: "Company",
+                            amount = amountStr,
+                            date = tx.date
+                        )
+                        PdfUtils.sharePdfFile(context, pdfFile, "Share Receipt")
                     }
                 )
                 PremiumIconBtn(
                     icon = Icons.Default.Edit,
                     tint = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B), dark = dark,
-                    onClick = { Toast.makeText(context, "Edit mode activated!", Toast.LENGTH_SHORT).show() }
+                    onClick = {
+                        viewModel.transactionToEdit = tx
+                        viewModel.transactionTypePreset = tx.type
+                        viewModel.showTransactionDialog = true
+                    }
                 )
             }
         )
@@ -1951,11 +2033,14 @@ private fun PremiumPaymentDetailPage(
                     )
                     .background(VioletGlow.copy(alpha = 0.1f))
                     .clickable {
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, "Payment: $amountStr | ID: ${tx.id}")
-                        }
-                        context.startActivity(Intent.createChooser(intent, "Share"))
+                        val pdfFile = PdfUtils.generateReceiptPdfFile(
+                            context = context,
+                            txId = tx.id,
+                            name = tx.partyName ?: "Company",
+                            amount = amountStr,
+                            date = tx.date
+                        )
+                        PdfUtils.sharePdfFile(context, pdfFile, "Share Receipt PDF")
                     }
                     .padding(vertical = 14.dp),
                 contentAlignment = Alignment.Center
@@ -1965,7 +2050,7 @@ private fun PremiumPaymentDetailPage(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(Icons.Default.Share, null, tint = VioletGlow, modifier = Modifier.size(15.dp))
-                    Text("SHARE LINK", fontSize = 11.sp, fontWeight = FontWeight.Black,
+                    Text("SHARE PDF", fontSize = 11.sp, fontWeight = FontWeight.Black,
                         color = VioletGlow, letterSpacing = 0.5.sp)
                 }
             }
@@ -2207,100 +2292,165 @@ private fun PremiumTransactionCard(
     workerName: String = "",
     onClick: () -> Unit
 ) {
+    TransactionCardLayout(tx = tx, dark = dark, workerName = workerName, onClick = onClick)
+}
+
+@Composable
+private fun TransactionCardLayout(
+    tx: Transaction,
+    dark: Boolean,
+    workerName: String = "",
+    onClick: () -> Unit
+) {
     val isIn = tx.type == "Money In"
-    val accentColor = if (isIn) EmeraldGlow else RoseGlow
     val dateParts = tx.date.split("-")
     val months = listOf("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
     val dayStr = dateParts.getOrNull(2) ?: "27"
     val monStr = months.getOrElse((dateParts.getOrNull(1)?.toIntOrNull() ?: 1) - 1) { "May" }
-    val yearStr = dateParts.getOrNull(0) ?: "2026"
+
+    val cardBg = if (dark) Color(0xFF1E293B) else Color.White
+    val cardBorder = if (dark) Color(0xFF334155) else Color(0xFFE2E8F0)
+    val textPrimary = if (dark) Color(0xFFF1F5F9) else Color(0xFF1E293B)
+    val textSecondary = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
+    val arrowBg = if (isIn) {
+        if (dark) Color(0xFF143A25) else Color(0xFFE6F4EA)
+    } else {
+        if (dark) Color(0xFF4C1B1B) else Color(0xFFFCE8E6)
+    }
+    val arrowTint = if (isIn) {
+        if (dark) Color(0xFF81C784) else Color(0xFF137333)
+    } else {
+        if (dark) Color(0xFFE57373) else Color(0xFFC5221F)
+    }
+    val amountColor = arrowTint
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(
-                if (dark)
-                    Brush.horizontalGradient(listOf(Color(0xFF111827), Color(0xFF0D1B3E)))
-                else
-                    Brush.horizontalGradient(listOf(Color.White, Color(0xFFF8FAFF)))
-            )
-            .border(
-                1.dp,
-                if (dark) Color(0xFF1E2D4A) else Color(0xFFDDE4F0),
-                RoundedCornerShape(14.dp)
-            )
+            .background(cardBg)
+            .border(1.dp, cardBorder, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .padding(12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Date Badge
-                Box(
-                    modifier = Modifier
-                        .size(50.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(GradientViolet),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(dayStr, fontSize = 14.sp, color = Color.White, fontWeight = FontWeight.Black)
-                        Text(monStr, fontSize = 9.sp, color = Color.White.copy(alpha = 0.8f), fontWeight = FontWeight.Bold)
-                        Text(yearStr, fontSize = 8.sp, color = Color.White.copy(alpha = 0.6f))
-                    }
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    val dirText = if (tx.type == "Money Out")
-                        "Company → ${tx.partyName ?: workerName.ifBlank { "Party" }}"
-                    else
-                        "${tx.partyName ?: workerName.ifBlank { "Party" }} → Company"
+            // 1. Date Badge
+            Box(
+                modifier = Modifier
+                    .size(width = 46.dp, height = 48.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF5D53EA)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        dirText, fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                        color = if (dark) Color(0xFFE2E8F4) else Color(0xFF1E293B),
-                        maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 160.dp)
+                        text = dayStr,
+                        fontSize = 16.sp,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
                     )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Text(
+                        text = monStr,
+                        fontSize = 11.sp,
+                        color = Color.White,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            // 2. Arrow Indicator
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .background(arrowBg, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isIn) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
+                    contentDescription = null,
+                    tint = arrowTint,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            // 3. Name & Tag details Column
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                val partyText = tx.partyName ?: workerName.ifBlank { "Party" }
+                val line1 = if (isIn) partyText else "Company"
+                val line2 = if (isIn) "To: Company" else "To: $partyText"
+
+                Text(
+                    text = line1,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = line2,
+                    fontSize = 12.sp,
+                    color = textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    // Payment Method Tag
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(if (dark) Color(0xFF334155) else Color(0xFFE8F0FE))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(if (dark) Color(0xFF1E2D4A) else Color(0xFFEEF2FF))
-                                .padding(horizontal = 4.dp, vertical = 1.dp)
-                        ) {
-                            Text(
-                                tx.paymentMethod, fontSize = 9.sp,
-                                color = AquaGlow, fontWeight = FontWeight.Bold
-                            )
-                        }
-                        if (tx.description.isNotBlank()) {
-                            Text(
-                                "· ${tx.description}", fontSize = 10.sp,
-                                color = if (dark) Color(0xFF475569) else Color(0xFF94A3B8),
-                                maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.widthIn(max = 100.dp)
-                            )
-                        }
+                        Text(
+                            text = tx.paymentMethod,
+                            fontSize = 10.sp,
+                            color = if (dark) Color(0xFF90CDF4) else Color(0xFF1A73E8),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    if (tx.description.isNotBlank()) {
+                        Text(
+                            text = "·  ${tx.description}",
+                            fontSize = 11.sp,
+                            color = textSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }
 
-            Column(horizontalAlignment = Alignment.End) {
+            // 4. Amount and Chevron
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 Text(
-                    (if (isIn) "+" else "-") + formatIndianRupees(tx.amount),
-                    fontSize = 14.sp, fontWeight = FontWeight.Black, color = accentColor
+                    text = (if (isIn) "+" else "-") + formatIndianRupees(tx.amount),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = amountColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip
                 )
                 Icon(
-                    imageVector = Icons.Default.ChevronRight, null,
-                    tint = if (dark) Color(0xFF2D3F5E) else Color(0xFFCBD5E1),
-                    modifier = Modifier.size(14.dp)
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }
@@ -3023,7 +3173,6 @@ private fun PremiumAttendanceDialog(
 @Composable
 private fun PremiumAddTransactionDialog(
     dark: Boolean,
-    partyName: String,
     partyTxType: String,
     partyTxAmount: String,
     partyTxDesc: String,
@@ -3037,8 +3186,12 @@ private fun PremiumAddTransactionDialog(
     onCategoryChange: (String) -> Unit,
     onMethodChange: (String) -> Unit,
     onDismiss: () -> Unit,
-    onSave: () -> Unit
+    onSave: () -> Unit,
+    allWorkers: List<Worker>,
+    selectedParty: Worker?,
+    viewModel: MainViewModel
 ) {
+    var reference by remember { mutableStateOf("") }
     GlassModalDialog(
         visible = true, onDismiss = onDismiss,
         title = "Record Payment",
@@ -3046,133 +3199,30 @@ private fun PremiumAddTransactionDialog(
         glowColor = if (partyTxType == "Money Out") RoseGlow else EmeraldGlow,
         scrollable = true
     ) {
-        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            // Party label
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(VioletGlow.copy(alpha = 0.08f))
-                    .border(1.dp, VioletGlow.copy(alpha = 0.25f), RoundedCornerShape(10.dp))
-                    .padding(10.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(Icons.Default.Person, null, tint = VioletGlow, modifier = Modifier.size(14.dp))
-                    Text(partyName, fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                        color = if (dark) Color(0xFFE2E8F4) else Color(0xFF1E293B))
-                }
-            }
-
-            // Type selector
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                listOf("Money Out" to RoseGlow, "Money In" to EmeraldGlow).forEach { (type, color) ->
-                    val sel = partyTxType == type
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (sel) Brush.linearGradient(listOf(color.copy(0.2f), color.copy(0.08f)))
-                            else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)))
-                            .border(1.5.dp, if (sel) color else color.copy(0.25f), RoundedCornerShape(12.dp))
-                            .clickable { onTypeChange(type) }
-                            .padding(vertical = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            if (type == "Money Out") "I PAID" else "I RECEIVED",
-                            color = if (sel) color else color.copy(0.5f),
-                            fontWeight = FontWeight.Black, fontSize = 12.sp
-                        )
-                    }
-                }
-            }
-
-            GlassTextField(value = partyTxAmount, onValueChange = onAmountChange,
-                label = "Amount (₹)", isNumeric = true, placeholder = "e.g. 5000", darkTheme = dark)
-            GlassTextField(value = partyTxDesc, onValueChange = onDescChange,
-                label = "Description", placeholder = "e.g. Weekly advance", darkTheme = dark)
-            GlassTextField(value = partyTxDate, onValueChange = onDateChange,
-                label = "Date (YYYY-MM-DD)", placeholder = "2026-05-27", darkTheme = dark)
-
-            // Category
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("CATEGORY", fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp,
-                    color = if (dark) Color(0xFF475569) else Color(0xFF94A3B8))
-                Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf("Labor", "Material", "Equipment", "Client Advance", "Other").forEach { cat ->
-                        val sel = partyTxCategory == cat
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (sel) VioletGlow.copy(alpha = 0.18f) else Color.Transparent)
-                                .border(1.dp, if (sel) VioletGlow else VioletGlow.copy(0.2f), RoundedCornerShape(10.dp))
-                                .clickable { onCategoryChange(cat) }
-                                .padding(horizontal = 12.dp, vertical = 7.dp)
-                        ) {
-                            Text(cat, color = if (sel) VioletGlow else if (dark) Color(0xFF475569) else Color(0xFF94A3B8),
-                                fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-
-            // Method
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("PAYMENT METHOD", fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp,
-                    color = if (dark) Color(0xFF475569) else Color(0xFF94A3B8))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("Cash", "Bank Transfer", "Cheque").forEach { method ->
-                        val sel = partyTxMethod == method
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (sel) AquaGlow.copy(alpha = 0.15f) else Color.Transparent)
-                                .border(1.dp, if (sel) AquaGlow else AquaGlow.copy(0.2f), RoundedCornerShape(10.dp))
-                                .clickable { onMethodChange(method) }
-                                .padding(vertical = 9.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(method, color = if (sel) AquaGlow else if (dark) Color(0xFF475569) else Color(0xFF94A3B8),
-                                fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-
-            // Buttons
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .border(1.dp, RoseGlow.copy(0.5f), RoundedCornerShape(12.dp))
-                        .background(RoseGlow.copy(alpha = 0.08f))
-                        .clickable(onClick = onDismiss)
-                        .padding(vertical = 13.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("CANCEL", color = RoseGlow, fontWeight = FontWeight.Black, fontSize = 12.sp)
-                }
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(GradientEmerald)
-                        .clickable(onClick = onSave)
-                        .padding(vertical = 13.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("SAVE RECORD", color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
-                }
-            }
-        }
+        UnifiedTransactionFormContent(
+            dark = dark,
+            type = partyTxType,
+            onTypeChange = onTypeChange,
+            allWorkers = allWorkers,
+            selectedParty = selectedParty,
+            onPartySelected = {},
+            amountStr = partyTxAmount,
+            onAmountChange = onAmountChange,
+            category = partyTxCategory,
+            onCategoryChange = onCategoryChange,
+            description = partyTxDesc,
+            onDescriptionChange = onDescChange,
+            reference = reference,
+            onReferenceChange = { reference = it },
+            paymentMethod = partyTxMethod,
+            onPaymentMethodChange = onMethodChange,
+            date = partyTxDate,
+            onDateChange = onDateChange,
+            onSave = onSave,
+            onCancel = onDismiss,
+            isPartyLocked = true,
+            viewModel = viewModel
+        )
     }
 }
 
@@ -3288,8 +3338,56 @@ private fun PremiumPdfDialog(
                         .clip(RoundedCornerShape(12.dp))
                         .background(GradientAqua)
                         .clickable {
+                            try {
+                                val pdfFile = PdfUtils.generateReceiptPdfFile(
+                                    context = context,
+                                    txId = txId,
+                                    name = name,
+                                    amount = formatIndianRupees(amount),
+                                    date = date
+                                )
+                                val fileName = pdfFile.name
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                                    val contentValues = android.content.ContentValues().apply {
+                                        put(android.provider.MediaStore.Downloads.DISPLAY_NAME, fileName)
+                                        put(android.provider.MediaStore.Downloads.MIME_TYPE, "application/pdf")
+                                        put(android.provider.MediaStore.Downloads.RELATIVE_PATH,
+                                            android.os.Environment.DIRECTORY_DOWNLOADS + "/ConstructPro")
+                                    }
+                                    val uri = context.contentResolver.insert(
+                                        android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                                        contentValues
+                                    )
+                                    if (uri != null) {
+                                        context.contentResolver.openOutputStream(uri)?.use { out ->
+                                            pdfFile.inputStream().use { input -> input.copyTo(out) }
+                                        }
+                                        Toast.makeText(context,
+                                            "Saved to Downloads/ConstructPro/$fileName",
+                                            Toast.LENGTH_LONG).show()
+                                    } else {
+                                        Toast.makeText(context,
+                                            "Download failed: could not create file",
+                                            Toast.LENGTH_LONG).show()
+                                    }
+                                } else {
+                                    // Pre-Q fallback: save directly to Downloads
+                                    val dir = android.os.Environment.getExternalStoragePublicDirectory(
+                                        android.os.Environment.DIRECTORY_DOWNLOADS
+                                    )
+                                    val folder = java.io.File(dir, "ConstructPro").also { it.mkdirs() }
+                                    val dest = java.io.File(folder, fileName)
+                                    pdfFile.copyTo(dest, overwrite = true)
+                                    Toast.makeText(context,
+                                        "Saved to Downloads/ConstructPro/$fileName",
+                                        Toast.LENGTH_LONG).show()
+                                }
+                            } catch (e: Exception) {
+                                Toast.makeText(context,
+                                    "Download failed: ${e.localizedMessage}",
+                                    Toast.LENGTH_LONG).show()
+                            }
                             onDismiss()
-                            Toast.makeText(context, "PDF downloaded successfully!", Toast.LENGTH_LONG).show()
                         }
                         .padding(vertical = 12.dp),
                     contentAlignment = Alignment.Center

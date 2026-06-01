@@ -5,35 +5,69 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     
-    <!-- Premium Golden Architectural Shield (Main Contour Frame) -->
+    <!-- Premium Golden Architectural Shield (Main Contour Frame) with linear gradient -->
     <path
         android:pathData="M54,21 C67,21 77,26 79,33 C79,53 64,72 54,80 C44,72 29,53 29,33 C31,26 41,21 54,21 Z"
         android:strokeWidth="2.5"
-        android:strokeColor="#FCD34D"
-        android:fillColor="#CD0A111F" />
+        android:strokeColor="#F59E0B">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="29"
+                android:startY="21"
+                android:endX="79"
+                android:endY="80"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#1A1530" />
+                <item android:offset="0.5" android:color="#0B0F19" />
+                <item android:offset="1.0" android:color="#020617" />
+            </gradient>
+        </aapt:attr>
+    </path>
     
     <!-- Skyscraper Structural Frame under progress -->
     <!-- Base structural dark block -->
     <path
-        android:pathData="M51,40 L71,40 L71,68 L51,68 Z"
-        android:fillColor="#334155" />
+        android:pathData="M51,40 L71,40 L71,68 L51,68 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="51"
+                android:startY="40"
+                android:endX="71"
+                android:endY="68"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#312E81" />
+                <item android:offset="1.0" android:color="#1E1B4B" />
+            </gradient>
+        </aapt:attr>
+    </path>
         
-    <!-- Skyline glowing highlights inside core center of structural unit -->
+    <!-- Skyline glowing highlights inside core center of structural unit with cyan-blue gradient -->
     <path
-        android:pathData="M54,42 L68,42 L68,66 L54,66 Z"
-        android:fillColor="#900EA5E9" />
+        android:pathData="M54,42 L68,42 L68,66 L54,66 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="54"
+                android:startY="42"
+                android:endX="68"
+                android:endY="66"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#00E5FF" />
+                <item android:offset="1.0" android:color="#2979FF" />
+            </gradient>
+        </aapt:attr>
+    </path>
         
     <!-- Horizontal blueprint floor dividers -->
     <path
         android:pathData="M51,45 L71,45 M51,50 L71,50 M51,55 L71,55 M51,60 L71,60 M51,65 L71,65"
         android:strokeWidth="1.2"
-        android:strokeColor="#0F172A" />
+        android:strokeColor="#020617" />
         
     <!-- Vertical structural windows partitions -->
     <path
         android:pathData="M56,40 L56,68 M61,40 L61,68 M66,40 L66,68"
         android:strokeWidth="1.0"
-        android:strokeColor="#0F172A" />
+        android:strokeColor="#020617" />
 
     <!-- Yellow Tower Crane (Mechanical Mast & Jib Boom) -->
     <!-- Vertical core support lattice mast -->
@@ -55,8 +89,19 @@
         
     <!-- Counter jib weight balance box -->
     <path
-        android:pathData="M24,28 L24,33 L30,33 L30,28 Z"
-        android:fillColor="#FCD34D" />
+        android:pathData="M24,28 L24,33 L30,33 L30,28 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="24"
+                android:startY="28"
+                android:endX="30"
+                android:endY="33"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#FCD34D" />
+                <item android:offset="1.0" android:color="#F59E0B" />
+            </gradient>
+        </aapt:attr>
+    </path>
         
     <!-- High-tensile cable sling -->
     <path
@@ -71,20 +116,31 @@
         android:strokeColor="#E2E8F0" />
 
     <!-- Yellow Safety Helmet (Left bottom overlay) -->
-    <!-- Curved Hardhat Dome -->
+    <!-- Curved Hardhat Dome with bright gradient -->
     <path
-        android:pathData="M28,60 C28,52 44,52 44,60 Z"
-        android:fillColor="#F59E0B" />
+        android:pathData="M28,60 C28,52 44,52 44,60 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="28"
+                android:startY="52"
+                android:endX="44"
+                android:endY="60"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#FCD34D" />
+                <item android:offset="1.0" android:color="#D97706" />
+            </gradient>
+        </aapt:attr>
+    </path>
         
     <!-- Reinforced protective brim wrap -->
     <path
         android:pathData="M25,60 C25,60 47,60 47,60 C47,61.2 45,62 45,62 L27,62 C27,62 25,61.2 25,60 Z"
-        android:fillColor="#D97706" />
+        android:fillColor="#B45309" />
 
     <!-- Central Metallic Ribbon Plate Header -->
     <path
         android:pathData="M31,70 L77,70 L73,76 L35,76 Z"
-        android:fillColor="#1E293B"
+        android:fillColor="#0B0F19"
         android:strokeWidth="1.0"
         android:strokeColor="#FCD34D" />
         

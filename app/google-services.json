@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "970298420983-ggru07q7j7htvhs8e89qqpojdmhq9stb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aistudio.constructpro.kgrmqd",
+            "certificate_hash": "bd71a8af844319de83ea43d0409589a94b9d5f23"
+          }
+        },
+        {
           "client_id": "970298420983-bin5cqqcqgdoi9r256p7a78bvpi6c0hs.apps.googleusercontent.com",
           "client_type": 3
         }

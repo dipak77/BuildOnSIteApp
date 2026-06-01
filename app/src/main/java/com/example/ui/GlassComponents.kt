@@ -43,6 +43,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CalendarToday
+import android.app.DatePickerDialog
+import java.util.Calendar
+import java.util.Locale
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -56,6 +60,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -397,6 +402,16 @@ fun GlassTextField(
     val textC = if (darkTheme) TextPrimary else TextPrimaryLight
     val labelC = if (darkTheme) TextSecondary else TextSecondaryLight
 
+    val resolvedFocusedStroke = if (!darkTheme) {
+        when (focusedStroke) {
+            NeonCyan -> Color(0xFF0284C7)
+            NeonPurple -> Color(0xFF6D28D9)
+            NeonGreen -> Color(0xFF047857)
+            NeonPink -> Color(0xFFBE123C)
+            else -> focusedStroke
+        }
+    } else focusedStroke
+
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -404,21 +419,22 @@ fun GlassTextField(
         shape = RoundedCornerShape(16.dp),
         textStyle = LocalTextStyle.current.copy(color = textC, fontSize = 15.sp, fontWeight = FontWeight.Medium),
         keyboardOptions = KeyboardOptions(keyboardType = if (isNumeric) KeyboardType.Number else KeyboardType.Text),
-        leadingIcon = if (icon != null) ({ Icon(imageVector = icon, contentDescription = null, tint = focusedStroke) }) else null,
+        leadingIcon = if (icon != null) ({ Icon(imageVector = icon, contentDescription = null, tint = resolvedFocusedStroke) }) else null,
         label = { Text(text = label, color = labelC, fontWeight = FontWeight.SemiBold) },
         placeholder = { Text(text = placeholder, color = labelC.copy(alpha = 0.48f)) },
         singleLine = true,
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = if (darkTheme) Color(0x3B070A13) else Color(0x99FFFFFF),
             unfocusedContainerColor = containerBg,
-            focusedBorderColor = focusedStroke,
+            focusedBorderColor = resolvedFocusedStroke,
             unfocusedBorderColor = if (darkTheme) GlassBorderDark else GlassBorderLight,
-            cursorColor = focusedStroke,
-            focusedLabelColor = focusedStroke,
+            cursorColor = resolvedFocusedStroke,
+            focusedLabelColor = resolvedFocusedStroke,
             unfocusedLabelColor = labelC
         )
     )
 }
+
 
 @Composable
 fun GlassChip(
@@ -520,6 +536,16 @@ fun GlassModalDialog(
 ) {
     if (!visible) return
 
+    val resolvedGlow = if (!darkTheme) {
+        when (glowColor) {
+            NeonCyan -> Color(0xFF0284C7)
+            NeonPurple -> Color(0xFF6D28D9)
+            NeonGreen -> Color(0xFF047857)
+            NeonPink -> Color(0xFFBE123C)
+            else -> glowColor
+        }
+    } else glowColor
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -529,12 +555,12 @@ fun GlassModalDialog(
                 .fillMaxWidth(0.92f)
                 .padding(vertical = 12.dp)
                 .drawBehind {
-                    if (darkTheme) drawCircle(color = glowColor.copy(alpha = 0.15f), radius = size.maxDimension * 0.58f, center = center)
+                    if (darkTheme) drawCircle(color = resolvedGlow.copy(alpha = 0.15f), radius = size.maxDimension * 0.58f, center = center)
                 }
                 .clip(RoundedCornerShape(26.dp))
                 .background(if (darkTheme) Color(0xF2090D1A) else Color(0xFAF8FAFC))
                 .border(
-                    BorderStroke(1.5.dp, Brush.verticalGradient(listOf(glowColor.copy(alpha = 0.65f), if (darkTheme) Color(0x30FFFFFF) else Color(0x30111827)))),
+                    BorderStroke(1.5.dp, Brush.verticalGradient(listOf(resolvedGlow.copy(alpha = 0.65f), if (darkTheme) Color(0x30FFFFFF) else Color(0x30111827)))),
                     RoundedCornerShape(26.dp)
                 )
         ) {
@@ -549,7 +575,7 @@ fun GlassModalDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
-                        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(glowColor))
+                        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(resolvedGlow))
                         Text(
                             text = title,
                             color = if (darkTheme) TextPrimary else TextPrimaryLight,
@@ -599,26 +625,43 @@ fun BuildOnSiteLogo(
             if (w <= 0f || h <= 0f) return@Canvas
             val strokeScale = w / 120f
 
+            // Premium background radial gradient
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = if (darkTheme) listOf(Color(0xFF1E293B), Color(0xFF030712)) else listOf(Color(0xFFFEF08A).copy(alpha = 0.2f), Color(0xFFE2E8F0)),
+                    colors = if (darkTheme) {
+                        listOf(Color(0xFF0F172A), Color(0xFF020617))
+                    } else {
+                        listOf(Color(0xFFEFF6FF), Color(0xFFDBEAFE))
+                    },
                     center = center,
                     radius = w * 0.5f
                 ),
                 radius = w * 0.5f
             )
+
+            // Outer ring: Golden/Neon Cyan gradient border
             drawCircle(
-                brush = Brush.sweepGradient(listOf(GoldLight, GoldDark, GoldMetallic, GoldLight)),
+                brush = Brush.sweepGradient(
+                    listOf(
+                        Color(0xFFF59E0B), // Amber/Gold
+                        Color(0xFF06B6D4), // Neon Cyan
+                        Color(0xFF8B5CF6), // Neon Purple
+                        Color(0xFFF59E0B)
+                    )
+                ),
                 radius = w * 0.48f,
-                style = Stroke(width = (2.5f * strokeScale).coerceAtLeast(1f))
+                style = Stroke(width = (3.0f * strokeScale).coerceAtLeast(1.5f))
             )
+
+            // Outer ring accent
             drawCircle(
-                color = if (darkTheme) NeonCyan.copy(alpha = 0.15f) else Color(0x330284C7),
+                color = if (darkTheme) NeonCyan.copy(alpha = 0.2f) else Color(0x330284C7),
                 radius = w * 0.44f,
                 style = Stroke(width = 0.8f * strokeScale)
             )
 
-            val gridAlpha = if (darkTheme) 0.09f else 0.16f
+            // Grid blueprint lines
+            val gridAlpha = if (darkTheme) 0.12f else 0.22f
             val gridColor = if (darkTheme) NeonCyan else Color(0xFF0284C7)
             for (degree in 0 until 360 step 45) {
                 val rad = Math.toRadians((degree + rotAngle).toDouble())
@@ -626,7 +669,7 @@ fun BuildOnSiteLogo(
                 val startY = h * 0.5f + sin(rad).toFloat() * (h * 0.38f)
                 val endX = w * 0.5f + cos(rad).toFloat() * (w * 0.42f)
                 val endY = h * 0.5f + sin(rad).toFloat() * (h * 0.42f)
-                drawLine(gridColor.copy(alpha = 0.28f), Offset(startX, startY), Offset(endX, endY), strokeWidth = 1f)
+                drawLine(gridColor.copy(alpha = 0.4f), Offset(startX, startY), Offset(endX, endY), strokeWidth = 1f)
             }
             for (i in 1..4) {
                 val x = w * (i * 0.2f)
@@ -635,25 +678,64 @@ fun BuildOnSiteLogo(
                 drawLine(gridColor.copy(alpha = gridAlpha), Offset(0.05f * w, y), Offset(0.95f * w, y), strokeWidth = 0.8f)
             }
 
+            // Towers drawing
             val baseLineY = h * 0.76f
             val tw = w * 0.08f
             val t1Left = w * 0.34f
             val t2Left = w * 0.46f
             val t3Left = w * 0.58f
-            drawRect(color = if (darkTheme) Color(0xFF475569) else Color(0xFF64748B), topLeft = Offset(t1Left, h * 0.35f), size = Size(tw, baseLineY - h * 0.35f))
-            drawRect(color = if (darkTheme) GoldDark else GoldMetallic, topLeft = Offset(t2Left, h * 0.24f), size = Size(tw, baseLineY - h * 0.24f))
-            drawRect(color = if (darkTheme) Color(0xFF334155) else Color(0xFF1E293B), topLeft = Offset(t3Left, h * 0.42f), size = Size(tw, baseLineY - h * 0.42f))
+
+            drawRect(
+                brush = Brush.verticalGradient(
+                    listOf(
+                        if (darkTheme) Color(0xFF312E81) else Color(0xFFC7D2FE),
+                        if (darkTheme) Color(0xFF1E1B4B) else Color(0xFFEEF2FF)
+                    )
+                ),
+                topLeft = Offset(t1Left, h * 0.35f),
+                size = Size(tw, baseLineY - h * 0.35f)
+            )
+            drawRect(
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color(0xFFF59E0B), // Gold
+                        Color(0xFFD97706)
+                    )
+                ),
+                topLeft = Offset(t2Left, h * 0.24f),
+                size = Size(tw, baseLineY - h * 0.24f)
+            )
+            drawRect(
+                brush = Brush.verticalGradient(
+                    listOf(
+                        if (darkTheme) Color(0xFF475569) else Color(0xFF94A3B8),
+                        if (darkTheme) Color(0xFF1E293B) else Color(0xFF475569)
+                    )
+                ),
+                topLeft = Offset(t3Left, h * 0.42f),
+                size = Size(tw, baseLineY - h * 0.42f)
+            )
 
             val towers = listOf(Triple(t1Left, h * 0.35f, 4), Triple(t2Left, h * 0.24f, 6), Triple(t3Left, h * 0.42f, 3))
             towers.forEach { (tx, ty, floors) ->
                 val flH = (baseLineY - ty) / floors
                 for (fl in 0 until floors) {
                     val currY = ty + fl * flH
-                    drawLine(color = if (darkTheme) NeonCyan.copy(alpha = 0.6f) else Color(0xFF0EA5E9), start = Offset(tx - 1f, currY), end = Offset(tx + tw + 1f, currY), strokeWidth = 0.8f)
-                    drawRect(color = if (fl % 2 == 0) NeonGreen.copy(alpha = 0.7f) else NeonAmber.copy(alpha = 0.7f), topLeft = Offset(tx + tw * 0.2f, currY + flH * 0.25f), size = Size(tw * 0.6f, flH * 0.5f))
+                    drawLine(
+                        color = if (darkTheme) NeonCyan.copy(alpha = 0.6f) else Color(0xFF0EA5E9),
+                        start = Offset(tx - 1f, currY),
+                        end = Offset(tx + tw + 1f, currY),
+                        strokeWidth = 0.8f
+                    )
+                    drawRect(
+                        color = if (fl % 2 == 0) NeonGreen.copy(alpha = 0.7f) else NeonAmber.copy(alpha = 0.7f),
+                        topLeft = Offset(tx + tw * 0.2f, currY + flH * 0.25f),
+                        size = Size(tw * 0.6f, flH * 0.5f)
+                    )
                 }
             }
 
+            // Crane drawing
             val cX = w * 0.18f
             val cTopY = h * 0.18f
             val cRightArmX = w * 0.90f
@@ -716,3 +798,122 @@ fun PremiumStatusBadge(
 }
 
 data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
+
+@Composable
+fun GlassDatePickerField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    darkTheme: Boolean = true,
+    focusedStroke: Color = NeonCyan
+) {
+    val context = LocalContext.current
+
+    val resolvedFocusedStroke = if (!darkTheme) {
+        when (focusedStroke) {
+            NeonCyan -> Color(0xFF0284C7)
+            NeonPurple -> Color(0xFF6D28D9)
+            NeonGreen -> Color(0xFF047857)
+            NeonPink -> Color(0xFFBE123C)
+            else -> focusedStroke
+        }
+    } else focusedStroke
+
+    val showDatePicker = {
+        val calendar = Calendar.getInstance()
+        if (value.isNotEmpty()) {
+            try {
+                val parts = value.split("-")
+                if (parts.size == 3) {
+                    calendar.set(Calendar.YEAR, parts[0].toInt())
+                    calendar.set(Calendar.MONTH, parts[1].toInt() - 1)
+                    calendar.set(Calendar.DAY_OF_MONTH, parts[2].toInt())
+                }
+            } catch (e: java.lang.Exception) {
+                // ignore
+            }
+        }
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                val formattedDate = String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, dayOfMonth)
+                onValueChange(formattedDate)
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        ).show()
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { showDatePicker() }
+    ) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = {},
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            readOnly = true,
+            enabled = false,
+            textStyle = LocalTextStyle.current.copy(
+                color = if (darkTheme) TextPrimary else TextPrimaryLight,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium
+            ),
+            trailingIcon = {
+                Icon(
+                    imageVector = Icons.Default.CalendarToday,
+                    contentDescription = "Select Date",
+                    tint = resolvedFocusedStroke
+                )
+            },
+            label = {
+                Text(
+                    text = label,
+                    color = if (darkTheme) TextSecondary else TextSecondaryLight,
+                    fontWeight = FontWeight.SemiBold
+                )
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                disabledTextColor = if (darkTheme) TextPrimary else TextPrimaryLight,
+                disabledContainerColor = if (darkTheme) Color(0x280B0F19) else Color(0x75FFFFFF),
+                disabledBorderColor = if (darkTheme) GlassBorderDark else GlassBorderLight,
+                disabledLabelColor = if (darkTheme) TextSecondary else TextSecondaryLight,
+                disabledTrailingIconColor = resolvedFocusedStroke
+            )
+        )
+    }
+}
+
+// ==========================================
+// PAYMENT METHOD AND COST CODE CONSTANTS
+// ==========================================
+
+const val PAYMENT_METHOD_CASH = "Cash"
+const val PAYMENT_METHOD_BANK_TRANSFER = "Bank Transfer"
+const val PAYMENT_METHOD_CHEQUE = "Cheque"
+const val PAYMENT_METHOD_UPI = "UPI"
+
+val PAYMENT_METHODS = listOf(
+    PAYMENT_METHOD_CASH,
+    PAYMENT_METHOD_BANK_TRANSFER,
+    PAYMENT_METHOD_CHEQUE,
+    PAYMENT_METHOD_UPI
+)
+
+const val CATEGORY_LABOUR = "Labour"
+const val CATEGORY_MATERIAL = "Material"
+const val CATEGORY_EQUIPMENT = "Equipment"
+const val CATEGORY_CLIENT_ADVANCE = "Client Advance"
+const val CATEGORY_OTHER = "Other"
+
+val COST_CODES = listOf(
+    CATEGORY_LABOUR,
+    CATEGORY_MATERIAL,
+    CATEGORY_EQUIPMENT,
+    CATEGORY_CLIENT_ADVANCE,
+    CATEGORY_OTHER
+)

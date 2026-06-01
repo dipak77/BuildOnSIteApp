@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -30,6 +31,8 @@ fun TasksScreen(
 
     // Status Filter Chip States
     val statusFilter = viewModel.taskStatusFilter
+    var searchQuery by remember { mutableStateOf("") }
+    var showDeleteConfirmForTask by remember { mutableStateOf<Task?>(null) }
 
     // Filtered lists for active project
     val projectTasks = remember(allTasks, currentProject) {
@@ -45,9 +48,14 @@ fun TasksScreen(
     val doneCount = projectTasks.count { it.status == "Done" }
 
     // Dynamic filtering!
-    val filteredTasks = remember(projectTasks, statusFilter) {
-        if (statusFilter == "All") projectTasks
-        else projectTasks.filter { it.status == statusFilter }
+    val filteredTasks = remember(projectTasks, statusFilter, searchQuery) {
+        projectTasks.filter { task ->
+            val matchesStatus = (statusFilter == "All") || (task.status == statusFilter)
+            val matchesSearch = (searchQuery.isBlank()) ||
+                    task.title.contains(searchQuery, ignoreCase = true) ||
+                    task.assignee.contains(searchQuery, ignoreCase = true)
+            matchesStatus && matchesSearch
+        }
     }
 
     LazyColumn(
@@ -113,6 +121,19 @@ fun TasksScreen(
             }
         }
 
+        // Search Bar Block
+        item {
+            GlassTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = "Search tasks...",
+                darkTheme = dark,
+                placeholder = "Type task title or assignee...",
+                icon = Icons.Default.Search,
+                focusedStroke = NeonCyan
+            )
+        }
+
         // Filters Column
         item {
             Row(
@@ -162,7 +183,7 @@ fun TasksScreen(
                 }
             }
         } else {
-            items(filteredTasks) { task ->
+            items(filteredTasks, key = { it.id }) { task ->
                 val priorityColor = when (task.priority) {
                     "High" -> NeonPink
                     "Medium" -> NeonAmber
@@ -221,7 +242,7 @@ fun TasksScreen(
                                     Box(
                                         modifier = Modifier
                                             .size(8.dp)
-                                            .background(priorityColor, shape = androidx.compose.foundation.shape.CircleShape)
+                                            .background(priorityColor, shape = CircleShape)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
@@ -253,7 +274,7 @@ fun TasksScreen(
 
                             // Option to quick delete task
                             IconButton(
-                                onClick = { viewModel.deleteTask(task) },
+                                onClick = { showDeleteConfirmForTask = task },
                                 modifier = Modifier.size(26.dp)
                             ) {
                                 Icon(
@@ -264,6 +285,58 @@ fun TasksScreen(
                                 )
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showDeleteConfirmForTask != null) {
+        val task = showDeleteConfirmForTask!!
+        GlassModalDialog(
+            visible = true,
+            onDismiss = { showDeleteConfirmForTask = null },
+            title = "⚠ Confirm Deletion",
+            darkTheme = dark,
+            glowColor = NeonPink
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    "Are you sure you want to delete this task assignment? This action cannot be undone.",
+                    color = if (dark) TextSecondary else TextSecondaryLight,
+                    fontSize = 13.sp
+                )
+                Text(
+                    "Task: ${task.title}\nAssignee: ${task.assignee}",
+                    color = if (dark) TextPrimary else TextPrimaryLight,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    GlassButton(
+                        onClick = { showDeleteConfirmForTask = null },
+                        darkTheme = dark,
+                        outlineMode = true,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Cancel", fontWeight = FontWeight.Bold)
+                    }
+                    GlassButton(
+                        onClick = {
+                            viewModel.deleteTask(task)
+                            showDeleteConfirmForTask = null
+                        },
+                        darkTheme = dark,
+                        glowColor = NeonPink,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Delete", fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             }
