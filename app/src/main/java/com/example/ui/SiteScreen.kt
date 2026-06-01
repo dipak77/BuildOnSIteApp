@@ -1375,13 +1375,16 @@ private fun PremiumPartyDetailPage(
     val totalPaid     = matchedTxs.filter { it.type == "Money In" }.sumOf { it.amount }
     val diff          = totalReceived - totalPaid
 
-    var selectedHistoryTab by remember { mutableStateOf("Received") }
+    val receivedCount = remember(matchedTxs) { matchedTxs.count { it.type == "Money In" } }
+    val paidCount     = remember(matchedTxs) { matchedTxs.count { it.type == "Money Out" } }
+
+    var selectedHistoryTab by remember { mutableStateOf("All") }
 
     val historyTxs = remember(matchedTxs, selectedHistoryTab) {
-        if (selectedHistoryTab == "Received") {
-            matchedTxs.filter { it.type == "Money Out" }
-        } else {
-            matchedTxs.filter { it.type == "Money In" }
+        when (selectedHistoryTab) {
+            "Received" -> matchedTxs.filter { it.type == "Money In" }
+            "Paid"     -> matchedTxs.filter { it.type == "Money Out" }
+            else       -> matchedTxs
         }
     }
 
@@ -1395,7 +1398,7 @@ private fun PremiumPartyDetailPage(
             .fillMaxSize()
             .background(bgBrush)
     ) {
-        // Center-aligned visual header mimicking the screenshot
+        // Left-aligned visual header matching the reference screenshot
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1404,26 +1407,30 @@ private fun PremiumPartyDetailPage(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.size(40.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
             ) {
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowLeft,
-                    contentDescription = "Back",
-                    tint = if (dark) Color.White else Color(0xFF1E293B),
-                    modifier = Modifier.size(28.dp)
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = if (dark) Color.White else Color(0xFF1E293B),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                Text(
+                    text = "Party Project Balance",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (dark) Color.White else Color(0xFF131F3C)
                 )
             }
-
-            Text(
-                text = "Party Project Balance",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (dark) Color.White else Color(0xFF131F3C),
-                modifier = Modifier.weight(1f),
-                textAlign = TextAlign.Center
-            )
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1519,71 +1526,121 @@ private fun PremiumPartyDetailPage(
             }
         }
 
-        // Tab-wise received vs paid summary
+        // Static Balance Summary Card (Party Received & Party Paid)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(if (dark) Color(0xFF111827) else Color.White)
+                .border(
+                    1.dp,
+                    if (dark) Color(0xFF1E2D4A) else Color(0xFFE2E8F4),
+                    RoundedCornerShape(12.dp)
+                )
+                .padding(vertical = 12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Left Column: Party Received
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Party Received",
+                        fontSize = 12.sp,
+                        color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = formatIndianRupees(totalReceived),
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (dark) Color.White else Color(0xFF0F172A)
+                    )
+                }
+
+                // Vertical Divider
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(36.dp)
+                        .background(if (dark) Color(0xFF2D3F5E) else Color(0xFFE2E8F0))
+                )
+
+                // Right Column: Party Paid
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Party Paid",
+                        fontSize = 12.sp,
+                        color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = formatIndianRupees(totalPaid),
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (dark) Color.White else Color(0xFF0F172A)
+                    )
+                }
+            }
+        }
+
+        // 3-way Horizontal Tab Bar Selector
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 12.dp, bottom = 4.dp),
+                .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val leftActive = selectedHistoryTab == "Received"
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { selectedHistoryTab = "Received" }
-                    .padding(vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Party Received",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = if (dark) (if (leftActive) Color.White else Color(0xFF64748B)) else (if (leftActive) Color(0xFF1E293B) else Color(0xFF64748B))
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = formatIndianRupees(totalReceived),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (dark) (if (leftActive) Color.White else Color(0xFF94A3B8)) else (if (leftActive) Color(0xFF0F172A) else Color(0xFF475569))
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .height(2.dp)
-                        .background(if (leftActive) (if (dark) AquaGlow else Color(0xFF4F46E5)) else Color.Transparent)
-                )
-            }
+            val tabs = listOf(
+                "All" to "All Transactions",
+                "Received" to "Received ($receivedCount)",
+                "Paid" to "Paid ($paidCount)"
+            )
 
-            val rightActive = selectedHistoryTab == "Paid"
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { selectedHistoryTab = "Paid" }
-                    .padding(vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Party Paid",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = if (dark) (if (rightActive) Color.White else Color(0xFF64748B)) else (if (rightActive) Color(0xFF1E293B) else Color(0xFF64748B))
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = formatIndianRupees(totalPaid),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (dark) (if (rightActive) Color.White else Color(0xFF94A3B8)) else (if (rightActive) Color(0xFF0F172A) else Color(0xFF475569))
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Box(
+            tabs.forEach { (tabKey, tabLabel) ->
+                val isActive = selectedHistoryTab == tabKey
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .height(2.dp)
-                        .background(if (rightActive) (if (dark) AquaGlow else Color(0xFF4F46E5)) else Color.Transparent)
-                )
+                        .weight(1f)
+                        .clickable { selectedHistoryTab = tabKey }
+                        .padding(vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = tabLabel,
+                        fontSize = 13.sp,
+                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isActive) {
+                            if (dark) Color.White else Color(0xFF5D53EA)
+                        } else {
+                            if (dark) Color(0xFF64748B) else Color(0xFF94A3B8)
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.7f)
+                            .height(3.dp)
+                            .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                            .background(
+                                if (isActive) {
+                                    if (dark) Color(0xFF818CF8) else Color(0xFF5D53EA)
+                                } else {
+                                    Color.Transparent
+                                }
+                            )
+                    )
+                }
             }
         }
 
@@ -1770,101 +1827,7 @@ private fun PartyTransactionCard(
     workerName: String,
     onClick: () -> Unit
 ) {
-    val dateParts = tx.date.split("-")
-    val months = listOf("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
-    val dayStr = dateParts.getOrNull(2) ?: "27"
-    val monStr = months.getOrElse((dateParts.getOrNull(1)?.toIntOrNull() ?: 1) - 1) { "May" }
-    val yearStr = dateParts.getOrNull(0) ?: "2026"
-
-    val topBg = if (dark) Color(0xFF7C3AED) else Color(0xFF4F46E5)
-    val botBg = if (dark) Color(0xFF7C3AED).copy(alpha = 0.15f) else Color(0xFFEEF2FF)
-    val botTextColor = if (dark) Color(0xFFC084FC) else Color(0xFF312E81)
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (dark) Color(0xFF111827) else Color.White)
-            .border(
-                1.dp,
-                if (dark) Color(0xFF1E2D4A) else Color(0xFFE2E8F0),
-                RoundedCornerShape(8.dp)
-            )
-            .clickable(onClick = onClick)
-            .padding(12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Split Date Badge
-                Column(
-                    modifier = Modifier
-                        .width(60.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(
-                            1.dp,
-                            if (dark) Color(0xFF7C3AED).copy(alpha = 0.4f) else Color(0xFFE0E7FF),
-                            RoundedCornerShape(8.dp)
-                        )
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(topBg)
-                            .padding(vertical = 3.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = yearStr,
-                            fontSize = 10.sp,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(botBg)
-                            .padding(vertical = 5.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "$dayStr $monStr",
-                            fontSize = 11.sp,
-                            color = botTextColor,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                val directionText = if (tx.type == "Money Out") {
-                    "Company  >  $workerName"
-                } else {
-                    "$workerName  >  Company"
-                }
-
-                Text(
-                    text = directionText,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (dark) Color(0xFFE2E8F4) else Color(0xFF1E293B)
-                )
-            }
-
-            Text(
-                text = formatIndianRupees(tx.amount),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (dark) Color.White else Color(0xFF0F172A)
-            )
-        }
-    }
+    TransactionCardLayout(tx = tx, dark = dark, workerName = workerName, onClick = onClick)
 }
 
 // ─────────────────────────────────────────────
@@ -2329,100 +2292,165 @@ private fun PremiumTransactionCard(
     workerName: String = "",
     onClick: () -> Unit
 ) {
+    TransactionCardLayout(tx = tx, dark = dark, workerName = workerName, onClick = onClick)
+}
+
+@Composable
+private fun TransactionCardLayout(
+    tx: Transaction,
+    dark: Boolean,
+    workerName: String = "",
+    onClick: () -> Unit
+) {
     val isIn = tx.type == "Money In"
-    val accentColor = if (isIn) EmeraldGlow else RoseGlow
     val dateParts = tx.date.split("-")
     val months = listOf("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
     val dayStr = dateParts.getOrNull(2) ?: "27"
     val monStr = months.getOrElse((dateParts.getOrNull(1)?.toIntOrNull() ?: 1) - 1) { "May" }
-    val yearStr = dateParts.getOrNull(0) ?: "2026"
+
+    val cardBg = if (dark) Color(0xFF1E293B) else Color.White
+    val cardBorder = if (dark) Color(0xFF334155) else Color(0xFFE2E8F0)
+    val textPrimary = if (dark) Color(0xFFF1F5F9) else Color(0xFF1E293B)
+    val textSecondary = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
+    val arrowBg = if (isIn) {
+        if (dark) Color(0xFF143A25) else Color(0xFFE6F4EA)
+    } else {
+        if (dark) Color(0xFF4C1B1B) else Color(0xFFFCE8E6)
+    }
+    val arrowTint = if (isIn) {
+        if (dark) Color(0xFF81C784) else Color(0xFF137333)
+    } else {
+        if (dark) Color(0xFFE57373) else Color(0xFFC5221F)
+    }
+    val amountColor = arrowTint
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(
-                if (dark)
-                    Brush.horizontalGradient(listOf(Color(0xFF111827), Color(0xFF0D1B3E)))
-                else
-                    Brush.horizontalGradient(listOf(Color.White, Color(0xFFF8FAFF)))
-            )
-            .border(
-                1.dp,
-                if (dark) Color(0xFF1E2D4A) else Color(0xFFDDE4F0),
-                RoundedCornerShape(14.dp)
-            )
+            .background(cardBg)
+            .border(1.dp, cardBorder, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .padding(12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Date Badge
-                Box(
-                    modifier = Modifier
-                        .size(50.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(GradientViolet),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(dayStr, fontSize = 14.sp, color = Color.White, fontWeight = FontWeight.Black)
-                        Text(monStr, fontSize = 9.sp, color = Color.White.copy(alpha = 0.8f), fontWeight = FontWeight.Bold)
-                        Text(yearStr, fontSize = 8.sp, color = Color.White.copy(alpha = 0.6f))
-                    }
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    val dirText = if (tx.type == "Money Out")
-                        "Company → ${tx.partyName ?: workerName.ifBlank { "Party" }}"
-                    else
-                        "${tx.partyName ?: workerName.ifBlank { "Party" }} → Company"
+            // 1. Date Badge
+            Box(
+                modifier = Modifier
+                    .size(width = 46.dp, height = 48.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF5D53EA)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        dirText, fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                        color = if (dark) Color(0xFFE2E8F4) else Color(0xFF1E293B),
-                        maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 160.dp)
+                        text = dayStr,
+                        fontSize = 16.sp,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
                     )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Text(
+                        text = monStr,
+                        fontSize = 11.sp,
+                        color = Color.White,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            // 2. Arrow Indicator
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .background(arrowBg, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isIn) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
+                    contentDescription = null,
+                    tint = arrowTint,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            // 3. Name & Tag details Column
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                val partyText = tx.partyName ?: workerName.ifBlank { "Party" }
+                val line1 = if (isIn) partyText else "Company"
+                val line2 = if (isIn) "To: Company" else "To: $partyText"
+
+                Text(
+                    text = line1,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = line2,
+                    fontSize = 12.sp,
+                    color = textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    // Payment Method Tag
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(if (dark) Color(0xFF334155) else Color(0xFFE8F0FE))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(if (dark) Color(0xFF1E2D4A) else Color(0xFFEEF2FF))
-                                .padding(horizontal = 4.dp, vertical = 1.dp)
-                        ) {
-                            Text(
-                                tx.paymentMethod, fontSize = 9.sp,
-                                color = AquaGlow, fontWeight = FontWeight.Bold
-                            )
-                        }
-                        if (tx.description.isNotBlank()) {
-                            Text(
-                                "· ${tx.description}", fontSize = 10.sp,
-                                color = if (dark) Color(0xFF475569) else Color(0xFF94A3B8),
-                                maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.widthIn(max = 100.dp)
-                            )
-                        }
+                        Text(
+                            text = tx.paymentMethod,
+                            fontSize = 10.sp,
+                            color = if (dark) Color(0xFF90CDF4) else Color(0xFF1A73E8),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    if (tx.description.isNotBlank()) {
+                        Text(
+                            text = "·  ${tx.description}",
+                            fontSize = 11.sp,
+                            color = textSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }
 
-            Column(horizontalAlignment = Alignment.End) {
+            // 4. Amount and Chevron
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 Text(
-                    (if (isIn) "+" else "-") + formatIndianRupees(tx.amount),
-                    fontSize = 14.sp, fontWeight = FontWeight.Black, color = accentColor
+                    text = (if (isIn) "+" else "-") + formatIndianRupees(tx.amount),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = amountColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip
                 )
                 Icon(
-                    imageVector = Icons.Default.ChevronRight, null,
-                    tint = if (dark) Color(0xFF2D3F5E) else Color(0xFFCBD5E1),
-                    modifier = Modifier.size(14.dp)
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }
