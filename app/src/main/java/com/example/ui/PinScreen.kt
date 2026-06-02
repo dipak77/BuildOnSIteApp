@@ -30,20 +30,95 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import java.security.MessageDigest
+import java.security.SecureRandom
+import android.util.Base64
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PIN PREFS HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 private const val PREFS_NAME = "constructpro_prefs"
 private const val KEY_PIN    = "app_security_pin"
+private const val KEY_PIN_HASH = "app_security_pin_hash"
+private const val KEY_PIN_SALT = "app_security_pin_salt"
+private const val KEY_PIN_DISABLED = "app_security_pin_disabled"
 
-fun readStoredPin(context: android.content.Context): String? =
-    context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
-        .getString(KEY_PIN, null)
+private data class PinCredential(
+    val hash: String?,
+    val salt: String?,
+    val disabled: Boolean
+)
+
+private fun hashPin(pin: String, salt: String): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    val bytes = digest.digest("$salt:$pin".toByteArray(Charsets.UTF_8))
+    return Base64.encodeToString(bytes, Base64.NO_WRAP)
+}
+
+private fun newSalt(): String {
+    val bytes = ByteArray(16)
+    SecureRandom().nextBytes(bytes)
+    return Base64.encodeToString(bytes, Base64.NO_WRAP)
+}
+
+private fun readPinCredential(context: android.content.Context): PinCredential {
+    val prefs = context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+    val disabled = prefs.getBoolean(KEY_PIN_DISABLED, false)
+    val hash = prefs.getString(KEY_PIN_HASH, null)
+    val salt = prefs.getString(KEY_PIN_SALT, null)
+    if (disabled || (hash != null && salt != null)) {
+        return PinCredential(hash = hash, salt = salt, disabled = disabled)
+    }
+
+    val legacyPin = prefs.getString(KEY_PIN, null)
+    return when {
+        legacyPin == "SKIP" -> {
+            prefs.edit()
+                .remove(KEY_PIN)
+                .putBoolean(KEY_PIN_DISABLED, true)
+                .apply()
+            PinCredential(hash = null, salt = null, disabled = true)
+        }
+        legacyPin != null && legacyPin.length == 4 && legacyPin.all { it.isDigit() } -> {
+            val migratedSalt = newSalt()
+            val migratedHash = hashPin(legacyPin, migratedSalt)
+            prefs.edit()
+                .remove(KEY_PIN)
+                .putString(KEY_PIN_HASH, migratedHash)
+                .putString(KEY_PIN_SALT, migratedSalt)
+                .putBoolean(KEY_PIN_DISABLED, false)
+                .apply()
+            PinCredential(hash = migratedHash, salt = migratedSalt, disabled = false)
+        }
+        else -> PinCredential(hash = null, salt = null, disabled = false)
+    }
+}
 
 fun savePin(context: android.content.Context, pin: String) {
+    val salt = newSalt()
     context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
-        .edit().putString(KEY_PIN, pin).apply()
+        .edit()
+        .remove(KEY_PIN)
+        .putString(KEY_PIN_HASH, hashPin(pin, salt))
+        .putString(KEY_PIN_SALT, salt)
+        .putBoolean(KEY_PIN_DISABLED, false)
+        .apply()
+}
+
+private fun disablePin(context: android.content.Context) {
+    context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+        .edit()
+        .remove(KEY_PIN)
+        .remove(KEY_PIN_HASH)
+        .remove(KEY_PIN_SALT)
+        .putBoolean(KEY_PIN_DISABLED, true)
+        .apply()
+}
+
+private fun verifyPin(pin: String, credential: PinCredential): Boolean {
+    val hash = credential.hash ?: return false
+    val salt = credential.salt ?: return false
+    return hashPin(pin, salt) == hash
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -57,9 +132,15 @@ fun PinScreen(
 ) {
     val context = LocalContext.current
     val haptic  = LocalHapticFeedback.current
-    val storedPin = remember { readStoredPin(context) }
-    val isSetupMode = storedPin == null          // true = first-time setup
+    val credential = remember { readPinCredential(context) }
+    val isSetupMode = credential.hash == null && !credential.disabled
     val PIN_LENGTH  = 4
+
+    LaunchedEffect(credential.disabled) {
+        if (credential.disabled) {
+            onPinVerified()
+        }
+    }
 
     // ── State ─────────────────────────────────────────────────────────────────
     var pin         by remember { mutableStateOf("") }
@@ -150,7 +231,7 @@ fun PinScreen(
             if (pin.length < PIN_LENGTH) {
                 pin += digit
                 if (pin.length == PIN_LENGTH) {
-                    if (pin == storedPin) {
+                    if (verifyPin(pin, credential)) {
                         unlocked = true
                     } else {
                         shakeState = true
@@ -327,8 +408,7 @@ fun PinScreen(
                     fontSize = 13.sp,
                     color = subText,
                     modifier = Modifier.clickable {
-                        // Save a sentinel "SKIP" value so we never re-show setup
-                        savePin(context, "SKIP")
+                        disablePin(context)
                         onPinVerified()
                     }
                 )

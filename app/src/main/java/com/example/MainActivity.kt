@@ -832,7 +832,7 @@ fun DrawerContent(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = "ConstructoPro • Secure Ledger Core v3.0",
+                    text = "ConstructPro Secure Ledger Core v3.0",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     color = if (dark) Color.White.copy(alpha = 0.4f) else Color(0xFF64748B)

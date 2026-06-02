@@ -60,7 +60,6 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
             putString("auth_name", user.displayName)
             putString("auth_email", user.email)
             putString("auth_photo", user.photoUrl ?: "")
-            putString("auth_token", user.idToken ?: "")
             putBoolean("auth_guest", user.isGuest)
             apply()
         }
@@ -69,7 +68,13 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
     fun handleGoogleSignOut(context: Context) {
         _userSession.value = null
         val prefs = context.getSharedPreferences("constructpro_prefs", Context.MODE_PRIVATE)
-        prefs.edit().clear().apply()
+        prefs.edit()
+            .remove("auth_name")
+            .remove("auth_email")
+            .remove("auth_photo")
+            .remove("auth_token")
+            .remove("auth_guest")
+            .apply()
     }
 
     fun loadUserSessionFromPrefs(context: Context) {
@@ -78,13 +83,12 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
         val email = prefs.getString("auth_email", null)
         if (name != null && email != null) {
             val photo = prefs.getString("auth_photo", "") ?: ""
-            val token = prefs.getString("auth_token", "") ?: ""
             val isGuest = prefs.getBoolean("auth_guest", false)
             _userSession.value = GoogleUser(
                 displayName = name,
                 email = email,
                 photoUrl = if (photo.isEmpty()) null else photo,
-                idToken = if (token.isEmpty()) null else token,
+                idToken = null,
                 isGuest = isGuest
             )
         } else {
@@ -417,6 +421,14 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
         reference: String = "",
         paymentMethod: String = "Cash"
     ) {
+        if (amount <= 0.0) {
+            emitEvent(UiEvent.ShowToast("Enter a valid transaction amount"))
+            return
+        }
+        if (description.isBlank()) {
+            emitEvent(UiEvent.ShowToast("Add a short transaction description"))
+            return
+        }
         viewModelScope.launch {
             try {
                 repository.insertTransaction(
@@ -487,6 +499,10 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
 
     // Payroll
     fun addPayroll(workerId: Int, projectId: Int, date: String, wagesPaid: Double, status: String) {
+        if (wagesPaid <= 0.0) {
+            emitEvent(UiEvent.ShowToast("Enter a valid payroll amount"))
+            return
+        }
         viewModelScope.launch {
             try {
                 repository.insertPayroll(Payroll(workerId = workerId, projectId = projectId, date = date, wagesPaid = wagesPaid, status = status))
@@ -520,6 +536,14 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
 
     // Estimates
     fun addEstimate(projectId: Int, itemName: String, quantity: Double, unit: String, rate: Double) {
+        if (itemName.isBlank()) {
+            emitEvent(UiEvent.ShowToast("Enter an estimate item name"))
+            return
+        }
+        if (quantity <= 0.0 || rate <= 0.0) {
+            emitEvent(UiEvent.ShowToast("Quantity and rate must be greater than zero"))
+            return
+        }
         viewModelScope.launch {
             try {
                 repository.insertEstimate(
@@ -625,6 +649,7 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
                 DataIO.exportProjectBackupJSON(
                     context,
                     project,
+                    workers.value,
                     tasks.value,
                     transactions.value,
                     attendance.value,

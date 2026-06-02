@@ -40,6 +40,7 @@ import com.google.android.gms.common.api.ApiException
 fun GoogleLoginScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     val dark = viewModel.darkThemeEnabled
+    val allowDemoIdentity = com.example.BuildConfig.DEBUG
     
     // UI controller states
     var isConnecting by remember { mutableStateOf(false) }
@@ -55,8 +56,12 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
             kotlinx.coroutines.delay(30000)
             if (isConnecting) {
                 isConnecting = false
-                showAccountChooser = true
-                Toast.makeText(context, "Google Services timeout. Falling back to offline simulator...", Toast.LENGTH_LONG).show()
+                showAccountChooser = allowDemoIdentity
+                Toast.makeText(
+                    context,
+                    if (allowDemoIdentity) "Google Services timeout. Opening local demo options." else "Google Services timeout. Please try again.",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
@@ -107,11 +112,11 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
                 viewModel.handleGoogleSignIn(user, context)
                 Toast.makeText(context, "Welcome, ${user.displayName}!", Toast.LENGTH_SHORT).show()
             } else {
-                showAccountChooser = true
+                showAccountChooser = allowDemoIdentity
                 Toast.makeText(context, "Sign-in returned no account", Toast.LENGTH_SHORT).show()
             }
         } catch (e: ApiException) {
-            showAccountChooser = true
+            showAccountChooser = allowDemoIdentity
             val errMsg = when (e.statusCode) {
                 10 -> "Google Sign-In failed (code 10: DEVELOPER_ERROR). Please register the new SHA-1 in your Firebase Console."
                 7 -> "Google Sign-In failed (code 7: NETWORK_ERROR). Please check your internet connection."
@@ -122,7 +127,7 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
             android.util.Log.e("GoogleSignIn", errMsg, e)
             Toast.makeText(context, errMsg, Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
-            showAccountChooser = true
+            showAccountChooser = allowDemoIdentity
             val errMsg = "Google Sign-In error: ${e.localizedMessage}"
             android.util.Log.e("GoogleSignIn", errMsg, e)
             Toast.makeText(context, errMsg, Toast.LENGTH_LONG).show()
@@ -227,10 +232,10 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
                             TextButton(
                                 onClick = {
                                     isConnecting = false
-                                    showAccountChooser = true
+                                    showAccountChooser = allowDemoIdentity
                                 }
                             ) {
-                                Text("Bypass / Use Demo Account", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(if (allowDemoIdentity) "Use Local Demo Account" else "Cancel", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     } else {
@@ -251,13 +256,13 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
                                             signInLauncher.launch(intent)
                                         } catch (ex: Exception) {
                                             isConnecting = false
-                                            showAccountChooser = true
+                                            showAccountChooser = allowDemoIdentity
                                             Toast.makeText(context, "No local Play services: opening account list", Toast.LENGTH_SHORT).show()
                                         }
                                     }
                                 } else {
                                     isConnecting = false
-                                    showAccountChooser = true
+                                    showAccountChooser = allowDemoIdentity
                                     Toast.makeText(context, "Google Play Services unavailable: opening account list", Toast.LENGTH_SHORT).show()
                                 }
                             },
@@ -304,27 +309,29 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
                         }
 
                         // Alternative demo/offline quick entry option
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showAccountChooser = true }
-                                .padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Security,
-                                contentDescription = null,
-                                tint = if (dark) NeonGreen else Color(0xFF059669),
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Having trouble? Select demo account",
-                                color = if (dark) NeonGreen else Color(0xFF059669),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                        if (allowDemoIdentity) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showAccountChooser = true }
+                                    .padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Security,
+                                    contentDescription = null,
+                                    tint = if (dark) NeonGreen else Color(0xFF059669),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Developer mode: open local demo accounts",
+                                    color = if (dark) NeonGreen else Color(0xFF059669),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
@@ -333,7 +340,7 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
     }
 
     // Google Account Selector Fallback & Custom Entry Sheet Dialog
-    if (showAccountChooser) {
+    if (showAccountChooser && allowDemoIdentity) {
         AlertDialog(
             onDismissRequest = { showAccountChooser = false },
             properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
@@ -436,7 +443,7 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
 
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "💡 Tip: Bypass GMS remote signature errors instantly by tapping \"Dipak Harane\" or typing custom email below!",
+                                    text = "Tip: debug builds can use local identities while Google credentials are being configured.",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (dark) NeonGreen else Color(0xFF047857),
@@ -446,21 +453,21 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
                         }
                     }
                     
-                    // Account Option 1: The current developer user (Dipak Harane)
+                    // Account Option 1: local developer identity
                     item {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
                                     val user = GoogleUser(
-                                        displayName = "Dipak Harane",
-                                        email = "haranedipak@gmail.com",
+                                        displayName = "Local Developer",
+                                        email = "developer@example.invalid",
                                         photoUrl = null,
                                         isGuest = false
                                     )
                                     viewModel.handleGoogleSignIn(user, context)
                                     showAccountChooser = false
-                                    Toast.makeText(context, "SignedIn successfully as Dipak", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Signed in with local developer identity", Toast.LENGTH_SHORT).show()
                                 },
                             colors = CardDefaults.cardColors(
                                 containerColor = if (dark) Color(0x3B1F2937) else Color(0xFFF3F4F6)
@@ -483,13 +490,13 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Dipak Harane",
+                                        text = "Local Developer",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 13.sp,
                                         color = if (dark) Color.White else Color.Black
                                     )
                                     Text(
-                                        text = "haranedipak@gmail.com",
+                                        text = "developer@example.invalid",
                                         fontSize = 11.sp,
                                         color = Color.Gray
                                     )

@@ -34,21 +34,18 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun `database initialization and seeding works correctly`() = runBlocking {
+  fun `database initializes with clean production state`() = runBlocking {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val db = AppDatabase.getDatabase(context)
     val dao = db.constructionDao()
 
-    // Manually trigger seed database to verify queries and schema constraints
     AppDatabase.seedDatabase(dao)
 
     val projects = dao.getAllProjects().first()
-    assertTrue(projects.isNotEmpty())
-    assertEquals("Skyline Corporate Tower", projects.find { it.name == "Skyline Corporate Tower" }?.name)
+    assertTrue(projects.isEmpty())
 
     val workers = dao.getAllWorkers().first()
-    assertTrue(workers.isNotEmpty())
-    assertEquals("John Carter", workers.find { it.name == "John Carter" }?.name)
+    assertTrue(workers.isEmpty())
   }
 }
 

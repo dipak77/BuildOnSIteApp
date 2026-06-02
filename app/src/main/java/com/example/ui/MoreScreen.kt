@@ -641,9 +641,9 @@ fun MoreScreen(
                 if (userMessageText.isNotBlank()) {
                     val intent = Intent(Intent.ACTION_SENDTO).apply {
                         data = Uri.parse("mailto:")
-                        putExtra(Intent.EXTRA_EMAIL, arrayOf("haranedipak@gmail.com"))
+                        putExtra(Intent.EXTRA_EMAIL, arrayOf("support@constructpro.app"))
                         putExtra(Intent.EXTRA_SUBJECT, "Build On Site App - User Feedback")
-                        putExtra(Intent.EXTRA_TEXT, "Hello Dipak,\n\nFeedback:\n\n$userMessageText\n\nSent from Build On Site App")
+                        putExtra(Intent.EXTRA_TEXT, "Hello ConstructPro Team,\n\nFeedback:\n\n$userMessageText\n\nSent from Build On Site App")
                     }
                     try {
                         context.startActivity(Intent.createChooser(intent, "Send Feedback"))
@@ -2373,7 +2373,7 @@ private fun PremiumDeveloperCard(dark: Boolean, onClick: () -> Unit) {
                         fontWeight = FontWeight.Black, fontSize = 18.sp
                     )
                     Text(
-                        "Lead Engineer: Dipak Harane",
+                        "ConstructPro Support",
                         color = purpleRes,
                         fontSize = 12.sp, fontWeight = FontWeight.Medium
                     )
@@ -3028,10 +3028,10 @@ private fun PremiumDeveloperContent(
                 Text("LEAD SOFTWARE ENGINEER", color = AccentCyan,
                     fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
                 listOf(
-                    Triple(Icons.Default.Person, "Dipak Harane", true),
+                    Triple(Icons.Default.Person, "ConstructPro Support", true),
                     Triple(Icons.Default.Home, "New Sangvi, Pune", false),
                     Triple(Icons.Default.Phone, "7709320496", false),
-                    Triple(Icons.Default.Email, "haranedipak@gmail.com", false)
+                    Triple(Icons.Default.Email, "support@constructpro.app", false)
                 ).forEach { (icon, value, isName) ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(

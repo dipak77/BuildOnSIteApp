@@ -26,6 +26,7 @@ data class BackupData(
 @JsonClass(generateAdapter = true)
 data class ProjectBackupData(
     val project: Project,
+    val workers: List<Worker> = emptyList(),
     val tasks: List<Task> = emptyList(),
     val transactions: List<Transaction> = emptyList(),
     val attendance: List<Attendance> = emptyList(),
@@ -135,26 +136,7 @@ object DataIO {
     ): Boolean {
         return try {
             val backupData = backupAdapter.fromJson(jsonString) ?: return false
-
-            // Clear existing tables
-            dao.clearProjects()
-            dao.clearWorkers()
-            dao.clearAttendance()
-            dao.clearTasks()
-            dao.clearTransactions()
-            dao.clearMOMs()
-            dao.clearPayroll()
-            dao.clearEstimates()
-
-            // Bulk inserts using Room transaction
-            backupData.projects.let { dao.insertAllProjects(it) }
-            backupData.workers.let { dao.insertAllWorkers(it) }
-            backupData.attendance.let { dao.insertAllAttendance(it) }
-            backupData.tasks.let { dao.insertAllTasks(it) }
-            backupData.transactions.let { dao.insertAllTransactions(it) }
-            backupData.moms.let { dao.insertAllMOMs(it) }
-            backupData.payroll.let { dao.insertAllPayroll(it) }
-            backupData.estimates.let { dao.insertAllEstimates(it) }
+            dao.replaceAllData(backupData.sanitized())
 
             true
         } catch (e: Exception) {
@@ -169,6 +151,7 @@ object DataIO {
     fun exportProjectBackupJSON(
         context: Context,
         project: Project,
+        workers: List<Worker>,
         tasks: List<Task>,
         transactions: List<Transaction>,
         attendance: List<Attendance>,
@@ -179,6 +162,7 @@ object DataIO {
         try {
             val projectBackup = ProjectBackupData(
                 project = project,
+                workers = workersForProject(workers = workers, transactions = transactions, attendance = attendance, payroll = payroll, projectId = project.id),
                 tasks = tasks.filter { it.projectId == project.id },
                 transactions = transactions.filter { it.projectId == project.id },
                 attendance = attendance.filter { it.projectId == project.id },
@@ -220,12 +204,31 @@ object DataIO {
                 )
             ).toInt()
 
-            val updatedTasks = projectBackup.tasks.map { it.copy(projectId = pId) }
-            val updatedTransactions = projectBackup.transactions.map { it.copy(projectId = pId) }
-            val updatedAttendance = projectBackup.attendance.map { it.copy(projectId = pId) }
-            val updatedMoms = projectBackup.moms.map { it.copy(projectId = pId) }
-            val updatedPayroll = projectBackup.payroll.map { it.copy(projectId = pId) }
-            val updatedEstimates = projectBackup.estimates.map { it.copy(projectId = pId) }
+            val workerIdMap = mutableMapOf<Int, Int>()
+            projectBackup.workers.forEach { worker ->
+                val newId = dao.insertWorker(worker.copy(id = 0)).toInt()
+                workerIdMap[worker.id] = newId
+            }
+
+            val updatedTasks = projectBackup.tasks.map { it.copy(id = 0, projectId = pId) }
+            val updatedTransactions = projectBackup.transactions.map {
+                it.copy(
+                    id = 0,
+                    projectId = pId,
+                    partyId = it.partyId?.let { oldId -> workerIdMap[oldId] },
+                    partyName = it.partyName
+                )
+            }
+            val updatedAttendance = projectBackup.attendance.mapNotNull {
+                val newWorkerId = workerIdMap[it.workerId] ?: return@mapNotNull null
+                it.copy(id = 0, workerId = newWorkerId, projectId = pId)
+            }
+            val updatedMoms = projectBackup.moms.map { it.copy(id = 0, projectId = pId) }
+            val updatedPayroll = projectBackup.payroll.mapNotNull {
+                val newWorkerId = workerIdMap[it.workerId] ?: return@mapNotNull null
+                it.copy(id = 0, workerId = newWorkerId, projectId = pId)
+            }
+            val updatedEstimates = projectBackup.estimates.map { it.copy(id = 0, projectId = pId) }
 
             if (updatedTasks.isNotEmpty()) dao.insertAllTasks(updatedTasks)
             if (updatedTransactions.isNotEmpty()) dao.insertAllTransactions(updatedTransactions)
@@ -239,5 +242,35 @@ object DataIO {
             e.printStackTrace()
             false
         }
+    }
+
+    private fun workersForProject(
+        workers: List<Worker>,
+        transactions: List<Transaction>,
+        attendance: List<Attendance>,
+        payroll: List<Payroll>,
+        projectId: Int
+    ): List<Worker> {
+        val workerIds = buildSet {
+            transactions.filter { it.projectId == projectId }.mapNotNullTo(this) { it.partyId }
+            attendance.filter { it.projectId == projectId }.mapTo(this) { it.workerId }
+            payroll.filter { it.projectId == projectId }.mapTo(this) { it.workerId }
+        }
+        return workers.filter { it.id in workerIds }
+    }
+
+    private fun BackupData.sanitized(): BackupData {
+        val projectIds = projects.map { it.id }.toSet()
+        val workerIds = workers.map { it.id }.toSet()
+        return copy(
+            tasks = tasks.filter { it.projectId in projectIds },
+            transactions = transactions
+                .filter { it.projectId in projectIds }
+                .map { tx -> if (tx.partyId == null || tx.partyId in workerIds) tx else tx.copy(partyId = null) },
+            attendance = attendance.filter { it.projectId in projectIds && it.workerId in workerIds },
+            moms = moms.filter { it.projectId in projectIds },
+            payroll = payroll.filter { it.projectId in projectIds && it.workerId in workerIds },
+            estimates = estimates.filter { it.projectId in projectIds }
+        )
     }
 }
