@@ -20,6 +20,15 @@ object PdfUtils {
     private val timestampFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
     private val dateOnlyFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
 
+    private fun truncateText(text: String, maxWidth: Float, paint: Paint): String {
+        if (paint.measureText(text) <= maxWidth) return text
+        var truncated = text
+        while (truncated.isNotEmpty() && paint.measureText("$truncated...") > maxWidth) {
+            truncated = truncated.dropLast(1)
+        }
+        return if (truncated.isEmpty()) "..." else "$truncated..."
+    }
+
     // ── Color palette ──────────────────────────────────────────
     private val NAVY       = Color.parseColor("#0F172A")
     private val DARK_SLATE = Color.parseColor("#1E293B")
@@ -155,7 +164,8 @@ object PdfUtils {
 
         p.color = Color.parseColor("#0F172A")
         p.textSize = 14f; p.isFakeBoldText = true; p.textAlign = Paint.Align.RIGHT
-        c.drawText("Payment Receipt", pw - margin, y, p)
+        val docTitle = if (isMoneyIn) "Payment Received" else "Payment Paid"
+        c.drawText(docTitle, pw - margin, y, p)
         p.isFakeBoldText = false; p.color = Color.parseColor("#64748B")
         p.textSize = 9f
         c.drawText("Payment Date:", pw - margin - 70f, y + 16f, p)
@@ -192,7 +202,7 @@ object PdfUtils {
         p.color = Color.parseColor("#64748B"); p.textSize = 9f
         c.drawText("Subject:", margin, y, p)
         p.color = Color.parseColor("#0F172A"); p.textSize = 10f; p.isFakeBoldText = true
-        val subjectText = if (isMoneyIn) "Payment In Receipt" else "Payment Out Receipt"
+        val subjectText = if (isMoneyIn) "Payment Received" else "Payment Paid"
         c.drawText(subjectText, margin, y + 14f, p)
 
         y += 34f
@@ -200,8 +210,8 @@ object PdfUtils {
         // Body Text
         p.color = Color.parseColor("#0F172A"); p.textSize = 9f; p.isFakeBoldText = false
         c.drawText("Dear Sir/Madam,", margin, y, p)
-        val actionWord = if (isMoneyIn) "receipt" else "disbursal"
-        c.drawText("We confirm $actionWord of below payment on $date.", margin, y + 14f, p)
+        val actionWord = if (isMoneyIn) "received" else "paid"
+        c.drawText("We confirm payment was $actionWord on $date.", margin, y + 14f, p)
 
         y += 28f
 
@@ -366,7 +376,8 @@ object PdfUtils {
 
         // Balance Card
         val c3x = margin + 2 * (cw + gap)
-        val isAdv = statusText.contains("Advance", true)
+        val isAdv = statusText.contains("Advance", true) || statusText.contains("Paid", true)
+        val cleanStatus = if (isAdv) "Paid" else "Received"
         val balBg = if (isAdv) GREEN_LITE else RED_LITE
         val balFg = if (isAdv) GREEN_DARK else RED_DARK
         p.color = balBg; c.drawRoundRect(c3x, yPos, c3x + cw, yPos + cardH, 6f, 6f, p)
@@ -375,7 +386,7 @@ object PdfUtils {
         p.textSize = 13f
         c.drawText(balance, c3x + cw / 2, yPos + 32f, p)
         p.textSize = 8f; p.isFakeBoldText = false
-        c.drawText(statusText, c3x + cw / 2, yPos + 44f, p)
+        c.drawText(cleanStatus, c3x + cw / 2, yPos + 44f, p)
 
         yPos += cardH + 24f
 
@@ -418,7 +429,8 @@ object PdfUtils {
                 p.color = typeColor
                 c.drawCircle(margin + 167f, yPos + 8f, 3f, p)
                 p.textSize = 10f
-                c.drawText(tx.type, margin + 178f, yPos + 12f, p)
+                val typeText = if (isIn) "Received" else "Paid"
+                c.drawText(typeText, margin + 178f, yPos + 12f, p)
 
                 p.color = SLATE; p.textSize = 9f
                 c.drawText(tx.paymentMethod, margin + 260f, yPos + 12f, p)
@@ -515,8 +527,8 @@ object PdfUtils {
             c.drawText("Party Name", margin + 12f, yPos + 16f, p)
             
             p.textAlign = Paint.Align.RIGHT
-            c.drawText("Sales and Expenses", margin + 280f, yPos + 16f, p)
-            c.drawText("Payments", margin + 400f, yPos + 16f, p)
+            c.drawText("Sales & Exp", margin + 280f, yPos + 16f, p)
+            c.drawText("Payments", margin + 380f, yPos + 16f, p)
             c.drawText("Net Balance", pw - margin - 12f, yPos + 16f, p)
 
             yPos += 30f
@@ -553,18 +565,18 @@ object PdfUtils {
                 }
 
                 p.color = NAVY; p.textSize = 10f; p.textAlign = Paint.Align.LEFT; p.isFakeBoldText = true
-                c.drawText(party.name, margin + 12f, yPos + 12f, p)
+                c.drawText(truncateText(party.name, 120f, p), margin + 12f, yPos + 12f, p)
                 p.isFakeBoldText = false
 
                 p.textAlign = Paint.Align.RIGHT; p.color = SLATE
-                val salesText = if (salesExpenses > 0) indFmt.format(salesExpenses) else ""
+                val salesText = if (salesExpenses > 0) indFmt.format(salesExpenses) else "0.00"
                 c.drawText(salesText, margin + 280f, yPos + 12f, p)
 
-                val paymentsText = if (payments > 0) indFmt.format(payments) else ""
-                c.drawText(paymentsText, margin + 400f, yPos + 12f, p)
+                val paymentsText = if (payments > 0) indFmt.format(payments) else "0.00"
+                c.drawText(paymentsText, margin + 380f, yPos + 12f, p)
 
                 val balColor = if (netBalance >= 0) GREEN_DARK else RED_DARK
-                val balText = indFmt.format(kotlin.math.abs(netBalance)) + " " + if (netBalance >= 0) "Advance Paid" else "Pending to Pay"
+                val balText = indFmt.format(kotlin.math.abs(netBalance)) + " " + if (netBalance >= 0) "Paid" else "Received"
                 p.color = balColor; p.isFakeBoldText = true
                 c.drawText(balText, pw - margin - 12f, yPos + 12f, p)
                 p.isFakeBoldText = false
@@ -696,7 +708,7 @@ object PdfUtils {
                 }
 
                 p.color = NAVY; p.textSize = 9f; p.isFakeBoldText = false; p.textAlign = Paint.Align.LEFT
-                c.drawText(r[0], margin + 12f, yPos + 12f, p)
+                c.drawText(truncateText(r[0], 140f, p), margin + 12f, yPos + 12f, p)
 
                 p.textAlign = Paint.Align.RIGHT
                 c.drawText(r[1], margin + 220f, yPos + 12f, p)
@@ -753,7 +765,7 @@ object PdfUtils {
             indFmt.format(totalTradeOut)
         )
 
-        drawSummaryTable("Trade Summary", listOf("Trade", "#Entries", "In", "Out"), tradeRows, tradeTotals)
+        drawSummaryTable("Trade Summary", listOf("Trade", "#Entries", "Received", "Paid"), tradeRows, tradeTotals)
 
         // ── 2. CATEGORY SUMMARY ──
         val catGroups = transactions.groupBy { it.category }
@@ -775,7 +787,7 @@ object PdfUtils {
             indFmt.format(totalTradeOut)
         )
 
-        drawSummaryTable("Category Summary", listOf("Category", "#Entries", "In", "Out"), catRows, catTotals)
+        drawSummaryTable("Category Summary", listOf("Category", "#Entries", "Received", "Paid"), catRows, catTotals)
 
         val fc = canvas!!
         p.color = BORDER; p.strokeWidth = 1f
@@ -846,14 +858,12 @@ object PdfUtils {
             p.color = Color.WHITE; p.textSize = 9f; p.isFakeBoldText = true
             p.textAlign = Paint.Align.LEFT
             c.drawText("Date", margin + 8f, yPos + 16f, p)
-            c.drawText("Sender", margin + 70f, yPos + 16f, p)
-            c.drawText("Receiver", margin + 170f, yPos + 16f, p)
-            c.drawText("Creator", margin + 270f, yPos + 16f, p)
-            c.drawText("Description", margin + 350f, yPos + 16f, p)
+            c.drawText("Party Name", margin + 80f, yPos + 16f, p)
+            c.drawText("Type", margin + 185f, yPos + 16f, p)
+            c.drawText("Description", margin + 375f, yPos + 16f, p)
             
             p.textAlign = Paint.Align.RIGHT
-            c.drawText("Amount", margin + 480f, yPos + 16f, p)
-            c.drawText("Balance", pw - margin - 8f, yPos + 16f, p)
+            c.drawText("Amount", margin + 360f, yPos + 16f, p)
 
             yPos += 30f
             p.isFakeBoldText = false
@@ -866,9 +876,9 @@ object PdfUtils {
         val totalBalance = totalIn - totalOut
 
         p.color = GREEN_DARK; p.textSize = 10f; p.isFakeBoldText = true
-        c.drawText("Total In: ${indFmt.format(totalIn)}", margin, yPos, p)
+        c.drawText("Total Received: ${indFmt.format(totalIn)}", margin, yPos, p)
         p.color = RED_DARK
-        c.drawText("Total Out: ${indFmt.format(totalOut)}", margin + 180f, yPos, p)
+        c.drawText("Total Paid: ${indFmt.format(totalOut)}", margin + 180f, yPos, p)
         p.color = NAVY
         c.drawText("Balance: ${indFmt.format(totalBalance)}", margin + 360f, yPos, p)
         yPos += 20f
@@ -876,7 +886,6 @@ object PdfUtils {
         drawTableHeader(c)
 
         val sortedTxs = transactions.sortedBy { it.date }
-        var runningBalance = 0.0
 
         for ((idx, tx) in sortedTxs.withIndex()) {
             if (yPos > ph - 80f) {
@@ -885,7 +894,6 @@ object PdfUtils {
             }
 
             val isIn = tx.type == "Money In"
-            runningBalance += if (isIn) tx.amount else -tx.amount
 
             if (idx % 2 == 0) {
                 p.color = Color.argb(15, 0, 0, 0)
@@ -895,24 +903,23 @@ object PdfUtils {
             p.color = NAVY; p.textSize = 9f; p.textAlign = Paint.Align.LEFT
             c.drawText(tx.date, margin + 8f, yPos + 12f, p)
             
-            val sender = if (isIn) (tx.partyName ?: "Client") else "Company"
-            c.drawText(sender, margin + 70f, yPos + 12f, p)
+            val partyName = tx.partyName ?: "-"
+            c.drawText(truncateText(partyName, 90f, p), margin + 80f, yPos + 12f, p)
 
-            val receiver = if (!isIn) (tx.partyName ?: "Staff") else "Company"
-            c.drawText(receiver, margin + 170f, yPos + 12f, p)
+            val typeColor = if (isIn) GREEN_DARK else RED_DARK
+            val typeText = if (isIn) "Received" else "Paid"
+            p.color = typeColor
+            c.drawText(typeText, margin + 185f, yPos + 12f, p)
 
-            c.drawText(generatedBy, margin + 270f, yPos + 12f, p)
-
-            val desc = if (tx.description.length > 20) tx.description.take(17) + "..." else tx.description
-            c.drawText(desc, margin + 350f, yPos + 12f, p)
+            p.color = SLATE
+            val desc = tx.description.ifEmpty { "-" }
+            c.drawText(truncateText(desc, 165f, p), margin + 375f, yPos + 12f, p)
 
             p.textAlign = Paint.Align.RIGHT
-            p.color = if (isIn) GREEN_DARK else RED_DARK
             p.isFakeBoldText = true
-            c.drawText(indFmt.format(tx.amount), margin + 480f, yPos + 12f, p)
-
-            p.color = NAVY
-            c.drawText(indFmt.format(runningBalance), pw - margin - 8f, yPos + 12f, p)
+            p.color = typeColor
+            val amtText = (if (isIn) "+" else "-") + indFmt.format(tx.amount)
+            c.drawText(amtText, margin + 360f, yPos + 12f, p)
             p.isFakeBoldText = false
 
             p.color = Color.parseColor("#E2E8F0"); p.strokeWidth = 0.5f
@@ -999,14 +1006,12 @@ object PdfUtils {
             p.color = Color.WHITE; p.textSize = 9f; p.isFakeBoldText = true
             p.textAlign = Paint.Align.LEFT
             c.drawText("Date", margin + 8f, yPos + 16f, p)
-            c.drawText("Sender", margin + 70f, yPos + 16f, p)
-            c.drawText("Receiver", margin + 170f, yPos + 16f, p)
-            c.drawText("Creator", margin + 270f, yPos + 16f, p)
-            c.drawText("Description", margin + 350f, yPos + 16f, p)
+            c.drawText("Type", margin + 80f, yPos + 16f, p)
+            c.drawText("Description", margin + 335f, yPos + 16f, p)
             
             p.textAlign = Paint.Align.RIGHT
-            c.drawText("Amount", margin + 480f, yPos + 16f, p)
-            c.drawText("Balance", pw - margin - 8f, yPos + 16f, p)
+            c.drawText("Amount", margin + 220f, yPos + 16f, p)
+            c.drawText("Balance", margin + 320f, yPos + 16f, p)
 
             yPos += 30f
             p.isFakeBoldText = false
@@ -1022,9 +1027,9 @@ object PdfUtils {
         val totalBalance = totalIn - totalOut
 
         p.color = GREEN_DARK; p.textSize = 10f; p.isFakeBoldText = true
-        c.drawText("Total In: ${indFmt.format(totalIn)}", margin, yPos, p)
+        c.drawText("Total Received: ${indFmt.format(totalIn)}", margin, yPos, p)
         p.color = RED_DARK
-        c.drawText("Total Out: ${indFmt.format(totalOut)}", margin + 180f, yPos, p)
+        c.drawText("Total Paid: ${indFmt.format(totalOut)}", margin + 180f, yPos, p)
         p.color = NAVY
         c.drawText("Balance: ${indFmt.format(totalBalance)}", margin + 360f, yPos, p)
         yPos += 20f
@@ -1050,24 +1055,23 @@ object PdfUtils {
             p.color = NAVY; p.textSize = 9f; p.textAlign = Paint.Align.LEFT
             c.drawText(tx.date, margin + 8f, yPos + 12f, p)
             
-            val sender = if (isIn) (tx.partyName ?: "Client") else "Company"
-            c.drawText(sender, margin + 70f, yPos + 12f, p)
+            val typeColor = if (isIn) GREEN_DARK else RED_DARK
+            val typeText = if (isIn) "Received" else "Paid"
+            p.color = typeColor
+            c.drawText(typeText, margin + 80f, yPos + 12f, p)
 
-            val receiver = if (!isIn) (tx.partyName ?: "Staff") else "Company"
-            c.drawText(receiver, margin + 170f, yPos + 12f, p)
-
-            c.drawText(generatedBy, margin + 270f, yPos + 12f, p)
-
-            val desc = if (tx.description.length > 20) tx.description.take(17) + "..." else tx.description
-            c.drawText(desc, margin + 350f, yPos + 12f, p)
+            p.color = SLATE
+            val desc = tx.description.ifEmpty { "-" }
+            c.drawText(truncateText(desc, 165f, p), margin + 335f, yPos + 12f, p)
 
             p.textAlign = Paint.Align.RIGHT
-            p.color = if (isIn) GREEN_DARK else RED_DARK
             p.isFakeBoldText = true
-            c.drawText(indFmt.format(tx.amount), margin + 480f, yPos + 12f, p)
+            p.color = typeColor
+            val amtText = (if (isIn) "+" else "-") + indFmt.format(tx.amount)
+            c.drawText(amtText, margin + 220f, yPos + 12f, p)
 
             p.color = NAVY
-            c.drawText(indFmt.format(runningBalance), pw - margin - 8f, yPos + 12f, p)
+            c.drawText(indFmt.format(runningBalance), margin + 320f, yPos + 12f, p)
             p.isFakeBoldText = false
 
             p.color = Color.parseColor("#E2E8F0"); p.strokeWidth = 0.5f

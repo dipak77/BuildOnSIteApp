@@ -79,8 +79,8 @@ val NeonBlue         = Color(0xFF3B82F6)   // Royal Blue      — info
 // ── Light Theme Equivalents (deeper, saturated for readability) ───────────────
 val LightCyan        = Color(0xFF0284C7)   // Deep Sky Blue
 val LightPurple      = Color(0xFF7C3AED)   // Deep Violet
-val LightPink        = Color(0xFFE11D48)   // Deep Rose
-val LightGreen       = Color(0xFF059669)   // Deep Emerald
+val LightPink        = Color(0xFFB91C1C)   // Dark Red
+val LightGreen       = Color(0xFF15803D)   // Dark Green
 val LightAmber       = Color(0xFFD97706)   // Deep Amber
 val LightOrange      = Color(0xFFEA580C)   // Deep Orange
 val LightBlue        = Color(0xFF1D4ED8)   // Deep Blue
@@ -126,14 +126,14 @@ val TextTertiaryLight     = Color(0xFFCBD5E1)   // Very muted
 // Success
 val SemanticSuccess      = Color(0xFF00FF87)
 val SemanticSuccessDim   = Color(0xFF10B981)
-val SemanticSuccessLight = Color(0xFF059669)
+val SemanticSuccessLight = Color(0xFF15803D)
 val SemanticSuccessBg    = Color(0x1500FF87)     // dark bg tint
 val SemanticSuccessBgL   = Color(0xFFECFDF5)     // light bg tint
 
 // Error / Danger
 val SemanticError        = Color(0xFFFF4D7D)
 val SemanticErrorDim     = Color(0xFFF43F5E)
-val SemanticErrorLight   = Color(0xFFDC2626)
+val SemanticErrorLight   = Color(0xFFB91C1C)
 val SemanticErrorBg      = Color(0x15FF4D7D)
 val SemanticErrorBgL     = Color(0xFFFFF1F2)
 

@@ -1689,7 +1689,7 @@ fun PremiumReportPreviewDialog(
                                             Text(paymentsText, fontSize = 9.sp, color = textNavy, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
                                             
                                             val balColor = if (netBalance >= 0) Color(0xFF15803D) else Color(0xFFB91C1C)
-                                            val balStatus = if (netBalance >= 0) "Advance Paid" else "Pending to Pay"
+                                            val balStatus = if (netBalance >= 0) "Paid" else "Received"
                                             val balText = String.format(Locale.US, "%,.2f", netBalance.absoluteValue) + " " + balStatus
                                             Text(balText, fontSize = 9.sp, color = balColor, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1.5f))
                                         }
@@ -1931,7 +1931,7 @@ fun PremiumReportPreviewDialog(
                                         val payments = if (isClient) totalIn else totalOut
                                         val salesExpenses = if (isClient) totalOut else totalIn
 
-                                        val statusText = if (balance >= 0) "Advance Paid" else "Pending to Pay"
+                                        val statusText = if (balance >= 0) "Paid" else "Received"
 
                                         PdfUtils.generateBalanceReviewPdfFile(
                                             context = context,

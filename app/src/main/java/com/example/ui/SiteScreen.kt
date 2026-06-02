@@ -915,7 +915,7 @@ private fun PartyTab(
                 PremiumStatCard(
                     modifier = Modifier.weight(1f),
                     dark = dark,
-                    label = "ADVANCE PAID",
+                    label = "PAID",
                     value = formatIndianRupees(totalAdvance),
                     valueColor = EmeraldGlow,
                     icon = Icons.Default.TrendingUp,
@@ -927,7 +927,7 @@ private fun PartyTab(
                 PremiumStatCard(
                     modifier = Modifier.weight(1f),
                     dark = dark,
-                    label = "PENDING PAY",
+                    label = "Received",
                     value = formatIndianRupees(totalPending),
                     valueColor = RoseGlow,
                     icon = Icons.Default.TrendingDown,
@@ -1746,7 +1746,7 @@ private fun PremiumPartyDetailPage(
                 Column(horizontalAlignment = Alignment.End) {
                     val isAdvance = diff >= 0
                     val statusColor = if (isAdvance) Color(0xFF0F766E) else Color(0xFFE11D48)
-                    val statusText = if (isAdvance) "Advance Paid" else "Pending to Pay"
+                    val statusText = if (isAdvance) "Paid" else "Received"
                     Text(
                         text = formatIndianRupees(diff.absoluteValue),
                         fontSize = 19.sp,

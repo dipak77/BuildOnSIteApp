@@ -72,6 +72,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -574,16 +576,16 @@ fun DrawerContent(
     val currentTab = viewModel.currentScreen
     val activeSiteTab = viewModel.activeSiteTab
 
-    // Compute initials dynamically (e.g. "Treasure Garden" -> "TG")
     val projectName = currentProject?.name ?: ""
-    val initials = projectName.split(" ")
+    val userEmail = userSession?.email ?: ""
+    val userName = userSession?.displayName ?: "Guest"
+
+    // Compute initials dynamically from user name as fallback for profile picture placeholder
+    val userInitials = userName.split(" ")
         .mapNotNull { it.firstOrNull()?.uppercaseChar() }
         .joinToString("")
         .take(2)
-        .ifEmpty { "CP" }
-
-    val userEmail = userSession?.email ?: ""
-    val userName = userSession?.displayName ?: "Guest"
+        .ifEmpty { "U" }
 
     Column(
         modifier = Modifier
@@ -614,7 +616,7 @@ fun DrawerContent(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.padding(top = 8.dp)
             ) {
-                // Circular Initials Logo (TG)
+                // Circular Profile Photo
                 Box(
                     modifier = Modifier
                         .size(64.dp)
@@ -631,27 +633,31 @@ fun DrawerContent(
                         .border(1.5.dp, Color.White.copy(alpha = 0.4f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = initials,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Black,
-                        color = Color.White
-                    )
+                    val photo = userSession?.photoUrl
+                    if (!photo.isNullOrEmpty()) {
+                        AsyncImage(
+                            model = photo,
+                            contentDescription = "Profile Photo",
+                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Text(
+                            text = userInitials,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.White
+                        )
+                    }
                 }
 
                 // Workspace & Email Names
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        text = projectName,
+                        text = userName,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (dark) Color.White else Color(0xFF0F172A)
-                    )
-                    Text(
-                        text = userName,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (dark) Color.White.copy(alpha = 0.8f) else Color(0xFF334155)
                     )
                     Text(
                         text = userEmail,
