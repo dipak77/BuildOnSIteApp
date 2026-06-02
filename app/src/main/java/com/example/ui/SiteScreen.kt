@@ -2177,7 +2177,12 @@ private fun PremiumPaymentDetailPage(
                             txId = tx.id,
                             name = tx.partyName ?: "Company",
                             amount = amountStr,
-                            date = tx.date
+                            date = tx.date,
+                            paymentMethod = tx.paymentMethod,
+                            remark = tx.description,
+                            isMoneyIn = tx.type == "Money In",
+                            projectName = currentProject?.name ?: "Treasure garden",
+                            siteAddress = currentProject?.location ?: "Treasure Garden Site, India"
                         )
                         PdfUtils.sharePdfFile(context, pdfFile, "Share Receipt")
                     }
@@ -2337,7 +2342,12 @@ private fun PremiumPaymentDetailPage(
                             txId = tx.id,
                             name = tx.partyName ?: "Company",
                             amount = amountStr,
-                            date = tx.date
+                            date = tx.date,
+                            paymentMethod = tx.paymentMethod,
+                            remark = tx.description,
+                            isMoneyIn = tx.type == "Money In",
+                            projectName = currentProject?.name ?: "Treasure garden",
+                            siteAddress = currentProject?.location ?: "Treasure Garden Site, India"
                         )
                         PdfUtils.sharePdfFile(context, pdfFile, "Share Receipt PDF")
                     }

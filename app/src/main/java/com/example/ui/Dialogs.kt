@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.Project
@@ -1252,8 +1253,8 @@ fun PremiumReportPreviewDialog(
                             // Header
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Column {
-                                    Text("Company", fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Bold)
-                                    Text("Pune", fontSize = 8.sp, color = textGray)
+                                    Text(projectName, fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(siteAddress.replace("\n", " "), fontSize = 8.sp, color = textGray, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     Text("GST : N/A", fontSize = 8.sp, color = textGray)
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
@@ -1376,8 +1377,8 @@ fun PremiumReportPreviewDialog(
                                 // Header
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Column {
-                                        Text("Company", fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Bold)
-                                        Text("Pune", fontSize = 8.sp, color = textGray)
+                                        Text(projectName, fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(siteAddress.replace("\n", " "), fontSize = 8.sp, color = textGray, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         Text("GST : N/A", fontSize = 8.sp, color = textGray)
                                     }
                                     Column(horizontalAlignment = Alignment.End) {
@@ -1560,12 +1561,12 @@ fun PremiumReportPreviewDialog(
                                 }
 
                                 // Stats row
-                                Row(
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .background(Color(0xFFF1F5F9))
                                         .padding(6.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Text("Total In: ${String.format(Locale.US, "%,.2f", totalIn)}", fontSize = 8.sp, color = Color(0xFF15803D), fontWeight = FontWeight.Bold)
                                     Text("Total Out: ${String.format(Locale.US, "%,.2f", totalOut)}", fontSize = 8.sp, color = Color(0xFFB91C1C), fontWeight = FontWeight.Bold)
@@ -1621,8 +1622,8 @@ fun PremiumReportPreviewDialog(
                         ) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Column {
-                                    Text("Company", fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Bold)
-                                    Text("Pune", fontSize = 8.sp, color = textGray)
+                                    Text(projectName, fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(siteAddress.replace("\n", " "), fontSize = 8.sp, color = textGray, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     Text("GST : N/A", fontSize = 8.sp, color = textGray)
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
@@ -1708,8 +1709,8 @@ fun PremiumReportPreviewDialog(
                         ) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Column {
-                                    Text("Company", fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Bold)
-                                    Text("Pune", fontSize = 8.sp, color = textGray)
+                                    Text(projectName, fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(siteAddress.replace("\n", " "), fontSize = 8.sp, color = textGray, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     Text("GST : N/A", fontSize = 8.sp, color = textGray)
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
@@ -1794,8 +1795,8 @@ fun PremiumReportPreviewDialog(
                         ) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Column {
-                                    Text("Company", fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Black)
-                                    Text("Pune", fontSize = 8.sp, color = textGray)
+                                    Text(projectName, fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(siteAddress.replace("\n", " "), fontSize = 8.sp, color = textGray, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     Text("GST : N/A", fontSize = 8.sp, color = textGray)
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
@@ -1826,9 +1827,9 @@ fun PremiumReportPreviewDialog(
                             val totalIn = projectTransactions.filter { it.type == "Money In" }.sumOf { it.amount }
                             val totalOut = projectTransactions.filter { it.type == "Money Out" }.sumOf { it.amount }
                             val totalBalance = totalIn - totalOut
-                            Row(
+                            Column(
                                 modifier = Modifier.fillMaxWidth().background(Color(0xFFF1F5F9)).padding(6.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text("Total In: ${String.format(Locale.US, "%,.2f", totalIn)}", fontSize = 9.sp, color = Color(0xFF15803D), fontWeight = FontWeight.Bold)
                                 Text("Total Out: ${String.format(Locale.US, "%,.2f", totalOut)}", fontSize = 9.sp, color = Color(0xFFB91C1C), fontWeight = FontWeight.Bold)
@@ -1919,7 +1920,8 @@ fun PremiumReportPreviewDialog(
                                             paymentMethod = rxMethod,
                                             remark = rxRemark,
                                             isMoneyIn = rxIsMoneyIn,
-                                            projectName = projectName
+                                            projectName = projectName,
+                                            siteAddress = siteAddress
                                         )
                                     }
                                     "Party Ledger" -> {

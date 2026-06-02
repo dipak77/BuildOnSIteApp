@@ -2,9 +2,7 @@ package com.example.ui
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
+import android.graphics.*
 import android.graphics.pdf.PdfDocument
 import androidx.core.content.FileProvider
 import com.example.data.Transaction
@@ -17,115 +15,354 @@ import java.util.Locale
 
 object PdfUtils {
 
+    // ── Formatters ───────────────────────────────────────────
     private val timestampFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
-    private val dateOnlyFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+    private val dateOnlyFormat  = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+    private val currencyFmt     = NumberFormat.getNumberInstance(Locale.US).apply {
+        maximumFractionDigits = 2; minimumFractionDigits = 2
+    }
+
+    // ── Color Palette ────────────────────────────────────────
+    private val NAVY        = Color.parseColor("#0F172A")
+    private val DARK_SLATE  = Color.parseColor("#1E293B")
+    private val SLATE       = Color.parseColor("#334155")
+    private val GRAY        = Color.parseColor("#64748B")
+    private val LIGHT_GRAY  = Color.parseColor("#94A3B8")
+    private val BORDER      = Color.parseColor("#CBD5E1")
+    private val BG_LIGHT    = Color.parseColor("#F1F5F9")
+    private val BG_PAGE     = Color.parseColor("#FAFBFC")
+    private val WHITE       = Color.WHITE
+
+    private val GREEN_DARK  = Color.parseColor("#15803D")
+    private val GREEN_MID   = Color.parseColor("#22C55E")
+    private val GREEN_LITE  = Color.parseColor("#DCFCE7")
+    private val GREEN_ACCENT= Color.parseColor("#86EFAC")
+
+    private val RED_DARK    = Color.parseColor("#B91C1C")
+    private val RED_MID     = Color.parseColor("#EF4444")
+    private val RED_LITE    = Color.parseColor("#FEE2E2")
+
+    private val BLUE_DARK   = Color.parseColor("#1D4ED8")
+    private val BLUE_LITE   = Color.parseColor("#DBEAFE")
+
+    private val PURPLE      = Color.parseColor("#5D53EA")
+    private val PURPLE_LT   = Color.parseColor("#EEF2FF")
+
+    private val AMBER_DARK  = Color.parseColor("#92400E")
+    private val AMBER_LITE  = Color.parseColor("#FEF3C7")
+
+    private val HEADER_BAR  = Color.parseColor("#0F172A")
+    private val ROW_ALT     = Color.parseColor("#F8FAFC")
+    private val ROW_NORMAL  = Color.WHITE
+    private val DIVIDER     = Color.parseColor("#E2E8F0")
+    private val ACCENT_LINE = Color.parseColor("#3B82F6")
+
+    // ── Constants ────────────────────────────────────────────
+    private const val A4_W = 595
+    private const val A4_H = 842
+    private const val A5_W = 420
+    private const val A5_H = 595
+    private const val PAGE_MARGIN = 36f
+    private const val ROW_HEIGHT  = 26f
+    private const val HEADER_H    = 28f
+    private const val CORNER_R    = 5f
+    private const val FOOTER_H    = 70f
+
+    // ════════════════════════════════════════════════════════
+    // UTILITY HELPERS
+    // ════════════════════════════════════════════════════════
+
+    private fun Paint.reset(
+        color: Int = NAVY,
+        size: Float = 10f,
+        bold: Boolean = false,
+        align: Paint.Align = Paint.Align.LEFT
+    ) {
+        this.color = color
+        textSize = size
+        isFakeBoldText = bold
+        textAlign = align
+        style = Paint.Style.FILL
+    }
 
     private fun truncateText(text: String, maxWidth: Float, paint: Paint): String {
         if (paint.measureText(text) <= maxWidth) return text
-        var truncated = text
-        while (truncated.isNotEmpty() && paint.measureText("$truncated...") > maxWidth) {
-            truncated = truncated.dropLast(1)
-        }
-        return if (truncated.isEmpty()) "..." else "$truncated..."
+        var t = text
+        while (t.isNotEmpty() && paint.measureText("$t…") > maxWidth) t = t.dropLast(1)
+        return if (t.isEmpty()) "…" else "$t…"
     }
 
-    // ── Color palette ──────────────────────────────────────────
-    private val NAVY       = Color.parseColor("#0F172A")
-    private val DARK_SLATE = Color.parseColor("#1E293B")
-    private val SLATE      = Color.parseColor("#334155")
-    private val GRAY       = Color.parseColor("#64748B")
-    private val LIGHT_GRAY = Color.parseColor("#94A3B8")
-    private val BORDER     = Color.parseColor("#CBD5E1")
-    private val BG_LIGHT   = Color.parseColor("#F1F5F9")
-    private val BG_PAGE    = Color.parseColor("#F8FAFC")
-    private val GREEN_DARK = Color.parseColor("#15803D")
-    private val GREEN_LITE = Color.parseColor("#DCFCE7")
-    private val GREEN_MID  = Color.parseColor("#22C55E")
-    private val RED_DARK   = Color.parseColor("#B91C1C")
-    private val RED_LITE   = Color.parseColor("#FEE2E2")
-    private val PURPLE     = Color.parseColor("#5D53EA")
-    private val PURPLE_LT  = Color.parseColor("#EEF2FF")
+    private fun wrapText(text: String, maxWidth: Float, paint: Paint): List<String> {
+        val words = text.split(" ")
+        val lines = mutableListOf<String>()
+        var current = ""
+        for (word in words) {
+            val test = if (current.isEmpty()) word else "$current $word"
+            if (paint.measureText(test) <= maxWidth) {
+                current = test
+            } else {
+                if (current.isNotEmpty()) lines.add(current)
+                current = word
+            }
+        }
+        if (current.isNotEmpty()) lines.add(current)
+        return lines
+    }
 
-    // ═══════════════════════════════════════════════════════════
-    //  1. SINGLE RECEIPT PDF  (A5 — 420 × 595)
-    // ═══════════════════════════════════════════════════════════
+    /** Draws a filled rounded rect with optional border */
+    private fun Canvas.drawCard(
+        left: Float, top: Float, right: Float, bottom: Float,
+        fillColor: Int, paint: Paint,
+        borderColor: Int = Color.TRANSPARENT,
+        borderWidth: Float = 0.8f,
+        radius: Float = CORNER_R
+    ) {
+        paint.style = Paint.Style.FILL
+        paint.color = fillColor
+        drawRoundRect(left, top, right, bottom, radius, radius, paint)
+        if (borderColor != Color.TRANSPARENT) {
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = borderWidth
+            paint.color = borderColor
+            drawRoundRect(left, top, right, bottom, radius, radius, paint)
+            paint.style = Paint.Style.FILL
+        }
+    }
+
+    /** Draws a horizontal separator line */
+    private fun Canvas.drawHRule(
+        x1: Float, x2: Float, y: Float, paint: Paint,
+        color: Int = BORDER, width: Float = 0.5f
+    ) {
+        paint.color = color
+        paint.strokeWidth = width
+        drawLine(x1, y, x2, y, paint)
+    }
+
+    /** Draws an accent left-bar for section titles */
+    private fun Canvas.drawSectionTitle(
+        text: String, x: Float, y: Float, pw: Int,
+        paint: Paint, subtitle: String = ""
+    ) {
+        // Accent bar
+        paint.color = ACCENT_LINE
+        paint.style = Paint.Style.FILL
+        drawRect(x, y - 10f, x + 3f, y + 4f, paint)
+
+        paint.reset(NAVY, 11f, true, Paint.Align.LEFT)
+        drawText(text, x + 9f, y, paint)
+
+        if (subtitle.isNotEmpty()) {
+            paint.reset(GRAY, 8.5f, false, Paint.Align.RIGHT)
+            drawText(subtitle, pw - PAGE_MARGIN, y, paint)
+        }
+    }
+
+    // ════════════════════════════════════════════════════════
+    // PRO COMMON HEADER  (used across all A4 reports)
+    // ════════════════════════════════════════════════════════
+
     fun drawCommonHeader(
-        c: Canvas,
-        p: Paint,
-        pw: Int,
+        c: Canvas, p: Paint, pw: Int,
         margin: Float,
         reportTitle: String,
         generatedBy: String,
         dateRange: String,
         projectName: String,
         siteAddress: String,
-        yStart: Float
+        yStart: Float,
+        pageNum: Int = 1,
+        totalPages: Int = 0
     ): Float {
         var y = yStart
 
-        // 1. Company Logo / Info (Left-aligned)
-        p.color = Color.parseColor("#0F172A") // Navy/Charcoal
-        p.textSize = 10f
-        p.isFakeBoldText = true
-        p.textAlign = Paint.Align.LEFT
-        c.drawText("Company", margin, y, p)
-        
-        p.isFakeBoldText = false
-        p.color = Color.parseColor("#64748B") // Slate gray
-        p.textSize = 9f
-        c.drawText("Pune", margin, y + 12f, p)
-        c.drawText("GST : N/A", margin, y + 24f, p)
-
-        // 2. Report Title & Info (Right-aligned)
-        p.color = Color.parseColor("#0F172A")
-        p.textSize = 14f
-        p.isFakeBoldText = true
-        p.textAlign = Paint.Align.RIGHT
-        c.drawText(reportTitle, pw - margin, y, p)
-
-        p.isFakeBoldText = false
-        p.color = Color.parseColor("#64748B")
-        p.textSize = 9f
-        c.drawText("Generated By: $generatedBy", pw - margin, y + 12f, p)
-        c.drawText("Date Range: $dateRange", pw - margin, y + 24f, p)
-
-        y += 36f
-
-        // 3. Divider Line
-        p.color = Color.parseColor("#CBD5E1") // light grey divider
-        p.strokeWidth = 1f
-        c.drawLine(margin, y, pw - margin, y, p)
-
-        y += 15f
-
-        // 4. Project Card Box (light grey background rounded box)
-        val boxHeight = 45f
-        p.color = Color.parseColor("#F1F5F9") // Light grey box fill
+        // ── Top accent strip ──────────────────────────────────
+        p.color = HEADER_BAR
         p.style = Paint.Style.FILL
-        c.drawRoundRect(margin, y, pw - margin, y + boxHeight, 6f, 6f, p)
+        c.drawRect(0f, 0f, pw.toFloat(), 5f, p)
 
-        // Project Info Text inside Card
-        p.color = Color.parseColor("#1E293B")
-        p.textSize = 10f
-        p.textAlign = Paint.Align.LEFT
-        p.isFakeBoldText = true
-        c.drawText("Project: ", margin + 12f, y + 18f, p)
-        val projWidth = p.measureText("Project: ")
-        p.isFakeBoldText = false
-        p.color = Color.parseColor("#0F172A")
-        c.drawText(projectName, margin + 12f + projWidth, y + 18f, p)
+        // ── Header background card ────────────────────────────
+        c.drawCard(
+            margin - 4f, y - 4f,
+            (pw - margin + 4f), y + 58f,
+            Color.parseColor("#F0F4FF"), p,
+            borderColor = Color.parseColor("#C7D2FE"),
+            borderWidth = 0.6f, radius = 6f
+        )
 
-        p.color = Color.parseColor("#1E293B")
-        p.isFakeBoldText = true
-        c.drawText("Site Address: ", margin + 12f, y + 32f, p)
-        val siteWidth = p.measureText("Site Address: ")
-        p.isFakeBoldText = false
-        p.color = Color.parseColor("#0F172A")
-        c.drawText(siteAddress.replace("\n", " "), margin + 12f + siteWidth, y + 32f, p)
+        // Left: Company block
+        p.reset(NAVY, 11f, true, Paint.Align.LEFT)
+        c.drawText(truncateText(projectName, 180f, p), margin + 8f, y + 13f, p)
 
-        y += boxHeight + 15f
+        p.reset(GRAY, 8f, false, Paint.Align.LEFT)
+        c.drawText(truncateText(siteAddress.replace("\n", ", "), 180f, p), margin + 8f, y + 25f, p)
+        c.drawText("GST: N/A  |  CIN: N/A", margin + 8f, y + 36f, p)
+
+        // Right: Report title + meta
+        p.reset(NAVY, 14f, true, Paint.Align.RIGHT)
+        c.drawText(reportTitle.uppercase(), pw - margin - 8f, y + 16f, p)
+
+        p.reset(GRAY, 8f, false, Paint.Align.RIGHT)
+        c.drawText("Generated by: $generatedBy", pw - margin - 8f, y + 28f, p)
+        c.drawText("Period: $dateRange", pw - margin - 8f, y + 39f, p)
+        if (totalPages > 0) {
+            c.drawText("Page $pageNum of $totalPages", pw - margin - 8f, y + 50f, p)
+        }
+
+        y += 66f
+
+        // ── Project Info bar ──────────────────────────────────
+        c.drawCard(
+            margin - 4f, y,
+            pw - margin + 4f, y + 32f,
+            DARK_SLATE, p, radius = 5f
+        )
+
+        // Project label + value
+        p.reset(Color.parseColor("#94A3B8"), 8f, false, Paint.Align.LEFT)
+        c.drawText("PROJECT", margin + 8f, y + 12f, p)
+        p.reset(WHITE, 9f, true, Paint.Align.LEFT)
+        c.drawText(projectName, margin + 8f, y + 24f, p)
+
+        // Divider
+        p.color = Color.parseColor("#475569")
+        p.strokeWidth = 0.5f
+        c.drawLine(
+            margin + pw * 0.38f, y + 6f,
+            margin + pw * 0.38f, y + 26f, p
+        )
+
+        // Address label + value
+        p.reset(Color.parseColor("#94A3B8"), 8f, false, Paint.Align.LEFT)
+        c.drawText("SITE ADDRESS", margin + pw * 0.40f, y + 12f, p)
+        p.reset(WHITE, 9f, true, Paint.Align.LEFT)
+        val maxAddrW = pw - margin * 2 - pw * 0.42f
+        c.drawText(
+            truncateText(siteAddress.replace("\n", ", "), maxAddrW, p),
+            margin + pw * 0.40f, y + 24f, p
+        )
+
+        y += 40f
         return y
     }
+
+    // ════════════════════════════════════════════════════════
+    // PRO FOOTER
+    // ════════════════════════════════════════════════════════
+
+    private fun drawFooter(
+        c: Canvas, p: Paint, pw: Int, ph: Int,
+        margin: Float, pageNum: Int, totalPages: Int = 0
+    ) {
+        val footerY = ph - FOOTER_H + 8f
+
+        p.color = Color.parseColor("#E2E8F0")
+        p.strokeWidth = 0.8f
+        c.drawLine(margin - 4f, footerY, pw - margin + 4f, footerY, p)
+
+        // Left: branding
+        p.reset(GRAY, 8f, false, Paint.Align.LEFT)
+        c.drawText("ConstructPro · Professional Report", margin, footerY + 14f, p)
+        c.drawText("Generated: ${timestampFormat.format(Date())}", margin, footerY + 26f, p)
+
+        // Center: disclaimer
+        p.reset(LIGHT_GRAY, 7f, false, Paint.Align.CENTER)
+        c.drawText(
+            "This is a computer-generated document. No signature required.",
+            pw / 2f, footerY + 20f, p
+        )
+
+        // Right: page number
+        val pageLabel = if (totalPages > 0) "Page $pageNum / $totalPages" else "Page $pageNum"
+        p.reset(GRAY, 8f, true, Paint.Align.RIGHT)
+        c.drawText(pageLabel, pw - margin, footerY + 14f, p)
+    }
+
+    // ════════════════════════════════════════════════════════
+    // SUMMARY STAT CARDS (3-column row)
+    // ════════════════════════════════════════════════════════
+
+    private fun drawStatCards(
+        c: Canvas, p: Paint,
+        margin: Float, yPos: Float,
+        card1: Triple<String, String, Int>,  // label, value, color
+        card2: Triple<String, String, Int>,
+        card3: Triple<String, String, Int>,
+        contentW: Float
+    ): Float {
+        val gap   = 10f
+        val cardW = (contentW - 2 * gap) / 3f
+        val cardH = 56f
+
+        listOf(
+            Pair(card1, margin),
+            Pair(card2, margin + cardW + gap),
+            Pair(card3, margin + 2 * (cardW + gap))
+        ).forEach { (card, x) ->
+            val (label, value, fg) = card
+            val bg = when (fg) {
+                GREEN_DARK -> GREEN_LITE
+                RED_DARK   -> RED_LITE
+                BLUE_DARK  -> BLUE_LITE
+                AMBER_DARK -> AMBER_LITE
+                else       -> BG_LIGHT
+            }
+            c.drawCard(x, yPos, x + cardW, yPos + cardH, bg, p, borderColor = BORDER, borderWidth = 0.6f)
+
+            // Top accent line on card
+            p.color = fg
+            p.style = Paint.Style.FILL
+            c.drawRoundRect(x, yPos, x + cardW, yPos + 3f, 4f, 4f, p)
+
+            p.reset(GRAY, 8f, true, Paint.Align.CENTER)
+            c.drawText(label.uppercase(), x + cardW / 2f, yPos + 18f, p)
+
+            p.reset(fg, 13f, true, Paint.Align.CENTER)
+            c.drawText(value, x + cardW / 2f, yPos + 38f, p)
+        }
+
+        return yPos + cardH + 14f
+    }
+
+    // ════════════════════════════════════════════════════════
+    // TABLE HEADER DRAWER
+    // ════════════════════════════════════════════════════════
+
+    data class ColumnDef(
+        val label: String,
+        val x: Float,           // absolute x position
+        val width: Float,       // column width
+        val align: Paint.Align = Paint.Align.LEFT
+    )
+
+    private fun drawTableHeader(
+        c: Canvas, p: Paint,
+        yPos: Float, margin: Float, pw: Int,
+        columns: List<ColumnDef>
+    ): Float {
+        val headerH = HEADER_H
+        c.drawCard(
+            margin - 4f, yPos,
+            pw - margin + 4f, yPos + headerH,
+            DARK_SLATE, p, radius = 4f
+        )
+        p.reset(WHITE, 9f, true)
+        columns.forEach { col ->
+            p.textAlign = col.align
+            val textX = when (col.align) {
+                Paint.Align.RIGHT  -> col.x + col.width - 6f
+                Paint.Align.CENTER -> col.x + col.width / 2f
+                else               -> col.x + 6f
+            }
+            c.drawText(col.label, textX, yPos + 18f, p)
+        }
+        p.isFakeBoldText = false
+        return yPos + headerH + 4f
+    }
+
+    // ════════════════════════════════════════════════════════
+    // 1. RECEIPT PDF  (A5 — 420 × 595) — PRO VERSION
+    // ════════════════════════════════════════════════════════
 
     fun generateReceiptPdfFile(
         context: Context,
@@ -136,137 +373,157 @@ object PdfUtils {
         paymentMethod: String = "Cash",
         remark: String = "",
         isMoneyIn: Boolean = false,
-        projectName: String = "Treasure garden"
+        projectName: String = "Treasure Garden",
+        siteAddress: String = "Treasure Garden Site, India"
     ): File {
         val fileName = "Receipt_${txId}_${System.currentTimeMillis()}.pdf"
-        val file = File(context.cacheDir, fileName)
-        val doc = PdfDocument()
+        val file     = File(context.cacheDir, fileName)
+        val doc      = PdfDocument()
+        val pw = A5_W; val ph = A5_H
+        val page  = doc.startPage(PdfDocument.PageInfo.Builder(pw, ph, 1).create())
+        val c     = page.canvas
+        val p     = Paint().apply { isAntiAlias = true }
+        val mg    = 28f
 
-        val pw = 420; val ph = 595
-        val page = doc.startPage(PdfDocument.PageInfo.Builder(pw, ph, 1).create())
-        val c = page.canvas
-        val p = Paint().apply { isAntiAlias = true }
+        // Page background
+        p.color = BG_PAGE
+        c.drawRect(0f, 0f, pw.toFloat(), ph.toFloat(), p)
 
-        // page background
-        p.color = BG_PAGE; c.drawRect(0f, 0f, pw.toFloat(), ph.toFloat(), p)
+        // Top accent
+        p.color = if (isMoneyIn) GREEN_DARK else RED_DARK
+        c.drawRect(0f, 0f, pw.toFloat(), 4f, p)
 
-        val margin = 30f
-        var y = 40f
+        var y = 22f
 
-        // 1. Header (Left-aligned company info, Right-aligned Receipt title)
-        p.color = Color.parseColor("#0F172A")
-        p.textSize = 10f; p.isFakeBoldText = true; p.textAlign = Paint.Align.LEFT
-        c.drawText("Company", margin, y, p)
-        p.isFakeBoldText = false; p.color = Color.parseColor("#64748B")
-        c.drawText("Pune", margin, y + 12f, p)
-        c.drawText("Pune", margin, y + 24f, p)
-        c.drawText("GST : N/A", margin, y + 36f, p)
+        // ── Header ────────────────────────────────────────────
+        // Left: company
+        p.reset(NAVY, 10f, true, Paint.Align.LEFT)
+        c.drawText(truncateText(projectName, 130f, p), mg, y + 10f, p)
+        p.reset(GRAY, 7.5f, false, Paint.Align.LEFT)
+        c.drawText(truncateText(siteAddress.replace("\n", ", "), 130f, p), mg, y + 20f, p)
+        c.drawText("GST: N/A", mg, y + 30f, p)
 
-        p.color = Color.parseColor("#0F172A")
-        p.textSize = 14f; p.isFakeBoldText = true; p.textAlign = Paint.Align.RIGHT
-        val docTitle = if (isMoneyIn) "Payment Received" else "Payment Paid"
-        c.drawText(docTitle, pw - margin, y, p)
-        p.isFakeBoldText = false; p.color = Color.parseColor("#64748B")
-        p.textSize = 9f
-        c.drawText("Payment Date:", pw - margin - 70f, y + 16f, p)
-        p.color = Color.parseColor("#0F172A"); p.isFakeBoldText = true
-        c.drawText(date, pw - margin, y + 16f, p)
+        // Right: receipt type badge
+        val docTitle  = if (isMoneyIn) "PAYMENT RECEIVED" else "PAYMENT PAID"
+        val badgeColor = if (isMoneyIn) GREEN_DARK else RED_DARK
+        val badgeBg    = if (isMoneyIn) GREEN_LITE  else RED_LITE
 
-        y += 48f
+        c.drawCard(
+            pw - mg - 115f, y + 2f,
+            pw - mg, y + 18f,
+            badgeBg, p, borderColor = if (isMoneyIn) GREEN_ACCENT else RED_MID,
+            borderWidth = 0.5f, radius = 10f
+        )
+        p.reset(badgeColor, 8f, true, Paint.Align.CENTER)
+        c.drawText(docTitle, pw - mg - 57.5f, y + 13f, p)
 
-        // Divider line
-        p.color = Color.parseColor("#CBD5E1"); p.strokeWidth = 0.5f
-        c.drawLine(margin, y, pw - margin, y, p)
+        // Receipt # and date right
+        p.reset(GRAY, 7.5f, false, Paint.Align.RIGHT)
+        c.drawText("Receipt #$txId", pw - mg, y + 24f, p)
+        p.reset(NAVY, 7.5f, true, Paint.Align.RIGHT)
+        c.drawText(date, pw - mg, y + 34f, p)
 
-        y += 20f
+        y += 44f
 
-        // Project Info
-        p.color = Color.parseColor("#64748B"); p.textSize = 9f; p.textAlign = Paint.Align.LEFT; p.isFakeBoldText = false
-        c.drawText("Project:", margin, y, p)
-        p.color = Color.parseColor("#0F172A"); p.textSize = 10f; p.isFakeBoldText = true
-        c.drawText(projectName, margin, y + 14f, p)
+        // ── Divider ───────────────────────────────────────────
+        c.drawHRule(mg, pw - mg, y, p, BORDER, 0.8f)
+        y += 10f
 
-        y += 34f
+        // ── Project + Party Info side by side ─────────────────
+        val halfW = (pw - 2 * mg - 8f) / 2f
+        c.drawCard(mg, y, mg + halfW, y + 42f, BG_LIGHT, p, borderColor = BORDER, borderWidth = 0.5f)
+        p.reset(GRAY, 7f, false, Paint.Align.LEFT)
+        c.drawText("PROJECT", mg + 8f, y + 12f, p)
+        p.reset(NAVY, 9f, true, Paint.Align.LEFT)
+        c.drawText(truncateText(projectName, halfW - 16f, p), mg + 8f, y + 26f, p)
+        p.reset(GRAY, 7f, false, Paint.Align.LEFT)
+        c.drawText("GST: N/A", mg + 8f, y + 38f, p)
 
-        // To Info
-        p.color = Color.parseColor("#64748B"); p.textSize = 9f; p.isFakeBoldText = false
-        c.drawText("To:", margin, y, p)
-        p.color = Color.parseColor("#0F172A"); p.textSize = 10f; p.isFakeBoldText = true
-        c.drawText(name, margin, y + 14f, p)
-        p.color = Color.parseColor("#64748B"); p.textSize = 8f; p.isFakeBoldText = false
-        c.drawText("GST: NA", margin, y + 26f, p)
+        val rx = mg + halfW + 8f
+        c.drawCard(rx, y, rx + halfW, y + 42f, BG_LIGHT, p, borderColor = BORDER, borderWidth = 0.5f)
+        p.reset(GRAY, 7f, false, Paint.Align.LEFT)
+        c.drawText("BILLED TO", rx + 8f, y + 12f, p)
+        p.reset(NAVY, 9f, true, Paint.Align.LEFT)
+        c.drawText(truncateText(name, halfW - 16f, p), rx + 8f, y + 26f, p)
+        p.reset(GRAY, 7f, false, Paint.Align.LEFT)
+        c.drawText("GST: N/A", rx + 8f, y + 38f, p)
 
+        y += 52f
+
+        // ── Amount Highlight ──────────────────────────────────
+        val amtBg = if (isMoneyIn) GREEN_LITE else RED_LITE
+        val amtFg = if (isMoneyIn) GREEN_DARK else RED_DARK
+        c.drawCard(mg, y, pw - mg, y + 36f, amtBg, p, borderColor = if (isMoneyIn) GREEN_ACCENT else RED_MID, borderWidth = 0.6f)
+        p.reset(amtFg, 8f, false, Paint.Align.LEFT)
+        c.drawText("TOTAL AMOUNT", mg + 12f, y + 14f, p)
+        p.reset(amtFg, 15f, true, Paint.Align.RIGHT)
+        c.drawText("₹ $amount", pw - mg - 12f, y + 26f, p)
         y += 46f
 
-        // Subject Info
-        p.color = Color.parseColor("#64748B"); p.textSize = 9f
-        c.drawText("Subject:", margin, y, p)
-        p.color = Color.parseColor("#0F172A"); p.textSize = 10f; p.isFakeBoldText = true
-        val subjectText = if (isMoneyIn) "Payment Received" else "Payment Paid"
-        c.drawText(subjectText, margin, y + 14f, p)
+        // ── Details Table ─────────────────────────────────────
+        data class ReceiptRow(val label: String, val value: String)
+        val rows = listOf(
+            ReceiptRow("Payment Date",   date),
+            ReceiptRow("Payment Method", paymentMethod.ifEmpty { "—" }),
+            ReceiptRow("Remark",         remark.ifEmpty { "—" }),
+            ReceiptRow("Attachment",     "—")
+        )
 
-        y += 34f
+        val col1End = mg + 120f
+        val col2End = pw - mg
 
-        // Body Text
-        p.color = Color.parseColor("#0F172A"); p.textSize = 9f; p.isFakeBoldText = false
-        c.drawText("Dear Sir/Madam,", margin, y, p)
-        val actionWord = if (isMoneyIn) "received" else "paid"
-        c.drawText("We confirm payment was $actionWord on $date.", margin, y + 14f, p)
+        // Table header
+        c.drawCard(mg, y, pw - mg, y + 20f, DARK_SLATE, p, radius = 4f)
+        p.reset(WHITE, 8f, true, Paint.Align.LEFT)
+        c.drawText("DETAILS", mg + 10f, y + 13f, p)
+        p.textAlign = Paint.Align.RIGHT
+        c.drawText("VALUE", pw - mg - 10f, y + 13f, p)
+        y += 24f
 
+        rows.forEachIndexed { idx, row ->
+            val rowBg = if (idx % 2 == 0) ROW_NORMAL else ROW_ALT
+            c.drawCard(mg, y, pw - mg, y + ROW_HEIGHT, rowBg, p, borderColor = DIVIDER, borderWidth = 0.3f, radius = 0f)
+
+            p.reset(GRAY, 8.5f, false, Paint.Align.LEFT)
+            c.drawText(row.label, mg + 10f, y + ROW_HEIGHT * 0.65f, p)
+
+            p.reset(NAVY, 8.5f, true, Paint.Align.RIGHT)
+            c.drawText(
+                truncateText(row.value, col2End - col1End - 12f, p),
+                col2End - 10f, y + ROW_HEIGHT * 0.65f, p
+            )
+            y += ROW_HEIGHT
+        }
+        y += 14f
+
+        // ── Message ───────────────────────────────────────────
+        val action = if (isMoneyIn) "received from" else "paid to"
+        p.reset(GRAY, 7.5f, false, Paint.Align.LEFT)
+        c.drawText("We confirm that payment of ₹ $amount was $action $name on $date.", mg, y, p)
+        c.drawText("Thank you for your business. Please contact us for any clarification.", mg, y + 12f, p)
         y += 28f
 
-        // Table
-        val col1X = margin
-        val col2X = margin + 110f
-        val tableW = pw - 2 * margin
-        val rowH = 22f
+        // ── Signature Block ───────────────────────────────────
+        c.drawHRule(mg, pw - mg, ph - 46f, p, BORDER, 0.5f)
+        p.reset(NAVY, 8f, true, Paint.Align.RIGHT)
+        c.drawText("Authorised Signatory", pw - mg, ph - 30f, p)
+        p.reset(GRAY, 7f, false, Paint.Align.RIGHT)
+        c.drawText("ConstructPro", pw - mg, ph - 18f, p)
 
-        fun drawTableRow(label: String, valText: String, isBoldVal: Boolean, yPos: Float) {
-            // Draw outer border and dividers
-            p.color = Color.parseColor("#CBD5E1"); p.style = Paint.Style.STROKE; p.strokeWidth = 0.5f
-            c.drawRect(col1X, yPos, col1X + tableW, yPos + rowH, p)
-            c.drawLine(col2X, yPos, col2X, yPos + rowH, p)
-            
-            p.style = Paint.Style.FILL
-            p.color = Color.parseColor("#475569"); p.textSize = 9f; p.textAlign = Paint.Align.LEFT
-            c.drawText(label, col1X + 8f, yPos + 14f, p)
-            
-            p.color = if (isBoldVal && label == "Amount") (if (isMoneyIn) GREEN_DARK else RED_DARK) else Color.parseColor("#0F172A")
-            p.isFakeBoldText = isBoldVal
-            if (label == "Amount") {
-                p.textAlign = Paint.Align.RIGHT
-                c.drawText(valText, col1X + tableW - 8f, yPos + 14f, p)
-            } else {
-                p.textAlign = Paint.Align.LEFT
-                c.drawText(valText, col2X + 8f, yPos + 14f, p)
-            }
-            p.isFakeBoldText = false
-        }
-
-        drawTableRow("Amount", amount, true, y); y += rowH
-        drawTableRow("Payment Date", date, false, y); y += rowH
-        drawTableRow("Payment Method", paymentMethod, false, y); y += rowH
-        drawTableRow("Remark", remark, false, y); y += rowH
-        drawTableRow("Attachment", "", false, y); y += rowH
-
-        y += 25f
-
-        // Bottom Message
-        p.color = Color.parseColor("#64748B"); p.textSize = 8f; p.textAlign = Paint.Align.LEFT
-        c.drawText("Thank you for your services . Please contact us for any clarifications.", margin, y, p)
-
-        // Signature
-        p.color = Color.parseColor("#0F172A"); p.textSize = 9f; p.isFakeBoldText = true; p.textAlign = Paint.Align.RIGHT
-        c.drawText("Authorised Signatory", pw - margin, ph - 45f, p)
+        // Bottom accent
+        p.color = DARK_SLATE
+        c.drawRect(0f, ph - 5f, pw.toFloat(), ph.toFloat(), p)
 
         doc.finishPage(page)
-        FileOutputStream(file).use { doc.writeTo(it) }; doc.close()
+        FileOutputStream(file).use { doc.writeTo(it) }
+        doc.close()
         return file
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  2. BALANCE REVIEW / PARTY LEDGER PDF  (A4 — 595 × 842)
-    // ═══════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
+    // 2. PARTY LEDGER / BALANCE REVIEW PDF (A4)
+    // ════════════════════════════════════════════════════════
+
     fun generateBalanceReviewPdfFile(
         context: Context,
         partyName: String,
@@ -280,193 +537,164 @@ object PdfUtils {
         generatedBy: String = "Tejas Harane",
         dateRange: String = "All Time"
     ): File {
-        val fileName = "Balance_${partyName.replace(" ", "_")}_${System.currentTimeMillis()}.pdf"
-        val file = File(context.cacheDir, fileName)
-        val doc = PdfDocument()
-
-        val pw = 595; val ph = 842
-        var pageNum = 0
-        val margin = 40f
+        val fileName = "Ledger_${partyName.replace(" ", "_")}_${System.currentTimeMillis()}.pdf"
+        val file     = File(context.cacheDir, fileName)
+        val doc      = PdfDocument()
+        val pw = A4_W; val ph = A4_H
+        val margin   = PAGE_MARGIN
         val contentW = pw - 2 * margin
-        val p = Paint().apply { isAntiAlias = true }
+        val p        = Paint().apply { isAntiAlias = true }
 
-        var page: PdfDocument.Page? = null
+        var pageNum   = 0
+        var curPage: PdfDocument.Page? = null
         var canvas: Canvas? = null
-        var yPos = 0f
+        var yPos      = 0f
+
+        // Column definitions for transaction table
+        val cols = listOf(
+            ColumnDef("S.No",    margin,            36f,  Paint.Align.LEFT),
+            ColumnDef("Date",    margin + 36f,      80f,  Paint.Align.LEFT),
+            ColumnDef("Type",    margin + 116f,     68f,  Paint.Align.LEFT),
+            ColumnDef("Method",  margin + 184f,     80f,  Paint.Align.LEFT),
+            ColumnDef("Remark",  margin + 264f,     110f, Paint.Align.LEFT),
+            ColumnDef("Amount",  margin + 374f,     contentW - 374f, Paint.Align.RIGHT)
+        )
 
         fun newPage(): Canvas {
-            page?.let { doc.finishPage(it) }
+            curPage?.let { doc.finishPage(it) }
             pageNum++
             val pi = PdfDocument.PageInfo.Builder(pw, ph, pageNum).create()
-            page = doc.startPage(pi)
-            canvas = page!!.canvas
-            val c = canvas!!
-
-            p.color = BG_PAGE; c.drawRect(0f, 0f, pw.toFloat(), ph.toFloat(), p)
-
-            yPos = drawCommonHeader(
-                c = c,
-                p = p,
-                pw = pw,
-                margin = margin,
-                reportTitle = "Party Ledger Report",
-                generatedBy = generatedBy,
-                dateRange = dateRange,
-                projectName = projectName,
-                siteAddress = siteAddress,
-                yStart = 40f
-            )
+            curPage = doc.startPage(pi)
+            canvas  = curPage!!.canvas
+            val c   = canvas!!
+            p.color = BG_PAGE
+            c.drawRect(0f, 0f, pw.toFloat(), ph.toFloat(), p)
+            yPos = drawCommonHeader(c, p, pw, margin,
+                "Party Ledger Report", generatedBy, dateRange,
+                projectName, siteAddress, 28f, pageNum)
             return c
         }
 
-        fun drawTableHeader(c: Canvas) {
-            p.color = DARK_SLATE
-            c.drawRoundRect(margin, yPos, pw - margin, yPos + 24f, 4f, 4f, p)
-
-            p.color = Color.WHITE; p.textSize = 10f; p.isFakeBoldText = true
-            p.textAlign = Paint.Align.LEFT
-            c.drawText("S.No", margin + 10f, yPos + 16f, p)
-            c.drawText("Date", margin + 50f, yPos + 16f, p)
-            c.drawText("Type", margin + 165f, yPos + 16f, p)
-            c.drawText("Method", margin + 260f, yPos + 16f, p)
-            p.textAlign = Paint.Align.RIGHT
-            c.drawText("Amount (₹)", pw - margin - 10f, yPos + 16f, p)
-
-            yPos += 30f
-            p.isFakeBoldText = false
+        fun drawTxHeader(c: Canvas) {
+            yPos = drawTableHeader(c, p, yPos, margin, pw, cols)
         }
 
         var c = newPage()
 
-        // Party Info card header
-        p.textAlign = Paint.Align.LEFT
-        p.color = NAVY; p.textSize = 12f; p.isFakeBoldText = true
-        c.drawText("PARTY DETAILS", margin, yPos, p)
+        // ── Party Details card ────────────────────────────────
+        c.drawSectionTitle("PARTY DETAILS", margin, yPos + 2f, pw, p)
         yPos += 14f
 
-        p.color = Color.WHITE; c.drawRoundRect(margin, yPos, pw - margin, yPos + 45f, 6f, 6f, p)
-        p.color = BORDER; p.style = Paint.Style.STROKE; p.strokeWidth = 0.5f
-        c.drawRoundRect(margin, yPos, pw - margin, yPos + 45f, 6f, 6f, p)
+        c.drawCard(
+            margin - 4f, yPos,
+            pw - margin + 4f, yPos + 38f,
+            WHITE, p, borderColor = BORDER, borderWidth = 0.5f, radius = 5f
+        )
+        // Left bar accent
+        p.color = ACCENT_LINE
         p.style = Paint.Style.FILL
+        c.drawRect(margin - 4f, yPos, margin, yPos + 38f, p)
 
-        p.color = GRAY; p.textSize = 10f; p.isFakeBoldText = false
-        c.drawText("Party Name:", margin + 16f, yPos + 26f, p)
-        p.color = NAVY; p.textSize = 11f; p.isFakeBoldText = true
-        c.drawText(partyName, margin + 90f, yPos + 26f, p)
-        p.isFakeBoldText = false
-        yPos += 60f
+        p.reset(GRAY, 8f, false, Paint.Align.LEFT)
+        c.drawText("PARTY NAME", margin + 10f, yPos + 13f, p)
+        p.reset(NAVY, 11f, true, Paint.Align.LEFT)
+        c.drawText(partyName, margin + 10f, yPos + 28f, p)
+        yPos += 50f
 
-        // Cards layout
-        val cardH = 50f; val gap = 12f; val cw = (contentW - 2 * gap) / 3
+        // ── Stat Cards ────────────────────────────────────────
+        val isAdv    = statusText.contains("Advance", true) || statusText.contains("Paid", true)
+        val balColor = if (isAdv) RED_DARK else GREEN_DARK
 
-        // Received Card
-        p.color = GREEN_LITE; c.drawRoundRect(margin, yPos, margin + cw, yPos + cardH, 6f, 6f, p)
-        p.color = GREEN_DARK; p.textAlign = Paint.Align.CENTER; p.textSize = 9f; p.isFakeBoldText = true
-        c.drawText("TOTAL RECEIVED", margin + cw / 2, yPos + 18f, p)
-        p.textSize = 14f
-        c.drawText(received, margin + cw / 2, yPos + 38f, p)
+        yPos = drawStatCards(
+            c, p, margin, yPos,
+            Triple("Total Received", "₹ $received", GREEN_DARK),
+            Triple("Total Paid",     "₹ $paid",     RED_DARK),
+            Triple("Net Balance",    "₹ $balance",  balColor),
+            contentW
+        )
 
-        // Paid Card
-        val c2x = margin + cw + gap
-        p.color = RED_LITE; c.drawRoundRect(c2x, yPos, c2x + cw, yPos + cardH, 6f, 6f, p)
-        p.color = RED_DARK; p.textSize = 9f
-        c.drawText("TOTAL PAID", c2x + cw / 2, yPos + 18f, p)
-        p.textSize = 14f
-        c.drawText(paid, c2x + cw / 2, yPos + 38f, p)
-
-        // Balance Card
-        val c3x = margin + 2 * (cw + gap)
-        val isAdv = statusText.contains("Advance", true) || statusText.contains("Paid", true)
-        val cleanStatus = if (isAdv) "Paid" else "Received"
-        val balBg = if (isAdv) RED_LITE else GREEN_LITE
-        val balFg = if (isAdv) RED_DARK else GREEN_DARK
-        p.color = balBg; c.drawRoundRect(c3x, yPos, c3x + cw, yPos + cardH, 6f, 6f, p)
-        p.color = balFg; p.textSize = 9f
-        c.drawText("NET BALANCE", c3x + cw / 2, yPos + 16f, p)
-        p.textSize = 13f
-        c.drawText(balance, c3x + cw / 2, yPos + 32f, p)
-        p.textSize = 8f; p.isFakeBoldText = false
-        c.drawText(cleanStatus, c3x + cw / 2, yPos + 44f, p)
-
-        yPos += cardH + 24f
-
-        p.textAlign = Paint.Align.LEFT
-        p.color = NAVY; p.textSize = 12f; p.isFakeBoldText = true
-        c.drawText("TRANSACTION HISTORY", margin, yPos, p)
-        p.color = GRAY; p.textSize = 10f; p.isFakeBoldText = false; p.textAlign = Paint.Align.RIGHT
-        c.drawText("${transactions.size} entries", pw - margin, yPos, p)
+        // ── Transaction history ───────────────────────────────
+        c.drawSectionTitle(
+            "TRANSACTION HISTORY", margin, yPos + 2f, pw, p,
+            subtitle = "${transactions.size} entries"
+        )
         yPos += 14f
-
-        drawTableHeader(c)
+        drawTxHeader(c)
 
         if (transactions.isEmpty()) {
-            yPos += 20f
-            p.textAlign = Paint.Align.CENTER; p.color = LIGHT_GRAY; p.textSize = 11f
-            c.drawText("No transactions found in selected period.", pw / 2f, yPos, p)
+            yPos += 24f
+            p.reset(LIGHT_GRAY, 10f, false, Paint.Align.CENTER)
+            c.drawText("No transactions found for the selected period.", pw / 2f, yPos, p)
         } else {
-            var runningBalance = 0.0
-            for ((idx, tx) in transactions.withIndex()) {
-                if (yPos > ph - 80f) {
+            var runBal = 0.0
+            transactions.forEachIndexed { idx, tx ->
+                if (yPos > ph - FOOTER_H - 30f) {
+                    drawFooter(c, p, pw, ph, margin, pageNum)
                     c = newPage()
-                    drawTableHeader(c)
+                    drawTxHeader(c)
                 }
+                val isIn   = tx.type == "Money In"
+                val rowBg  = if (idx % 2 == 0) ROW_NORMAL else ROW_ALT
+                runBal    += if (isIn) tx.amount else -tx.amount
 
-                val isIn = tx.type == "Money In"
-                runningBalance += if (isIn) tx.amount else -tx.amount
+                c.drawCard(
+                    margin - 4f, yPos, pw - margin + 4f, yPos + ROW_HEIGHT,
+                    rowBg, p, borderColor = DIVIDER, borderWidth = 0.3f, radius = 0f
+                )
 
-                if (idx % 2 == 0) {
-                    p.color = Color.argb(15, 0, 0, 0)
-                    c.drawRect(margin, yPos - 4f, pw - margin, yPos + 22f, p)
-                }
+                val typeColor  = if (isIn) GREEN_DARK else RED_DARK
+                val sign       = if (isIn) "+" else "-"
+                val amtText    = sign + "₹" + currencyFmt.format(tx.amount)
 
-                p.color = GRAY; p.textSize = 10f; p.textAlign = Paint.Align.LEFT; p.isFakeBoldText = false
-                c.drawText("${idx + 1}", margin + 10f, yPos + 12f, p)
+                p.reset(SLATE, 8.5f, false, Paint.Align.LEFT)
+                c.drawText("${idx + 1}", cols[0].x + 6f, yPos + 17f, p)
+                c.drawText(tx.date, cols[1].x + 4f, yPos + 17f, p)
 
-                p.color = NAVY
-                c.drawText(tx.date, margin + 50f, yPos + 12f, p)
-
-                val typeColor = if (isIn) GREEN_DARK else RED_DARK
+                // Type with dot indicator
                 p.color = typeColor
-                c.drawCircle(margin + 167f, yPos + 8f, 3f, p)
-                p.textSize = 10f
-                val typeText = if (isIn) "Received" else "Paid"
-                c.drawText(typeText, margin + 178f, yPos + 12f, p)
+                p.style = Paint.Style.FILL
+                c.drawCircle(cols[2].x + 10f, yPos + 12f, 3.5f, p)
+                p.reset(typeColor, 8.5f, true, Paint.Align.LEFT)
+                c.drawText(if (isIn) "Received" else "Paid", cols[2].x + 18f, yPos + 17f, p)
 
-                p.color = SLATE; p.textSize = 9f
-                c.drawText(tx.paymentMethod, margin + 260f, yPos + 12f, p)
+                p.reset(SLATE, 8f, false, Paint.Align.LEFT)
+                c.drawText(truncateText(tx.paymentMethod, cols[3].width - 6f, p), cols[3].x + 4f, yPos + 17f, p)
 
-                p.textAlign = Paint.Align.RIGHT; p.isFakeBoldText = true; p.textSize = 10f
-                p.color = typeColor
-                val sign = if (isIn) "+" else "-"
-                val indFmtVal = NumberFormat.getNumberInstance(Locale.US).apply {
-                    maximumFractionDigits = 2; minimumFractionDigits = 2
-                }
-                val amtText = sign + indFmtVal.format(tx.amount).replace("₹", "₹ ")
-                c.drawText(amtText, pw - margin - 10f, yPos + 12f, p)
-                p.isFakeBoldText = false
+                val remark = if (tx.description.isNotEmpty()) tx.description else "—"
+                c.drawText(truncateText(remark, cols[4].width - 6f, p), cols[4].x + 4f, yPos + 17f, p)
 
-                p.color = Color.parseColor("#E2E8F0"); p.strokeWidth = 0.5f
-                c.drawLine(margin, yPos + 20f, pw - margin, yPos + 20f, p)
+                p.reset(typeColor, 8.5f, true, Paint.Align.RIGHT)
+                c.drawText(amtText, cols[5].x + cols[5].width - 4f, yPos + 17f, p)
 
-                yPos += 24f
+                yPos += ROW_HEIGHT
             }
+
+            // Running balance summary row
+            yPos += 4f
+            c.drawCard(
+                margin - 4f, yPos, pw - margin + 4f, yPos + 26f,
+                DARK_SLATE, p, radius = 4f
+            )
+            p.reset(WHITE, 9f, true, Paint.Align.LEFT)
+            c.drawText("CLOSING BALANCE", margin + 8f, yPos + 17f, p)
+            p.textAlign = Paint.Align.RIGHT
+            val balFmt  = (if (runBal >= 0) "+" else "") + "₹" + currencyFmt.format(runBal)
+            p.color     = if (runBal >= 0) GREEN_MID else RED_MID
+            c.drawText(balFmt, pw - margin - 8f, yPos + 17f, p)
+            yPos += 36f
         }
 
-        val fc = canvas!!
-        p.color = BORDER; p.strokeWidth = 1f
-        fc.drawLine(margin, ph - 65f, pw - margin, ph - 65f, p)
-        p.color = LIGHT_GRAY; p.textSize = 9f; p.isFakeBoldText = false; p.textAlign = Paint.Align.CENTER
-        fc.drawText("Generated by ConstructPro  ·  ${timestampFormat.format(Date())}", pw / 2f, ph - 45f, p)
-        fc.drawText("This is a computer-generated document and does not require a physical signature.", pw / 2f, ph - 30f, p)
-
-        doc.finishPage(page!!)
-        FileOutputStream(file).use { doc.writeTo(it) }; doc.close()
+        drawFooter(canvas!!, p, pw, ph, margin, pageNum)
+        doc.finishPage(curPage!!)
+        FileOutputStream(file).use { doc.writeTo(it) }
+        doc.close()
         return file
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  3. PARTY BALANCE REPORT PDF (A4 — 595 × 842)
-    // ═══════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
+    // 3. PARTY BALANCE REPORT PDF (A4)
+    // ════════════════════════════════════════════════════════
+
     fun generatePartyBalanceReportPdfFile(
         context: Context,
         projectName: String,
@@ -474,136 +702,168 @@ object PdfUtils {
         generatedBy: String,
         parties: List<com.example.data.Worker>,
         transactions: List<Transaction>,
-        dateRange: String = "From Start - Till Now"
+        dateRange: String = "From Start – Till Now"
     ): File {
         val fileName = "PartyBalanceReport_${System.currentTimeMillis()}.pdf"
-        val file = File(context.cacheDir, fileName)
-        val doc = PdfDocument()
+        val file     = File(context.cacheDir, fileName)
+        val doc      = PdfDocument()
+        val pw = A4_W; val ph = A4_H
+        val margin   = PAGE_MARGIN
+        val contentW = pw - 2 * margin
+        val p        = Paint().apply { isAntiAlias = true }
 
-        val pw = 595; val ph = 842
-        var pageNum = 0
-        val margin = 40f
-        val p = Paint().apply { isAntiAlias = true }
-
-        val indFmt = NumberFormat.getNumberInstance(Locale.US).apply {
-            maximumFractionDigits = 2; minimumFractionDigits = 2
-        }
-
-        var page: PdfDocument.Page? = null
+        var pageNum   = 0
+        var curPage: PdfDocument.Page? = null
         var canvas: Canvas? = null
-        var yPos = 0f
+        var yPos      = 0f
+
+        val cols = listOf(
+            ColumnDef("#",            margin,              24f,  Paint.Align.LEFT),
+            ColumnDef("Party Name",   margin + 24f,        140f, Paint.Align.LEFT),
+            ColumnDef("Type",         margin + 164f,       70f,  Paint.Align.LEFT),
+            ColumnDef("Sales & Exp",  margin + 234f,       80f,  Paint.Align.RIGHT),
+            ColumnDef("Payments",     margin + 314f,       74f,  Paint.Align.RIGHT),
+            ColumnDef("Net Balance",  margin + 388f,       contentW - 388f, Paint.Align.RIGHT)
+        )
 
         fun newPage(): Canvas {
-            page?.let { doc.finishPage(it) }
+            curPage?.let { doc.finishPage(it) }
             pageNum++
             val pi = PdfDocument.PageInfo.Builder(pw, ph, pageNum).create()
-            page = doc.startPage(pi)
-            canvas = page!!.canvas
-            val c = canvas!!
-
-            p.color = BG_PAGE; c.drawRect(0f, 0f, pw.toFloat(), ph.toFloat(), p)
-
-            yPos = drawCommonHeader(
-                c = c,
-                p = p,
-                pw = pw,
-                margin = margin,
-                reportTitle = "Party Balance Report",
-                generatedBy = generatedBy,
-                dateRange = dateRange,
-                projectName = projectName,
-                siteAddress = siteAddress,
-                yStart = 40f
-            )
+            curPage = doc.startPage(pi)
+            canvas  = curPage!!.canvas
+            val c   = canvas!!
+            p.color = BG_PAGE
+            c.drawRect(0f, 0f, pw.toFloat(), ph.toFloat(), p)
+            yPos = drawCommonHeader(c, p, pw, margin,
+                "Party Balance Report", generatedBy, dateRange,
+                projectName, siteAddress, 28f, pageNum)
             return c
         }
 
-        fun drawTableHeader(c: Canvas) {
-            p.color = DARK_SLATE
-            c.drawRoundRect(margin, yPos, pw - margin, yPos + 24f, 4f, 4f, p)
-
-            p.color = Color.WHITE; p.textSize = 10f; p.isFakeBoldText = true
-            p.textAlign = Paint.Align.LEFT
-            c.drawText("Party Name", margin + 12f, yPos + 16f, p)
-            
-            p.textAlign = Paint.Align.RIGHT
-            c.drawText("Sales & Exp", margin + 280f, yPos + 16f, p)
-            c.drawText("Payments", margin + 380f, yPos + 16f, p)
-            c.drawText("Net Balance", pw - margin - 12f, yPos + 16f, p)
-
-            yPos += 30f
-            p.isFakeBoldText = false
+        fun drawHeader(c: Canvas) {
+            yPos = drawTableHeader(c, p, yPos, margin, pw, cols)
         }
 
         var c = newPage()
 
-        drawTableHeader(c)
+        // ── Grand totals ──────────────────────────────────────
+        val grandIn  = transactions.filter { it.type == "Money In"  }.sumOf { it.amount }
+        val grandOut = transactions.filter { it.type == "Money Out" }.sumOf { it.amount }
+        val grandBal = grandIn - grandOut
+
+        yPos = drawStatCards(
+            c, p, margin, yPos,
+            Triple("Total Received", "₹${currencyFmt.format(grandIn)}",  GREEN_DARK),
+            Triple("Total Paid",     "₹${currencyFmt.format(grandOut)}", RED_DARK),
+            Triple("Net Balance",    "₹${currencyFmt.format(grandBal)}", if (grandBal >= 0) GREEN_DARK else RED_DARK),
+            contentW
+        )
+
+        c.drawSectionTitle("PARTY WISE BALANCE", margin, yPos + 2f, pw, p,
+            subtitle = "${parties.size} parties")
+        yPos += 14f
+        drawHeader(c)
 
         if (parties.isEmpty()) {
-            yPos += 20f
-            p.textAlign = Paint.Align.CENTER; p.color = LIGHT_GRAY; p.textSize = 12f
+            yPos += 24f
+            p.reset(LIGHT_GRAY, 10f, false, Paint.Align.CENTER)
             c.drawText("No parties registered.", pw / 2f, yPos, p)
         } else {
-            for ((idx, party) in parties.withIndex()) {
-                if (yPos > ph - 80f) {
+            parties.forEachIndexed { idx, party ->
+                if (yPos > ph - FOOTER_H - 30f) {
+                    drawFooter(c, p, pw, ph, margin, pageNum)
                     c = newPage()
-                    drawTableHeader(c)
+                    drawHeader(c)
                 }
 
-                val partyTx = transactions.filter { it.partyId == party.id || it.partyName == party.name }
-                val totalIn = partyTx.filter { it.type == "Money In" }.sumOf { it.amount }
+                val partyTx  = transactions.filter { it.partyId == party.id || it.partyName == party.name }
+                val totalIn  = partyTx.filter { it.type == "Money In"  }.sumOf { it.amount }
                 val totalOut = partyTx.filter { it.type == "Money Out" }.sumOf { it.amount }
-                val netBalance = totalIn - totalOut
-
+                val net      = totalIn - totalOut
                 val isClient = party.partyType == "Client" || party.partyType == "Investor"
                 val payments = if (isClient) totalIn else totalOut
-                val salesExpenses = if (isClient) totalOut else totalIn
+                val salesExp = if (isClient) totalOut else totalIn
 
-                if (idx % 2 == 0) {
-                    p.color = Color.argb(15, 0, 0, 0)
-                    c.drawRect(margin, yPos - 4f, pw - margin, yPos + 22f, p)
+                val rowBg = if (idx % 2 == 0) ROW_NORMAL else ROW_ALT
+                c.drawCard(
+                    margin - 4f, yPos, pw - margin + 4f, yPos + ROW_HEIGHT,
+                    rowBg, p, borderColor = DIVIDER, borderWidth = 0.3f, radius = 0f
+                )
+
+                val balColor = if (net >= 0) GREEN_DARK else RED_DARK
+
+                p.reset(GRAY, 8f, false, Paint.Align.LEFT)
+                c.drawText("${idx + 1}", cols[0].x + 4f, yPos + 17f, p)
+
+                p.reset(NAVY, 9f, true, Paint.Align.LEFT)
+                c.drawText(truncateText(party.name, cols[1].width - 6f, p), cols[1].x + 4f, yPos + 17f, p)
+
+                // Party type badge
+                val typeBg = when (party.partyType) {
+                    "Client"   -> BLUE_LITE
+                    "Investor" -> PURPLE_LT
+                    "Vendor"   -> AMBER_LITE
+                    else       -> BG_LIGHT
                 }
+                val typeFg = when (party.partyType) {
+                    "Client"   -> BLUE_DARK
+                    "Investor" -> PURPLE
+                    "Vendor"   -> AMBER_DARK
+                    else       -> GRAY
+                }
+                val typeLabel = truncateText(party.partyType ?: "—", cols[2].width - 10f, p)
+                val badgeW    = p.measureText(typeLabel) + 12f
+                c.drawCard(
+                    cols[2].x + 2f, yPos + 5f,
+                    cols[2].x + 2f + badgeW, yPos + ROW_HEIGHT - 4f,
+                    typeBg, p, borderColor = Color.TRANSPARENT, radius = 8f
+                )
+                p.reset(typeFg, 7.5f, true, Paint.Align.LEFT)
+                c.drawText(typeLabel, cols[2].x + 8f, yPos + 16f, p)
 
-                p.color = NAVY; p.textSize = 10f; p.textAlign = Paint.Align.LEFT; p.isFakeBoldText = true
-                c.drawText(truncateText(party.name, 120f, p), margin + 12f, yPos + 12f, p)
-                p.isFakeBoldText = false
+                p.reset(SLATE, 8.5f, false, Paint.Align.RIGHT)
+                c.drawText(
+                    if (salesExp > 0) "₹${currencyFmt.format(salesExp)}" else "—",
+                    cols[3].x + cols[3].width - 4f, yPos + 17f, p
+                )
+                c.drawText(
+                    if (payments > 0) "₹${currencyFmt.format(payments)}" else "—",
+                    cols[4].x + cols[4].width - 4f, yPos + 17f, p
+                )
 
-                p.textAlign = Paint.Align.RIGHT; p.color = SLATE
-                val salesText = if (salesExpenses > 0) indFmt.format(salesExpenses) else "0.00"
-                c.drawText(salesText, margin + 280f, yPos + 12f, p)
+                p.reset(balColor, 8.5f, true, Paint.Align.RIGHT)
+                val balLabel = "₹${currencyFmt.format(kotlin.math.abs(net))} ${if (net >= 0) "↑" else "↓"}"
+                c.drawText(balLabel, cols[5].x + cols[5].width - 4f, yPos + 17f, p)
 
-                val paymentsText = if (payments > 0) indFmt.format(payments) else "0.00"
-                c.drawText(paymentsText, margin + 380f, yPos + 12f, p)
-
-                val isReceived = netBalance >= 0
-                val balColor = if (isReceived) GREEN_DARK else RED_DARK
-                val balText = indFmt.format(kotlin.math.abs(netBalance)) + " " + if (isReceived) "Received" else "Paid"
-                p.color = balColor; p.isFakeBoldText = true
-                c.drawText(balText, pw - margin - 12f, yPos + 12f, p)
-                p.isFakeBoldText = false
-
-                p.color = Color.parseColor("#E2E8F0"); p.strokeWidth = 0.5f
-                c.drawLine(margin, yPos + 20f, pw - margin, yPos + 20f, p)
-
-                yPos += 24f
+                yPos += ROW_HEIGHT
             }
+
+            // Grand total row
+            yPos += 4f
+            c.drawCard(margin - 4f, yPos, pw - margin + 4f, yPos + 26f, DARK_SLATE, p, radius = 4f)
+            p.reset(WHITE, 9f, true, Paint.Align.LEFT)
+            c.drawText("GRAND TOTAL  (${parties.size} Parties)", margin + 8f, yPos + 17f, p)
+            p.reset(GREEN_MID, 9f, true, Paint.Align.RIGHT)
+            c.drawText("₹${currencyFmt.format(grandIn)}", cols[3].x + cols[3].width - 4f, yPos + 17f, p)
+            p.reset(RED_MID, 9f, true, Paint.Align.RIGHT)
+            c.drawText("₹${currencyFmt.format(grandOut)}", cols[4].x + cols[4].width - 4f, yPos + 17f, p)
+            p.reset(if (grandBal >= 0) GREEN_MID else RED_MID, 9f, true, Paint.Align.RIGHT)
+            c.drawText("₹${currencyFmt.format(kotlin.math.abs(grandBal))}", cols[5].x + cols[5].width - 4f, yPos + 17f, p)
+            yPos += 36f
         }
 
-        val fc = canvas!!
-        p.color = BORDER; p.strokeWidth = 1f
-        fc.drawLine(margin, ph - 65f, pw - margin, ph - 65f, p)
-        p.color = LIGHT_GRAY; p.textSize = 9f; p.isFakeBoldText = false; p.textAlign = Paint.Align.CENTER
-        fc.drawText("Generated by ConstructPro  ·  ${timestampFormat.format(Date())}", pw / 2f, ph - 45f, p)
-        fc.drawText("This is a computer-generated document and does not require a physical signature.", pw / 2f, ph - 30f, p)
-
-        doc.finishPage(page!!)
-        FileOutputStream(file).use { doc.writeTo(it) }; doc.close()
+        drawFooter(canvas!!, p, pw, ph, margin, pageNum)
+        doc.finishPage(curPage!!)
+        FileOutputStream(file).use { doc.writeTo(it) }
+        doc.close()
         return file
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  4. PAYMENT REPORT SUMMARY PDF (A4 — 595 × 842)
-    // ═══════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
+    // 4. PAYMENT SUMMARY REPORT PDF (A4)
+    // ════════════════════════════════════════════════════════
+
     fun generatePaymentSummaryReportPdfFile(
         context: Context,
         projectName: String,
@@ -613,194 +873,166 @@ object PdfUtils {
         parties: List<com.example.data.Worker>,
         dateRange: String = "All Time"
     ): File {
-        val fileName = "PaymentSummaryReport_${System.currentTimeMillis()}.pdf"
-        val file = File(context.cacheDir, fileName)
-        val doc = PdfDocument()
+        val fileName = "PaymentSummary_${System.currentTimeMillis()}.pdf"
+        val file     = File(context.cacheDir, fileName)
+        val doc      = PdfDocument()
+        val pw = A4_W; val ph = A4_H
+        val margin   = PAGE_MARGIN
+        val contentW = pw - 2 * margin
+        val p        = Paint().apply { isAntiAlias = true }
 
-        val pw = 595; val ph = 842
-        var pageNum = 0
-        val margin = 40f
-        val p = Paint().apply { isAntiAlias = true }
-
-        val indFmt = NumberFormat.getNumberInstance(Locale.US).apply {
-            maximumFractionDigits = 2; minimumFractionDigits = 2
-        }
-
-        var page: PdfDocument.Page? = null
+        var pageNum   = 0
+        var curPage: PdfDocument.Page? = null
         var canvas: Canvas? = null
-        var yPos = 0f
+        var yPos      = 0f
 
         fun newPage(): Canvas {
-            page?.let { doc.finishPage(it) }
+            curPage?.let { doc.finishPage(it) }
             pageNum++
             val pi = PdfDocument.PageInfo.Builder(pw, ph, pageNum).create()
-            page = doc.startPage(pi)
-            canvas = page!!.canvas
-            val c = canvas!!
-
-            p.color = BG_PAGE; c.drawRect(0f, 0f, pw.toFloat(), ph.toFloat(), p)
-
-            yPos = drawCommonHeader(
-                c = c,
-                p = p,
-                pw = pw,
-                margin = margin,
-                reportTitle = "Payment Report",
-                generatedBy = generatedBy,
-                dateRange = dateRange,
-                projectName = projectName,
-                siteAddress = siteAddress,
-                yStart = 40f
-            )
+            curPage = doc.startPage(pi)
+            canvas  = curPage!!.canvas
+            val c   = canvas!!
+            p.color = BG_PAGE
+            c.drawRect(0f, 0f, pw.toFloat(), ph.toFloat(), p)
+            yPos = drawCommonHeader(c, p, pw, margin,
+                "Payment Summary Report", generatedBy, dateRange,
+                projectName, siteAddress, 28f, pageNum)
             return c
         }
 
         var c = newPage()
 
-        yPos += 10f
-        p.textAlign = Paint.Align.LEFT
-        p.color = NAVY; p.textSize = 12f; p.isFakeBoldText = true
-        c.drawText("Summary", margin, yPos, p)
-        yPos += 14f
+        val totalIn  = transactions.filter { it.type == "Money In"  }.sumOf { it.amount }
+        val totalOut = transactions.filter { it.type == "Money Out" }.sumOf { it.amount }
+        val netBal   = totalIn - totalOut
 
-        fun drawSummaryTable(
+        yPos = drawStatCards(
+            c, p, margin, yPos,
+            Triple("Total Received", "₹${currencyFmt.format(totalIn)}",  GREEN_DARK),
+            Triple("Total Paid",     "₹${currencyFmt.format(totalOut)}", RED_DARK),
+            Triple("Net Balance",    "₹${currencyFmt.format(netBal)}",   if (netBal >= 0) GREEN_DARK else RED_DARK),
+            contentW
+        )
+
+        // ── Generic summary table helper ──────────────────────
+        fun drawSummarySection(
             title: String,
-            headers: List<String>,
+            colLabels: List<String>,
             rows: List<List<String>>,
-            totals: List<String>
+            totalRow: List<String>,
+            colXPositions: List<Float>,
+            colAligns: List<Paint.Align>
         ) {
-            if (yPos > ph - 150f) { c = newPage() }
-            
-            p.textAlign = Paint.Align.LEFT
-            p.color = NAVY; p.textSize = 11f; p.isFakeBoldText = true
-            c.drawText(title, margin, yPos, p)
-            yPos += 12f
+            if (yPos > ph - FOOTER_H - 120f) {
+                drawFooter(c, p, pw, ph, margin, pageNum)
+                c = newPage()
+            }
+            c.drawSectionTitle(title, margin, yPos + 2f, pw, p)
+            yPos += 14f
 
-            p.color = DARK_SLATE
-            c.drawRoundRect(margin, yPos, pw - margin, yPos + 24f, 4f, 4f, p)
-            p.color = Color.WHITE; p.textSize = 10f; p.isFakeBoldText = true
-            
-            c.drawText(headers[0], margin + 12f, yPos + 16f, p)
-            p.textAlign = Paint.Align.RIGHT
-            c.drawText(headers[1], margin + 220f, yPos + 16f, p)
-            c.drawText(headers[2], margin + 360f, yPos + 16f, p)
-            c.drawText(headers[3], pw - margin - 12f, yPos + 16f, p)
+            // Header
+            c.drawCard(margin - 4f, yPos, pw - margin + 4f, yPos + HEADER_H, DARK_SLATE, p, radius = 4f)
+            p.reset(WHITE, 9f, true)
+            colLabels.forEachIndexed { i, lbl ->
+                p.textAlign = colAligns[i]
+                c.drawText(lbl, colXPositions[i], yPos + 18f, p)
+            }
+            yPos += HEADER_H + 4f
 
-            yPos += 30f
-
-            for ((idx, r) in rows.withIndex()) {
-                if (yPos > ph - 80f) {
+            rows.forEachIndexed { idx, row ->
+                if (yPos > ph - FOOTER_H - 36f) {
+                    drawFooter(c, p, pw, ph, margin, pageNum)
                     c = newPage()
-                    p.color = DARK_SLATE
-                    c.drawRoundRect(margin, yPos, pw - margin, yPos + 24f, 4f, 4f, p)
-                    p.color = Color.WHITE; p.textSize = 10f; p.isFakeBoldText = true
-                    p.textAlign = Paint.Align.LEFT
-                    c.drawText(headers[0], margin + 12f, yPos + 16f, p)
-                    p.textAlign = Paint.Align.RIGHT
-                    c.drawText(headers[1], margin + 220f, yPos + 16f, p)
-                    c.drawText(headers[2], margin + 360f, yPos + 16f, p)
-                    c.drawText(headers[3], pw - margin - 12f, yPos + 16f, p)
-                    yPos += 30f
+                    // Redraw header
+                    c.drawCard(margin - 4f, yPos, pw - margin + 4f, yPos + HEADER_H, DARK_SLATE, p, radius = 4f)
+                    p.reset(WHITE, 9f, true)
+                    colLabels.forEachIndexed { i, lbl ->
+                        p.textAlign = colAligns[i]
+                        c.drawText(lbl, colXPositions[i], yPos + 18f, p)
+                    }
+                    yPos += HEADER_H + 4f
                 }
 
-                if (idx % 2 == 0) {
-                    p.color = Color.argb(15, 0, 0, 0)
-                    c.drawRect(margin, yPos - 4f, pw - margin, yPos + 20f, p)
+                val rowBg = if (idx % 2 == 0) ROW_NORMAL else ROW_ALT
+                c.drawCard(
+                    margin - 4f, yPos, pw - margin + 4f, yPos + ROW_HEIGHT,
+                    rowBg, p, borderColor = DIVIDER, borderWidth = 0.3f, radius = 0f
+                )
+
+                row.forEachIndexed { i, cell ->
+                    val cellColor = when {
+                        i == 2 -> GREEN_DARK
+                        i == 3 -> RED_DARK
+                        else   -> NAVY
+                    }
+                    p.reset(cellColor, if (i == 0) 9f else 8.5f, i == 0, colAligns[i])
+                    val maxW = if (i == 0) 130f else 70f
+                    c.drawText(truncateText(cell, maxW, p), colXPositions[i], yPos + 17f, p)
                 }
-
-                p.color = NAVY; p.textSize = 9f; p.isFakeBoldText = false; p.textAlign = Paint.Align.LEFT
-                c.drawText(truncateText(r[0], 140f, p), margin + 12f, yPos + 12f, p)
-
-                p.textAlign = Paint.Align.RIGHT
-                c.drawText(r[1], margin + 220f, yPos + 12f, p)
-                
-                p.color = GREEN_DARK
-                c.drawText(r[2], margin + 360f, yPos + 12f, p)
-                
-                p.color = RED_DARK
-                c.drawText(r[3], pw - margin - 12f, yPos + 12f, p)
-
-                p.color = Color.parseColor("#E2E8F0"); p.strokeWidth = 0.5f
-                c.drawLine(margin, yPos + 22f, pw - margin, yPos + 22f, p)
-
-                yPos += 26f
+                yPos += ROW_HEIGHT
             }
 
-            p.color = DARK_SLATE
-            c.drawRect(margin, yPos - 4f, pw - margin, yPos + 20f, p)
-            p.color = Color.WHITE; p.textSize = 10f; p.isFakeBoldText = true; p.textAlign = Paint.Align.LEFT
-            c.drawText(totals[0], margin + 12f, yPos + 12f, p)
-
-            p.textAlign = Paint.Align.RIGHT
-            c.drawText(totals[1], margin + 220f, yPos + 12f, p)
-            c.drawText(totals[2], margin + 360f, yPos + 12f, p)
-            c.drawText(totals[3], pw - margin - 12f, yPos + 12f, p)
-            p.isFakeBoldText = false
-
+            // Total row
+            yPos += 2f
+            c.drawCard(margin - 4f, yPos, pw - margin + 4f, yPos + 26f, DARK_SLATE, p, radius = 4f)
+            totalRow.forEachIndexed { i, cell ->
+                p.reset(WHITE, 9f, true, colAligns[i])
+                c.drawText(cell, colXPositions[i], yPos + 17f, p)
+            }
             yPos += 36f
         }
 
-        // ── 1. TRADE SUMMARY ──
+        // Column x positions & alignments
+        val sumXPos    = listOf(margin + 8f, margin + 220f, margin + 320f, pw - margin - 8f)
+        val sumAligns  = listOf(Paint.Align.LEFT, Paint.Align.RIGHT, Paint.Align.RIGHT, Paint.Align.RIGHT)
+
+        // ── Trade Summary ─────────────────────────────────────
         val tradeGroups = transactions.groupBy { tx ->
-            val w = parties.find { it.id == tx.partyId || it.name == tx.partyName }
-            w?.partyType ?: "-"
+            parties.find { it.id == tx.partyId || it.name == tx.partyName }?.partyType ?: "Other"
         }
         val tradeRows = tradeGroups.map { (trade, txs) ->
-            val entries = txs.size.toString()
-            val totalIn = txs.filter { it.type == "Money In" }.sumOf { it.amount }
-            val totalOut = txs.filter { it.type == "Money Out" }.sumOf { it.amount }
-            listOf(
-                trade,
-                entries,
-                if (totalIn > 0) indFmt.format(totalIn) else "0.00",
-                if (totalOut > 0) indFmt.format(totalOut) else "0.00"
-            )
+            val tIn  = txs.filter { it.type == "Money In"  }.sumOf { it.amount }
+            val tOut = txs.filter { it.type == "Money Out" }.sumOf { it.amount }
+            listOf(trade, "${txs.size} entries",
+                "₹${currencyFmt.format(tIn)}", "₹${currencyFmt.format(tOut)}")
         }
-        val totalTradeEntries = transactions.size.toString()
-        val totalTradeIn = transactions.filter { it.type == "Money In" }.sumOf { it.amount }
-        val totalTradeOut = transactions.filter { it.type == "Money Out" }.sumOf { it.amount }
-        val tradeTotals = listOf(
-            "Total",
-            totalTradeEntries,
-            indFmt.format(totalTradeIn),
-            indFmt.format(totalTradeOut)
+        drawSummarySection(
+            "Trade Summary",
+            listOf("Trade / Party Type", "Entries", "Received (₹)", "Paid (₹)"),
+            tradeRows,
+            listOf("Total", "${transactions.size}",
+                "₹${currencyFmt.format(totalIn)}", "₹${currencyFmt.format(totalOut)}"),
+            sumXPos, sumAligns
         )
 
-        drawSummaryTable("Trade Summary", listOf("Trade", "#Entries", "Received", "Paid"), tradeRows, tradeTotals)
-
-        // ── 2. CATEGORY SUMMARY ──
-        val catGroups = transactions.groupBy { it.category }
-        val catRows = catGroups.map { (cat, txs) ->
-            val entries = txs.size.toString()
-            val totalIn = txs.filter { it.type == "Money In" }.sumOf { it.amount }
-            val totalOut = txs.filter { it.type == "Money Out" }.sumOf { it.amount }
-            listOf(
-                cat,
-                entries,
-                if (totalIn > 0) indFmt.format(totalIn) else "0.00",
-                if (totalOut > 0) indFmt.format(totalOut) else "0.00"
-            )
+        // ── Category Summary ──────────────────────────────────
+        val catGroups = transactions.groupBy { it.category.ifEmpty { "Uncategorised" } }
+        val catRows   = catGroups.map { (cat, txs) ->
+            val tIn  = txs.filter { it.type == "Money In"  }.sumOf { it.amount }
+            val tOut = txs.filter { it.type == "Money Out" }.sumOf { it.amount }
+            listOf(cat, "${txs.size} entries",
+                "₹${currencyFmt.format(tIn)}", "₹${currencyFmt.format(tOut)}")
         }
-        val catTotals = listOf(
-            "Total",
-            totalTradeEntries,
-            indFmt.format(totalTradeIn),
-            indFmt.format(totalTradeOut)
+        drawSummarySection(
+            "Category Summary",
+            listOf("Category", "Entries", "Received (₹)", "Paid (₹)"),
+            catRows,
+            listOf("Total", "${transactions.size}",
+                "₹${currencyFmt.format(totalIn)}", "₹${currencyFmt.format(totalOut)}"),
+            sumXPos, sumAligns
         )
 
-        drawSummaryTable("Category Summary", listOf("Category", "#Entries", "Received", "Paid"), catRows, catTotals)
-
-        val fc = canvas!!
-        p.color = BORDER; p.strokeWidth = 1f
-        fc.drawLine(margin, ph - 65f, pw - margin, ph - 65f, p)
-        p.color = LIGHT_GRAY; p.textSize = 9f; p.isFakeBoldText = false; p.textAlign = Paint.Align.CENTER
-        fc.drawText("Generated by ConstructPro  ·  ${timestampFormat.format(Date())}", pw / 2f, ph - 45f, p)
-        fc.drawText("This is a computer-generated document and does not require a physical signature.", pw / 2f, ph - 30f, p)
-
-        doc.finishPage(page!!)
-        FileOutputStream(file).use { doc.writeTo(it) }; doc.close()
+        drawFooter(canvas!!, p, pw, ph, margin, pageNum)
+        doc.finishPage(curPage!!)
+        FileOutputStream(file).use { doc.writeTo(it) }
+        doc.close()
         return file
     }
+
+    // ════════════════════════════════════════════════════════
+    // 5. PAYMENT TRANSACTIONS REPORT PDF (A4)
+    // ════════════════════════════════════════════════════════
 
     fun generatePaymentTransactionsReportPdfFile(
         context: Context,
@@ -810,138 +1042,133 @@ object PdfUtils {
         transactions: List<Transaction>,
         dateRange: String = "All Time"
     ): File {
-        val fileName = "PaymentTransactionsReport_${System.currentTimeMillis()}.pdf"
-        val file = File(context.cacheDir, fileName)
-        val doc = PdfDocument()
+        val fileName = "PaymentTransactions_${System.currentTimeMillis()}.pdf"
+        val file     = File(context.cacheDir, fileName)
+        val doc      = PdfDocument()
+        val pw = A4_W; val ph = A4_H
+        val margin   = PAGE_MARGIN
+        val contentW = pw - 2 * margin
+        val p        = Paint().apply { isAntiAlias = true }
 
-        val pw = 595; val ph = 842
-        var pageNum = 0
-        val margin = 30f
-        val p = Paint().apply { isAntiAlias = true }
-
-        val indFmt = NumberFormat.getNumberInstance(Locale.US).apply {
-            maximumFractionDigits = 2; minimumFractionDigits = 2
-        }
-
-        var page: PdfDocument.Page? = null
+        var pageNum   = 0
+        var curPage: PdfDocument.Page? = null
         var canvas: Canvas? = null
-        var yPos = 0f
+        var yPos      = 0f
+
+        val cols = listOf(
+            ColumnDef("Date",        margin,             76f,  Paint.Align.LEFT),
+            ColumnDef("Party",       margin + 76f,       110f, Paint.Align.LEFT),
+            ColumnDef("Type",        margin + 186f,      64f,  Paint.Align.LEFT),
+            ColumnDef("Category",    margin + 250f,      84f,  Paint.Align.LEFT),
+            ColumnDef("Description", margin + 334f,      104f, Paint.Align.LEFT),
+            ColumnDef("Amount",      margin + 438f,      contentW - 438f, Paint.Align.RIGHT)
+        )
 
         fun newPage(): Canvas {
-            page?.let { doc.finishPage(it) }
+            curPage?.let { doc.finishPage(it) }
             pageNum++
             val pi = PdfDocument.PageInfo.Builder(pw, ph, pageNum).create()
-            page = doc.startPage(pi)
-            canvas = page!!.canvas
-            val c = canvas!!
-
-            p.color = BG_PAGE; c.drawRect(0f, 0f, pw.toFloat(), ph.toFloat(), p)
-
-            yPos = drawCommonHeader(
-                c = c,
-                p = p,
-                pw = pw,
-                margin = margin,
-                reportTitle = "Payment Report",
-                generatedBy = generatedBy,
-                dateRange = dateRange,
-                projectName = projectName,
-                siteAddress = siteAddress,
-                yStart = 40f
-            )
+            curPage = doc.startPage(pi)
+            canvas  = curPage!!.canvas
+            val c   = canvas!!
+            p.color = BG_PAGE
+            c.drawRect(0f, 0f, pw.toFloat(), ph.toFloat(), p)
+            yPos = drawCommonHeader(c, p, pw, margin,
+                "Payment Transactions Report", generatedBy, dateRange,
+                projectName, siteAddress, 28f, pageNum)
             return c
         }
 
-        fun drawTableHeader(c: Canvas) {
-            p.color = DARK_SLATE
-            c.drawRoundRect(margin, yPos, pw - margin, yPos + 24f, 4f, 4f, p)
-
-            p.color = Color.WHITE; p.textSize = 9f; p.isFakeBoldText = true
-            p.textAlign = Paint.Align.LEFT
-            c.drawText("Date", margin + 8f, yPos + 16f, p)
-            c.drawText("Party Name", margin + 80f, yPos + 16f, p)
-            c.drawText("Type", margin + 185f, yPos + 16f, p)
-            c.drawText("Description", margin + 375f, yPos + 16f, p)
-            
-            p.textAlign = Paint.Align.RIGHT
-            c.drawText("Amount", margin + 360f, yPos + 16f, p)
-
-            yPos += 30f
-            p.isFakeBoldText = false
+        fun drawTxHeader(c: Canvas) {
+            yPos = drawTableHeader(c, p, yPos, margin, pw, cols)
         }
 
         var c = newPage()
 
-        val totalIn = transactions.filter { it.type == "Money In" }.sumOf { it.amount }
+        val totalIn  = transactions.filter { it.type == "Money In"  }.sumOf { it.amount }
         val totalOut = transactions.filter { it.type == "Money Out" }.sumOf { it.amount }
-        val totalBalance = totalIn - totalOut
+        val netBal   = totalIn - totalOut
 
-        p.color = GREEN_DARK; p.textSize = 10f; p.isFakeBoldText = true
-        c.drawText("Total Received: ${indFmt.format(totalIn)}", margin, yPos, p)
+        yPos = drawStatCards(
+            c, p, margin, yPos,
+            Triple("Total Received", "₹${currencyFmt.format(totalIn)}",  GREEN_DARK),
+            Triple("Total Paid",     "₹${currencyFmt.format(totalOut)}", RED_DARK),
+            Triple("Net Balance",    "₹${currencyFmt.format(netBal)}",   if (netBal >= 0) GREEN_DARK else RED_DARK),
+            contentW
+        )
+
+        c.drawSectionTitle("ALL TRANSACTIONS", margin, yPos + 2f, pw, p,
+            subtitle = "${transactions.size} records")
         yPos += 14f
-        p.color = RED_DARK
-        c.drawText("Total Paid: ${indFmt.format(totalOut)}", margin, yPos, p)
-        yPos += 14f
-        p.color = NAVY
-        c.drawText("Balance: ${indFmt.format(totalBalance)}", margin, yPos, p)
-        yPos += 24f
+        drawTxHeader(c)
 
-        drawTableHeader(c)
-
-        val sortedTxs = transactions.sortedBy { it.date }
-
-        for ((idx, tx) in sortedTxs.withIndex()) {
-            if (yPos > ph - 80f) {
+        val sorted = transactions.sortedBy { it.date }
+        sorted.forEachIndexed { idx, tx ->
+            if (yPos > ph - FOOTER_H - 30f) {
+                drawFooter(c, p, pw, ph, margin, pageNum)
                 c = newPage()
-                drawTableHeader(c)
+                drawTxHeader(c)
             }
-
-            val isIn = tx.type == "Money In"
-
-            if (idx % 2 == 0) {
-                p.color = Color.argb(15, 0, 0, 0)
-                c.drawRect(margin, yPos - 4f, pw - margin, yPos + 22f, p)
-            }
-
-            p.color = NAVY; p.textSize = 9f; p.textAlign = Paint.Align.LEFT
-            c.drawText(tx.date, margin + 8f, yPos + 12f, p)
-            
-            val partyName = tx.partyName ?: "-"
-            c.drawText(truncateText(partyName, 90f, p), margin + 80f, yPos + 12f, p)
-
+            val isIn      = tx.type == "Money In"
             val typeColor = if (isIn) GREEN_DARK else RED_DARK
-            val typeText = if (isIn) "Received" else "Paid"
+            val rowBg     = if (idx % 2 == 0) ROW_NORMAL else ROW_ALT
+
+            c.drawCard(
+                margin - 4f, yPos, pw - margin + 4f, yPos + ROW_HEIGHT,
+                rowBg, p, borderColor = DIVIDER, borderWidth = 0.3f, radius = 0f
+            )
+
+            p.reset(NAVY, 8.5f, false, Paint.Align.LEFT)
+            c.drawText(tx.date, cols[0].x + 4f, yPos + 17f, p)
+            c.drawText(truncateText(tx.partyName ?: "—", cols[1].width - 6f, p), cols[1].x + 4f, yPos + 17f, p)
+
+            // Type badge
             p.color = typeColor
-            c.drawText(typeText, margin + 185f, yPos + 12f, p)
+            p.style = Paint.Style.FILL
+            c.drawCircle(cols[2].x + 8f, yPos + 12f, 3f, p)
+            p.reset(typeColor, 8.5f, true, Paint.Align.LEFT)
+            c.drawText(if (isIn) "In" else "Out", cols[2].x + 16f, yPos + 17f, p)
 
-            p.color = SLATE
-            val desc = tx.description.ifEmpty { "-" }
-            c.drawText(truncateText(desc, 165f, p), margin + 375f, yPos + 12f, p)
+            p.reset(SLATE, 8f, false, Paint.Align.LEFT)
+            c.drawText(
+                truncateText(tx.category.ifEmpty { "—" }, cols[3].width - 6f, p),
+                cols[3].x + 4f, yPos + 17f, p
+            )
+            c.drawText(
+                truncateText(tx.description.ifEmpty { "—" }, cols[4].width - 6f, p),
+                cols[4].x + 4f, yPos + 17f, p
+            )
 
-            p.textAlign = Paint.Align.RIGHT
-            p.isFakeBoldText = true
-            p.color = typeColor
-            val amtText = (if (isIn) "+" else "-") + indFmt.format(tx.amount)
-            c.drawText(amtText, margin + 360f, yPos + 12f, p)
-            p.isFakeBoldText = false
+            p.reset(typeColor, 8.5f, true, Paint.Align.RIGHT)
+            c.drawText(
+                "${if (isIn) "+" else "-"}₹${currencyFmt.format(tx.amount)}",
+                cols[5].x + cols[5].width - 4f, yPos + 17f, p
+            )
 
-            p.color = Color.parseColor("#E2E8F0"); p.strokeWidth = 0.5f
-            c.drawLine(margin, yPos + 20f, pw - margin, yPos + 20f, p)
-
-            yPos += 24f
+            yPos += ROW_HEIGHT
         }
 
-        val fc = canvas!!
-        p.color = BORDER; p.strokeWidth = 1f
-        fc.drawLine(margin, ph - 65f, pw - margin, ph - 65f, p)
-        p.color = LIGHT_GRAY; p.textSize = 9f; p.isFakeBoldText = false; p.textAlign = Paint.Align.CENTER
-        fc.drawText("Generated by ConstructPro  ·  ${timestampFormat.format(Date())}", pw / 2f, ph - 45f, p)
-        fc.drawText("This is a computer-generated document and does not require a physical signature.", pw / 2f, ph - 30f, p)
+        // Grand total row
+        yPos += 4f
+        c.drawCard(margin - 4f, yPos, pw - margin + 4f, yPos + 26f, DARK_SLATE, p, radius = 4f)
+        p.reset(WHITE, 9f, true, Paint.Align.LEFT)
+        c.drawText("TOTAL  (${sorted.size} transactions)", margin + 8f, yPos + 17f, p)
+        p.reset(GREEN_MID, 9f, true, Paint.Align.RIGHT)
+        c.drawText("+₹${currencyFmt.format(totalIn)}", cols[4].x + cols[4].width - 4f, yPos + 17f, p)
+        p.reset(RED_MID, 9f, true, Paint.Align.RIGHT)
+        c.drawText("-₹${currencyFmt.format(totalOut)}", cols[5].x + cols[5].width - 4f, yPos + 17f, p)
+        yPos += 36f
 
-        doc.finishPage(page!!)
-        FileOutputStream(file).use { doc.writeTo(it) }; doc.close()
+        drawFooter(canvas!!, p, pw, ph, margin, pageNum)
+        doc.finishPage(curPage!!)
+        FileOutputStream(file).use { doc.writeTo(it) }
+        doc.close()
         return file
     }
+
+    // ════════════════════════════════════════════════════════
+    // 6. PARTY TRANSACTIONS REPORT PDF (A4)
+    // ════════════════════════════════════════════════════════
 
     fun generatePartyTransactionsReportPdfFile(
         context: Context,
@@ -952,159 +1179,181 @@ object PdfUtils {
         transactions: List<Transaction>,
         dateRange: String = "All Time"
     ): File {
-        val fileName = "PartyTransactions_${party.name.replace(" ", "_")}_${System.currentTimeMillis()}.pdf"
-        val file = File(context.cacheDir, fileName)
-        val doc = PdfDocument()
+        val fileName = "PartyTx_${party.name.replace(" ", "_")}_${System.currentTimeMillis()}.pdf"
+        val file     = File(context.cacheDir, fileName)
+        val doc      = PdfDocument()
+        val pw = A4_W; val ph = A4_H
+        val margin   = PAGE_MARGIN
+        val contentW = pw - 2 * margin
+        val p        = Paint().apply { isAntiAlias = true }
 
-        val pw = 595; val ph = 842
-        var pageNum = 0
-        val margin = 30f
-        val p = Paint().apply { isAntiAlias = true }
-
-        val indFmt = NumberFormat.getNumberInstance(Locale.US).apply {
-            maximumFractionDigits = 2; minimumFractionDigits = 2
-        }
-
-        var page: PdfDocument.Page? = null
+        var pageNum   = 0
+        var curPage: PdfDocument.Page? = null
         var canvas: Canvas? = null
-        var yPos = 0f
+        var yPos      = 0f
+
+        val cols = listOf(
+            ColumnDef("#",           margin,             24f,  Paint.Align.LEFT),
+            ColumnDef("Date",        margin + 24f,       76f,  Paint.Align.LEFT),
+            ColumnDef("Type",        margin + 100f,      64f,  Paint.Align.LEFT),
+            ColumnDef("Description", margin + 164f,      160f, Paint.Align.LEFT),
+            ColumnDef("Debit",       margin + 324f,      74f,  Paint.Align.RIGHT),
+            ColumnDef("Credit",      margin + 398f,      60f,  Paint.Align.RIGHT),
+            ColumnDef("Balance",     margin + 458f,      contentW - 458f, Paint.Align.RIGHT)
+        )
 
         fun newPage(): Canvas {
-            page?.let { doc.finishPage(it) }
+            curPage?.let { doc.finishPage(it) }
             pageNum++
             val pi = PdfDocument.PageInfo.Builder(pw, ph, pageNum).create()
-            page = doc.startPage(pi)
-            canvas = page!!.canvas
-            val c = canvas!!
-
-            p.color = BG_PAGE; c.drawRect(0f, 0f, pw.toFloat(), ph.toFloat(), p)
-
-            yPos = drawCommonHeader(
-                c = c,
-                p = p,
-                pw = pw,
-                margin = margin,
-                reportTitle = "Party Transactions",
-                generatedBy = generatedBy,
-                dateRange = dateRange,
-                projectName = projectName,
-                siteAddress = siteAddress,
-                yStart = 35f
-            )
-
-            p.color = Color.parseColor("#475569")
-            p.textSize = 9f
-            p.isFakeBoldText = false
-            p.textAlign = Paint.Align.LEFT
-            c.drawText("Party Name: ${party.name} (${party.partyType})", margin, yPos, p)
-            yPos += 16f
-
+            curPage = doc.startPage(pi)
+            canvas  = curPage!!.canvas
+            val c   = canvas!!
+            p.color = BG_PAGE
+            c.drawRect(0f, 0f, pw.toFloat(), ph.toFloat(), p)
+            yPos = drawCommonHeader(c, p, pw, margin,
+                "Party Statement", generatedBy, dateRange,
+                projectName, siteAddress, 28f, pageNum)
             return c
         }
 
-        fun drawTableHeader(c: Canvas) {
-            p.color = Color.parseColor("#1E293B")
-            c.drawRoundRect(margin, yPos, pw - margin, yPos + 24f, 4f, 4f, p)
-
-            p.color = Color.WHITE; p.textSize = 9f; p.isFakeBoldText = true
-            p.textAlign = Paint.Align.LEFT
-            c.drawText("Date", margin + 8f, yPos + 16f, p)
-            c.drawText("Type", margin + 80f, yPos + 16f, p)
-            c.drawText("Description", margin + 335f, yPos + 16f, p)
-            
-            p.textAlign = Paint.Align.RIGHT
-            c.drawText("Amount", margin + 220f, yPos + 16f, p)
-            c.drawText("Balance", margin + 320f, yPos + 16f, p)
-
-            yPos += 30f
-            p.isFakeBoldText = false
+        fun drawTxHeader(c: Canvas) {
+            yPos = drawTableHeader(c, p, yPos, margin, pw, cols)
         }
 
         var c = newPage()
 
+        // Party header card
+        c.drawSectionTitle("PARTY STATEMENT", margin, yPos + 2f, pw, p)
+        yPos += 14f
+
+        c.drawCard(margin - 4f, yPos, pw - margin + 4f, yPos + 40f, WHITE, p, borderColor = BORDER, borderWidth = 0.5f)
+        p.color = ACCENT_LINE
+        p.style = Paint.Style.FILL
+        c.drawRect(margin - 4f, yPos, margin + 1f, yPos + 40f, p)
+
+        p.reset(GRAY, 8f, false, Paint.Align.LEFT)
+        c.drawText("PARTY NAME", margin + 10f, yPos + 14f, p)
+        p.reset(NAVY, 11f, true, Paint.Align.LEFT)
+        c.drawText(party.name, margin + 10f, yPos + 28f, p)
+
+        p.reset(GRAY, 8f, false, Paint.Align.RIGHT)
+        c.drawText("PARTY TYPE", pw - margin - 10f, yPos + 14f, p)
+        p.reset(PURPLE, 10f, true, Paint.Align.RIGHT)
+        c.drawText(party.partyType ?: "—", pw - margin - 10f, yPos + 28f, p)
+        yPos += 52f
+
         val partyTxs = transactions.filter { it.partyId == party.id || it.partyName == party.name }
-        val sortedTxs = partyTxs.sortedBy { it.date }
+        val sorted   = partyTxs.sortedBy { it.date }
+        val totalIn  = sorted.filter { it.type == "Money In"  }.sumOf { it.amount }
+        val totalOut = sorted.filter { it.type == "Money Out" }.sumOf { it.amount }
+        val netBal   = totalIn - totalOut
 
-        val totalIn = sortedTxs.filter { it.type == "Money In" }.sumOf { it.amount }
-        val totalOut = sortedTxs.filter { it.type == "Money Out" }.sumOf { it.amount }
-        val totalBalance = totalIn - totalOut
+        yPos = drawStatCards(
+            c, p, margin, yPos,
+            Triple("Total Credit",  "₹${currencyFmt.format(totalIn)}",  GREEN_DARK),
+            Triple("Total Debit",   "₹${currencyFmt.format(totalOut)}", RED_DARK),
+            Triple("Closing Balance","₹${currencyFmt.format(kotlin.math.abs(netBal))}",
+                if (netBal >= 0) GREEN_DARK else RED_DARK),
+            contentW
+        )
 
-        p.color = GREEN_DARK; p.textSize = 10f; p.isFakeBoldText = true
-        c.drawText("Total Received: ${indFmt.format(totalIn)}", margin, yPos, p)
+        c.drawSectionTitle("STATEMENT DETAILS", margin, yPos + 2f, pw, p,
+            subtitle = "${sorted.size} transactions")
         yPos += 14f
-        p.color = RED_DARK
-        c.drawText("Total Paid: ${indFmt.format(totalOut)}", margin, yPos, p)
-        yPos += 14f
-        p.color = NAVY
-        c.drawText("Balance: ${indFmt.format(totalBalance)}", margin, yPos, p)
-        yPos += 24f
+        drawTxHeader(c)
 
-        drawTableHeader(c)
-
-        var runningBalance = 0.0
-
-        for ((idx, tx) in sortedTxs.withIndex()) {
-            if (yPos > ph - 80f) {
+        var runBal = 0.0
+        sorted.forEachIndexed { idx, tx ->
+            if (yPos > ph - FOOTER_H - 30f) {
+                drawFooter(c, p, pw, ph, margin, pageNum)
                 c = newPage()
-                drawTableHeader(c)
+                drawTxHeader(c)
             }
-
-            val isIn = tx.type == "Money In"
-            runningBalance += if (isIn) tx.amount else -tx.amount
-
-            if (idx % 2 == 0) {
-                p.color = Color.argb(15, 0, 0, 0)
-                c.drawRect(margin, yPos - 4f, pw - margin, yPos + 22f, p)
-            }
-
-            p.color = NAVY; p.textSize = 9f; p.textAlign = Paint.Align.LEFT
-            c.drawText(tx.date, margin + 8f, yPos + 12f, p)
-            
+            val isIn      = tx.type == "Money In"
             val typeColor = if (isIn) GREEN_DARK else RED_DARK
-            val typeText = if (isIn) "Received" else "Paid"
+            runBal       += if (isIn) tx.amount else -tx.amount
+            val rowBg     = if (idx % 2 == 0) ROW_NORMAL else ROW_ALT
+
+            c.drawCard(
+                margin - 4f, yPos, pw - margin + 4f, yPos + ROW_HEIGHT,
+                rowBg, p, borderColor = DIVIDER, borderWidth = 0.3f, radius = 0f
+            )
+
+            p.reset(GRAY, 8f, false, Paint.Align.LEFT)
+            c.drawText("${idx + 1}", cols[0].x + 4f, yPos + 17f, p)
+
+            p.reset(NAVY, 8.5f, false, Paint.Align.LEFT)
+            c.drawText(tx.date, cols[1].x + 4f, yPos + 17f, p)
+
             p.color = typeColor
-            c.drawText(typeText, margin + 80f, yPos + 12f, p)
+            p.style = Paint.Style.FILL
+            c.drawCircle(cols[2].x + 8f, yPos + 12f, 3f, p)
+            p.reset(typeColor, 8.5f, true, Paint.Align.LEFT)
+            c.drawText(if (isIn) "Credit" else "Debit", cols[2].x + 16f, yPos + 17f, p)
 
-            p.color = SLATE
-            val desc = tx.description.ifEmpty { "-" }
-            c.drawText(truncateText(desc, 165f, p), margin + 335f, yPos + 12f, p)
+            p.reset(SLATE, 8f, false, Paint.Align.LEFT)
+            c.drawText(
+                truncateText(tx.description.ifEmpty { "—" }, cols[3].width - 6f, p),
+                cols[3].x + 4f, yPos + 17f, p
+            )
 
-            p.textAlign = Paint.Align.RIGHT
-            p.isFakeBoldText = true
-            p.color = typeColor
-            val amtText = (if (isIn) "+" else "-") + indFmt.format(tx.amount)
-            c.drawText(amtText, margin + 220f, yPos + 12f, p)
+            // Debit column (Money Out)
+            if (!isIn) {
+                p.reset(RED_DARK, 8.5f, true, Paint.Align.RIGHT)
+                c.drawText("₹${currencyFmt.format(tx.amount)}", cols[4].x + cols[4].width - 4f, yPos + 17f, p)
+            } else {
+                p.reset(LIGHT_GRAY, 8f, false, Paint.Align.RIGHT)
+                c.drawText("—", cols[4].x + cols[4].width - 4f, yPos + 17f, p)
+            }
 
-            p.color = NAVY
-            c.drawText(indFmt.format(runningBalance), margin + 320f, yPos + 12f, p)
-            p.isFakeBoldText = false
+            // Credit column (Money In)
+            if (isIn) {
+                p.reset(GREEN_DARK, 8.5f, true, Paint.Align.RIGHT)
+                c.drawText("₹${currencyFmt.format(tx.amount)}", cols[5].x + cols[5].width - 4f, yPos + 17f, p)
+            } else {
+                p.reset(LIGHT_GRAY, 8f, false, Paint.Align.RIGHT)
+                c.drawText("—", cols[5].x + cols[5].width - 4f, yPos + 17f, p)
+            }
 
-            p.color = Color.parseColor("#E2E8F0"); p.strokeWidth = 0.5f
-            c.drawLine(margin, yPos + 20f, pw - margin, yPos + 20f, p)
+            // Running balance
+            p.reset(if (runBal >= 0) GREEN_DARK else RED_DARK, 8.5f, true, Paint.Align.RIGHT)
+            c.drawText(
+                (if (runBal >= 0) "+" else "") + "₹${currencyFmt.format(runBal)}",
+                cols[6].x + cols[6].width - 4f, yPos + 17f, p
+            )
 
-            yPos += 24f
+            yPos += ROW_HEIGHT
         }
 
-        val fc = canvas!!
-        p.color = BORDER; p.strokeWidth = 1f
-        fc.drawLine(margin, ph - 65f, pw - margin, ph - 65f, p)
-        p.color = LIGHT_GRAY; p.textSize = 9f; p.isFakeBoldText = false; p.textAlign = Paint.Align.CENTER
-        fc.drawText("Generated by ConstructPro  ·  ${timestampFormat.format(Date())}", pw / 2f, ph - 45f, p)
-        fc.drawText("This is a computer-generated document and does not require a physical signature.", pw / 2f, ph - 30f, p)
+        // Closing row
+        yPos += 4f
+        c.drawCard(margin - 4f, yPos, pw - margin + 4f, yPos + 26f, DARK_SLATE, p, radius = 4f)
+        p.reset(WHITE, 9f, true, Paint.Align.LEFT)
+        c.drawText("CLOSING BALANCE", margin + 8f, yPos + 17f, p)
+        p.reset(RED_MID, 9f, true, Paint.Align.RIGHT)
+        c.drawText("₹${currencyFmt.format(totalOut)}", cols[4].x + cols[4].width - 4f, yPos + 17f, p)
+        p.reset(GREEN_MID, 9f, true, Paint.Align.RIGHT)
+        c.drawText("₹${currencyFmt.format(totalIn)}", cols[5].x + cols[5].width - 4f, yPos + 17f, p)
+        val finalBal = (if (runBal >= 0) "+" else "") + "₹${currencyFmt.format(runBal)}"
+        p.reset(if (runBal >= 0) GREEN_MID else RED_MID, 9f, true, Paint.Align.RIGHT)
+        c.drawText(finalBal, cols[6].x + cols[6].width - 4f, yPos + 17f, p)
+        yPos += 36f
 
-        doc.finishPage(page!!)
-        FileOutputStream(file).use { doc.writeTo(it) }; doc.close()
+        drawFooter(canvas!!, p, pw, ph, margin, pageNum)
+        doc.finishPage(curPage!!)
+        FileOutputStream(file).use { doc.writeTo(it) }
+        doc.close()
         return file
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  SHARE
-    // ═══════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
+    // SHARE
+    // ════════════════════════════════════════════════════════
+
     fun sharePdfFile(context: Context, file: File, title: String = "Share PDF") {
         val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            file
+            context, "${context.packageName}.fileprovider", file
         )
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "application/pdf"
