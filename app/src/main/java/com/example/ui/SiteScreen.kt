@@ -703,17 +703,59 @@ private fun PremiumSiteHeader(
                     }
                     Spacer(modifier = Modifier.height(2.dp))
                     // Project name – capped to 1 line with ellipsis
-                    Text(
-                        text = currentProject?.name ?: "Project",
-                        style = TextStyle(
-                            brush = GradientAqua,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = (-0.3).sp
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    var dropdownExpanded by remember { mutableStateOf(false) }
+                    val projects by viewModel.projects.collectAsState()
+
+                    Box {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clickable { dropdownExpanded = true }
+                                .padding(vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = currentProject?.name ?: "Select Project",
+                                style = TextStyle(
+                                    brush = GradientAqua,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Black,
+                                    letterSpacing = (-0.3).sp
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = "Switch Project",
+                                tint = if (dark) Color.White else Color(0xFF1E293B),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = dropdownExpanded,
+                            onDismissRequest = { dropdownExpanded = false },
+                            modifier = Modifier.background(if (dark) Color(0xFF0F172A) else Color.White)
+                        ) {
+                            projects.forEach { proj ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = proj.name,
+                                            color = if (dark) Color.White else Color.Black,
+                                            fontWeight = if (proj.id == currentProject?.id) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    },
+                                    onClick = {
+                                        viewModel.selectedProjectId = proj.id
+                                        dropdownExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                     Text(
                         text = "Site Operations",
                         color = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),

@@ -378,8 +378,8 @@ object PdfUtils {
         val c3x = margin + 2 * (cw + gap)
         val isAdv = statusText.contains("Advance", true) || statusText.contains("Paid", true)
         val cleanStatus = if (isAdv) "Paid" else "Received"
-        val balBg = if (isAdv) GREEN_LITE else RED_LITE
-        val balFg = if (isAdv) GREEN_DARK else RED_DARK
+        val balBg = if (isAdv) RED_LITE else GREEN_LITE
+        val balFg = if (isAdv) RED_DARK else GREEN_DARK
         p.color = balBg; c.drawRoundRect(c3x, yPos, c3x + cw, yPos + cardH, 6f, 6f, p)
         p.color = balFg; p.textSize = 9f
         c.drawText("NET BALANCE", c3x + cw / 2, yPos + 16f, p)
@@ -575,7 +575,7 @@ object PdfUtils {
                 val paymentsText = if (payments > 0) indFmt.format(payments) else "0.00"
                 c.drawText(paymentsText, margin + 380f, yPos + 12f, p)
 
-                val balColor = if (netBalance >= 0) GREEN_DARK else RED_DARK
+                val balColor = if (netBalance >= 0) RED_DARK else GREEN_DARK
                 val balText = indFmt.format(kotlin.math.abs(netBalance)) + " " + if (netBalance >= 0) "Paid" else "Received"
                 p.color = balColor; p.isFakeBoldText = true
                 c.drawText(balText, pw - margin - 12f, yPos + 12f, p)
@@ -877,11 +877,13 @@ object PdfUtils {
 
         p.color = GREEN_DARK; p.textSize = 10f; p.isFakeBoldText = true
         c.drawText("Total Received: ${indFmt.format(totalIn)}", margin, yPos, p)
+        yPos += 14f
         p.color = RED_DARK
-        c.drawText("Total Paid: ${indFmt.format(totalOut)}", margin + 180f, yPos, p)
+        c.drawText("Total Paid: ${indFmt.format(totalOut)}", margin, yPos, p)
+        yPos += 14f
         p.color = NAVY
-        c.drawText("Balance: ${indFmt.format(totalBalance)}", margin + 360f, yPos, p)
-        yPos += 20f
+        c.drawText("Balance: ${indFmt.format(totalBalance)}", margin, yPos, p)
+        yPos += 24f
 
         drawTableHeader(c)
 
@@ -1028,11 +1030,13 @@ object PdfUtils {
 
         p.color = GREEN_DARK; p.textSize = 10f; p.isFakeBoldText = true
         c.drawText("Total Received: ${indFmt.format(totalIn)}", margin, yPos, p)
+        yPos += 14f
         p.color = RED_DARK
-        c.drawText("Total Paid: ${indFmt.format(totalOut)}", margin + 180f, yPos, p)
+        c.drawText("Total Paid: ${indFmt.format(totalOut)}", margin, yPos, p)
+        yPos += 14f
         p.color = NAVY
-        c.drawText("Balance: ${indFmt.format(totalBalance)}", margin + 360f, yPos, p)
-        yPos += 20f
+        c.drawText("Balance: ${indFmt.format(totalBalance)}", margin, yPos, p)
+        yPos += 24f
 
         drawTableHeader(c)
 
