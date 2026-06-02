@@ -123,6 +123,7 @@ fun MoreScreen(
     val cFormatter = remember { NumberFormat.getCurrencyInstance(Locale("en", "IN")) }
 
     var activeSubModal by remember { mutableStateOf<String?>(null) }
+    var showReportPreviewDialog by remember { mutableStateOf(false) }
 
     // Input States
     var inputEstName by remember { mutableStateOf("") }
@@ -600,7 +601,26 @@ fun MoreScreen(
             dark = dark,
             allTransactions = allTransactions,
             currentProject = currentProject,
-            cFormatter = cFormatter
+            cFormatter = cFormatter,
+            onViewPdfClick = {
+                showReportPreviewDialog = true
+                activeSubModal = null
+            }
+        )
+    }
+
+    if (showReportPreviewDialog) {
+        val projId = currentProject?.id
+        val projectTransactions = if (projId == null) emptyList() else allTransactions.filter { it.projectId == projId }
+        PremiumReportPreviewDialog(
+            dark = dark,
+            selectedTxDetail = null,
+            selectedPartyDetail = null,
+            projectTransactions = projectTransactions,
+            allWorkers = allWorkers,
+            currentProject = currentProject,
+            viewModel = viewModel,
+            onDismiss = { showReportPreviewDialog = false }
         )
     }
 
@@ -2875,7 +2895,8 @@ private fun PremiumPayrollContent(
 @Composable
 private fun PremiumReportsContent(
     dark: Boolean, allTransactions: List<Transaction>,
-    currentProject: Project?, cFormatter: NumberFormat
+    currentProject: Project?, cFormatter: NumberFormat,
+    onViewPdfClick: () -> Unit
 ) {
     val projTx = allTransactions.filter { it.projectId == currentProject?.id }
     val categoryTotals = projTx.groupBy { it.category }
@@ -2910,6 +2931,14 @@ private fun PremiumReportsContent(
                     color = Color(0xFF64748B), fontSize = 11.sp)
             }
         }
+
+        PremiumGradientButton(
+            label = "VIEW REPORT PDF",
+            icon = Icons.Default.PictureAsPdf,
+            gradient = getPremiumGradient(GradientCyan, dark),
+            onClick = onViewPdfClick,
+            modifier = Modifier.fillMaxWidth()
+        )
 
         Text("Expenditure by Category", color = if (dark) Color.White else Color(0xFF0F172A),
             fontWeight = FontWeight.Bold, fontSize = 15.sp)

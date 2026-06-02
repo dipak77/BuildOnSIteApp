@@ -34,7 +34,7 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.*
 
-private const val DASHBOARD_TODAY_ISO = "2026-05-30"
+
 
 // ─── Enhanced Color Palette ───────────────────────────────────────────────────
 private val ElectricBlue   = Color(0xFF00D4FF)
@@ -473,7 +473,7 @@ fun DashboardScreen(
         EnhancedProfileDialog(
             dark          = dark,
             session       = session,
-            activeLocation = currentProject?.location ?: "Mumbai Sector 7, MH",
+            activeLocation = currentProject?.location ?: "",
             onDismiss     = { showProfileDetailsDialog = false },
             onSettings    = { showProfileDetailsDialog = false; viewModel.currentScreen = AppScreen.More }
         )

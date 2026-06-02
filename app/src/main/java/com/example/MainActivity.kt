@@ -575,14 +575,15 @@ fun DrawerContent(
     val activeSiteTab = viewModel.activeSiteTab
 
     // Compute initials dynamically (e.g. "Treasure Garden" -> "TG")
-    val projectName = currentProject?.name ?: "Treasure Garden"
+    val projectName = currentProject?.name ?: ""
     val initials = projectName.split(" ")
         .mapNotNull { it.firstOrNull()?.uppercaseChar() }
         .joinToString("")
         .take(2)
-        .ifEmpty { "TG" }
+        .ifEmpty { "CP" }
 
-    val userEmail = userSession?.email ?: "haranedipak@gmail.com"
+    val userEmail = userSession?.email ?: ""
+    val userName = userSession?.displayName ?: "Guest"
 
     Column(
         modifier = Modifier
@@ -645,6 +646,12 @@ fun DrawerContent(
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (dark) Color.White else Color(0xFF0F172A)
+                    )
+                    Text(
+                        text = userName,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (dark) Color.White.copy(alpha = 0.8f) else Color(0xFF334155)
                     )
                     Text(
                         text = userEmail,

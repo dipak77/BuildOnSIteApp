@@ -121,6 +121,15 @@ fun SiteScreen(
     var partySearchQuery     by remember { mutableStateOf("") }
     var activeFilterSelected by remember { mutableStateOf(false) }
 
+    var txSearchQuery          by remember { mutableStateOf("") }
+    var txDatePreset           by remember { mutableStateOf("All") }
+    var txStartDate            by remember { mutableStateOf("") }
+    var txEndDate              by remember { mutableStateOf("") }
+    var showTxDateFilterDialog by remember { mutableStateOf(false) }
+
+    var partyDetailTimeFilter  by remember { mutableStateOf("All Time") }
+    var partyDetailHistoryTab  by remember { mutableStateOf("All") }
+
     var showAddPartyTxDialog by remember { mutableStateOf(false) }
     var partyTxType          by remember { mutableStateOf("Money Out") }
     var partyTxAmount        by remember { mutableStateOf("") }
@@ -135,6 +144,97 @@ fun SiteScreen(
         if (activeProjId == null) emptyList()
         else allTransactions.filter { it.projectId == activeProjId }
     }
+
+    val filteredWorkers = remember(allWorkers, partySearchQuery) {
+        allWorkers.filter {
+            it.name.contains(partySearchQuery, ignoreCase = true) ||
+            it.role.contains(partySearchQuery, ignoreCase = true)
+        }
+    }
+
+    val filteredTransactions = remember(projectTransactions, txSearchQuery, txDatePreset, txStartDate, txEndDate) {
+        var list = projectTransactions
+        if (txSearchQuery.isNotEmpty()) {
+            list = list.filter { tx ->
+                (tx.description?.contains(txSearchQuery, ignoreCase = true) == true) ||
+                (tx.category?.contains(txSearchQuery, ignoreCase = true) == true) ||
+                (tx.partyName?.contains(txSearchQuery, ignoreCase = true) == true) ||
+                (tx.reference?.contains(txSearchQuery, ignoreCase = true) == true) ||
+                (tx.paymentMethod?.contains(txSearchQuery, ignoreCase = true) == true) ||
+                tx.amount.toString().contains(txSearchQuery)
+            }
+        }
+        val bounds = if (txDatePreset == "Custom") {
+            if (txStartDate.isNotEmpty() && txEndDate.isNotEmpty()) Pair(txStartDate, txEndDate) else null
+        } else {
+            getPresetDateRange(txDatePreset)
+        }
+        if (bounds != null) {
+            val (start, end) = bounds
+            list = list.filter { it.date >= start && it.date <= end }
+        }
+        list
+    }
+
+    val filteredPartyTransactions = remember(projectTransactions, selectedPartyDetail, partyDetailHistoryTab, partyDetailTimeFilter) {
+        val party = selectedPartyDetail
+        if (party == null) emptyList()
+        else {
+            val matchedTxs = projectTransactions.filter { it.partyId == party.id || it.partyName == party.name }
+            val typeFiltered = when (partyDetailHistoryTab) {
+                "Received" -> matchedTxs.filter { it.type == "Money In" }
+                "Paid"     -> matchedTxs.filter { it.type == "Money Out" }
+                else       -> matchedTxs
+            }
+            if (partyDetailTimeFilter == "All Time") typeFiltered
+            else {
+                val format = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                val cal = java.util.Calendar.getInstance()
+                val today = cal.time
+                cal.time = today
+                cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+                cal.set(java.util.Calendar.MINUTE, 0)
+                cal.set(java.util.Calendar.SECOND, 0)
+                cal.set(java.util.Calendar.MILLISECOND, 0)
+                val startOfToday = cal.timeInMillis
+
+                val filterLimitTime = when (partyDetailTimeFilter) {
+                    "Today" -> startOfToday
+                    "Weekly" -> { cal.add(java.util.Calendar.DAY_OF_YEAR, -7); cal.timeInMillis }
+                    "2 Weeks" -> { cal.add(java.util.Calendar.DAY_OF_YEAR, -14); cal.timeInMillis }
+                    "3 Weeks" -> { cal.add(java.util.Calendar.DAY_OF_YEAR, -21); cal.timeInMillis }
+                    "Monthly" -> { cal.add(java.util.Calendar.MONTH, -1); cal.timeInMillis }
+                    else -> 0L
+                }
+
+                typeFiltered.filter { tx ->
+                    try {
+                        val d = format.parse(tx.date)
+                        if (d != null) {
+                            if (partyDetailTimeFilter == "Today") {
+                                d.time >= startOfToday
+                            } else {
+                                d.time >= filterLimitTime
+                            }
+                        } else true
+                    } catch (e: Exception) { true }
+                }
+            }
+        }
+    }
+
+    val activeDateRangeText = remember(txDatePreset, txStartDate, txEndDate) {
+        if (txDatePreset == "Custom") {
+            if (txStartDate.isNotEmpty() && txEndDate.isNotEmpty()) {
+                "$txStartDate to $txEndDate"
+            } else {
+                "Custom Range"
+            }
+        } else {
+            txDatePreset
+        }
+    }
+
 
     val navigateDay = { days: Int ->
         val cal = Calendar.getInstance()
@@ -243,7 +343,10 @@ fun SiteScreen(
                         partyTxAmount = ""; partyTxDesc = "Received funds"
                         showAddPartyTxDialog = true
                     },
-                    onAddTx = { viewModel.showTransactionDialog = true }
+                    onAddTx = { viewModel.showTransactionDialog = true },
+                    onShowPdf = { showPdfPreviewDialog = true },
+                    onHistoryTabChange = { partyDetailHistoryTab = it },
+                    onTimeFilterChange = { partyDetailTimeFilter = it }
                 )
 
                 else -> PremiumMainPage(
@@ -277,7 +380,12 @@ fun SiteScreen(
                         val rec = activeDateAttendance.find { r -> r.workerId == it.id }
                         inputOvertimeHours = rec?.overtimeHours?.toString() ?: "0.0"
                     },
-                    onShowPdf = { showPdfPreviewDialog = true }
+                    onShowPdf = { showPdfPreviewDialog = true },
+                    filteredTransactions = filteredTransactions,
+                    txSearchQuery = txSearchQuery,
+                    onTxSearchQueryChange = { txSearchQuery = it },
+                    txDatePreset = txDatePreset,
+                    onOpenDateFilter = { showTxDateFilterDialog = true }
                 )
             }
         }
@@ -360,12 +468,53 @@ fun SiteScreen(
         )
     }
 
+    if (showTxDateFilterDialog) {
+        ReportFilterDialog(
+            visible = showTxDateFilterDialog,
+            onDismiss = { showTxDateFilterDialog = false },
+            dark = dark,
+            preset = txDatePreset,
+            onPresetChange = { txDatePreset = it },
+            startDate = txStartDate,
+            onStartDateChange = { txStartDate = it },
+            endDate = txEndDate,
+            onEndDateChange = { txEndDate = it },
+            onApply = { showTxDateFilterDialog = false }
+        )
+    }
+
     if (showPdfPreviewDialog) {
-        PremiumPdfDialog(
+        val txsForReport = if (selectedPartyDetail != null) {
+            filteredPartyTransactions
+        } else if (activeSiteTab == "Transaction") {
+            filteredTransactions
+        } else {
+            projectTransactions
+        }
+
+        val dateRangeTextForReport = if (selectedPartyDetail != null) {
+            partyDetailTimeFilter
+        } else if (activeSiteTab == "Transaction") {
+            activeDateRangeText
+        } else {
+            "All Time"
+        }
+
+        val workersForReport = if (activeSiteTab == "Party") {
+            filteredWorkers
+        } else {
+            allWorkers
+        }
+
+        PremiumReportPreviewDialog(
             dark = dark,
             selectedTxDetail = selectedTxDetail,
             selectedPartyDetail = selectedPartyDetail,
-            context = context,
+            projectTransactions = txsForReport,
+            allWorkers = workersForReport,
+            currentProject = currentProject,
+            viewModel = viewModel,
+            dateRangeText = dateRangeTextForReport,
             onDismiss = { showPdfPreviewDialog = false }
         )
     }
@@ -402,7 +551,12 @@ private fun PremiumMainPage(
     onSelectParty: (Worker) -> Unit,
     onSelectTx: (Transaction) -> Unit,
     onSelectWorkerAttendance: (Worker) -> Unit,
-    onShowPdf: () -> Unit
+    onShowPdf: () -> Unit,
+    filteredTransactions: List<Transaction>,
+    txSearchQuery: String,
+    onTxSearchQueryChange: (String) -> Unit,
+    txDatePreset: String,
+    onOpenDateFilter: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
 
@@ -446,7 +600,11 @@ private fun PremiumMainPage(
                     "Transaction" -> TransactionTab(
                         dark = dark,
                         viewModel = viewModel,
-                        projectTransactions = projectTransactions,
+                        projectTransactions = filteredTransactions,
+                        txSearchQuery = txSearchQuery,
+                        onTxSearchQueryChange = onTxSearchQueryChange,
+                        txDatePreset = txDatePreset,
+                        onOpenDateFilter = onOpenDateFilter,
                         onSelectTx = onSelectTx
                     )
                     "Site" -> SiteInfoTab(
@@ -901,6 +1059,10 @@ private fun TransactionTab(
     dark: Boolean,
     viewModel: MainViewModel,
     projectTransactions: List<Transaction>,
+    txSearchQuery: String,
+    onTxSearchQueryChange: (String) -> Unit,
+    txDatePreset: String,
+    onOpenDateFilter: () -> Unit,
     onSelectTx: (Transaction) -> Unit
 ) {
     val totalIn  = projectTransactions.filter { it.type == "Money In" }.sumOf { it.amount }
@@ -918,9 +1080,9 @@ private fun TransactionTab(
                     .fillMaxWidth()
                     .background(
                         if (dark)
-                            Brush.horizontalGradient(listOf(Color(0xFF0D1B3E), Color(0xFF111827)))
+                          Brush.horizontalGradient(listOf(Color(0xFF0D1B3E), Color(0xFF111827)))
                         else
-                            Brush.horizontalGradient(listOf(Color(0xFFEEF2FF), Color(0xFFF8FAFF)))
+                          Brush.horizontalGradient(listOf(Color(0xFFEEF2FF), Color(0xFFF8FAFF)))
                     )
                     .padding(horizontal = 18.dp, vertical = 14.dp)
             ) {
@@ -947,9 +1109,54 @@ private fun TransactionTab(
                 }
             }
 
+            // Search and filter row
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    PremiumSearchBar(
+                        value = txSearchQuery,
+                        onValueChange = onTxSearchQueryChange,
+                        dark = dark,
+                        placeholder = "Search description, party..."
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (dark) Color(0xFF1E2D4A).copy(alpha = 0.6f) else Color(0xFFE2E8F4))
+                        .border(1.dp, if (dark) Color(0xFF2D3F5E) else Color(0xFFCBD5E1), RoundedCornerShape(10.dp))
+                        .clickable { onOpenDateFilter() }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CalendarToday,
+                        contentDescription = "Date Filter",
+                        tint = EmeraldGlow,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = if (txDatePreset == "All") "All Dates" else txDatePreset,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (dark) Color.White else Color(0xFF1E293B)
+                    )
+                }
+            }
+
             if (projectTransactions.isEmpty()) {
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    PremiumEmptyState(dark = dark, message = "No transactions logged yet")
+                    val emptyMessage = if (txSearchQuery.isNotEmpty() || txDatePreset != "All") {
+                        "No matching transactions found"
+                    } else {
+                        "No transactions logged yet"
+                    }
+                    PremiumEmptyState(dark = dark, message = emptyMessage)
                 }
             } else {
                 LazyColumn(
@@ -1366,7 +1573,10 @@ private fun PremiumPartyDetailPage(
     onSelectTx: (Transaction) -> Unit,
     onIPaid: () -> Unit,
     onIReceived: () -> Unit,
-    onAddTx: () -> Unit
+    onAddTx: () -> Unit,
+    onShowPdf: () -> Unit,
+    onHistoryTabChange: (String) -> Unit,
+    onTimeFilterChange: (String) -> Unit
 ) {
     val matchedTxs = remember(projectTransactions, worker) {
         projectTransactions.filter { it.partyId == worker.id || it.partyName == worker.name }
@@ -1379,12 +1589,53 @@ private fun PremiumPartyDetailPage(
     val paidCount     = remember(matchedTxs) { matchedTxs.count { it.type == "Money Out" } }
 
     var selectedHistoryTab by remember { mutableStateOf("All") }
+    var selectedTimeFilter by remember { mutableStateOf("All Time") }
+    var showTimeFilterMenu by remember { mutableStateOf(false) }
 
-    val historyTxs = remember(matchedTxs, selectedHistoryTab) {
-        when (selectedHistoryTab) {
+    LaunchedEffect(selectedHistoryTab, selectedTimeFilter) {
+        onHistoryTabChange(selectedHistoryTab)
+        onTimeFilterChange(selectedTimeFilter)
+    }
+
+    val historyTxs = remember(matchedTxs, selectedHistoryTab, selectedTimeFilter) {
+        val typeFiltered = when (selectedHistoryTab) {
             "Received" -> matchedTxs.filter { it.type == "Money In" }
             "Paid"     -> matchedTxs.filter { it.type == "Money Out" }
             else       -> matchedTxs
+        }
+        if (selectedTimeFilter == "All Time") return@remember typeFiltered
+        
+        val format = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+        val cal = java.util.Calendar.getInstance()
+        val today = cal.time
+        
+        cal.time = today
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        cal.set(java.util.Calendar.MINUTE, 0)
+        cal.set(java.util.Calendar.SECOND, 0)
+        cal.set(java.util.Calendar.MILLISECOND, 0)
+        val startOfToday = cal.timeInMillis
+
+        val filterLimitTime = when (selectedTimeFilter) {
+            "Today" -> startOfToday
+            "Weekly" -> { cal.add(java.util.Calendar.DAY_OF_YEAR, -7); cal.timeInMillis }
+            "2 Weeks" -> { cal.add(java.util.Calendar.DAY_OF_YEAR, -14); cal.timeInMillis }
+            "3 Weeks" -> { cal.add(java.util.Calendar.DAY_OF_YEAR, -21); cal.timeInMillis }
+            "Monthly" -> { cal.add(java.util.Calendar.MONTH, -1); cal.timeInMillis }
+            else -> 0L
+        }
+
+        typeFiltered.filter { tx ->
+            try {
+                val d = format.parse(tx.date)
+                if (d != null) {
+                    if (selectedTimeFilter == "Today") {
+                        d.time >= startOfToday
+                    } else {
+                        d.time >= filterLimitTime
+                    }
+                } else true
+            } catch (e: Exception) { true }
         }
     }
 
@@ -1437,22 +1688,9 @@ private fun PremiumPartyDetailPage(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 HeaderActionButton(
-                    icon = Icons.Default.ThumbUp,
+                    icon = Icons.Default.Description,
                     dark = dark,
-                    onClick = {
-                        val amountStr = formatIndianRupees(diff.absoluteValue)
-                        val statusText = if (diff >= 0) "Advance Paid" else "Pending to Pay"
-                        val pdfFile = PdfUtils.generateBalanceReviewPdfFile(
-                            context = context,
-                            partyName = worker.name,
-                            projectName = currentProject?.name ?: "Treasure Garden",
-                            balance = amountStr,
-                            statusText = statusText,
-                            received = formatIndianRupees(totalReceived),
-                            paid = formatIndianRupees(totalPaid)
-                        )
-                        PdfUtils.sharePdfFile(context, pdfFile, "Share Balance Review")
-                    }
+                    onClick = onShowPdf
                 )
                 HeaderActionButton(
                     icon = Icons.Default.GetApp,
@@ -1659,22 +1897,41 @@ private fun PremiumPartyDetailPage(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.FilterList,
-                    contentDescription = "Filter",
-                    tint = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
-                    modifier = Modifier.size(16.dp)
-                )
-                Text(
-                    text = "Filter",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B)
-                )
+            Box {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.clickable { showTimeFilterMenu = true }.padding(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FilterList,
+                        contentDescription = "Filter",
+                        tint = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Filter: $selectedTimeFilter",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                    )
+                }
+                DropdownMenu(
+                    expanded = showTimeFilterMenu,
+                    onDismissRequest = { showTimeFilterMenu = false },
+                    modifier = Modifier.background(if (dark) Color(0xFF1E293B) else Color.White)
+                ) {
+                    val opts = listOf("All Time", "Today", "Weekly", "2 Weeks", "3 Weeks", "Monthly")
+                    opts.forEach { opt ->
+                        DropdownMenuItem(
+                            text = { Text(opt, color = if (dark) Color.White else Color.Black) },
+                            onClick = {
+                                selectedTimeFilter = opt
+                                showTimeFilterMenu = false
+                            }
+                        )
+                    }
+                }
             }
 
             Text(
@@ -2390,16 +2647,12 @@ private fun TransactionCardLayout(
                     text = line1,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = textPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    color = textPrimary
                 )
                 Text(
                     text = line2,
                     fontSize = 12.sp,
-                    color = textSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    color = textSecondary
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(
@@ -2425,9 +2678,7 @@ private fun TransactionCardLayout(
                         Text(
                             text = "·  ${tx.description}",
                             fontSize = 11.sp,
-                            color = textSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            color = textSecondary
                         )
                     }
                 }
@@ -3226,181 +3477,7 @@ private fun PremiumAddTransactionDialog(
     }
 }
 
-@Composable
-private fun PremiumPdfDialog(
-    dark: Boolean,
-    selectedTxDetail: Transaction?,
-    selectedPartyDetail: Worker?,
-    context: Context,
-    onDismiss: () -> Unit
-) {
-    val amount   = selectedTxDetail?.amount ?: 1000.0
-    val name     = selectedTxDetail?.partyName ?: selectedPartyDetail?.name ?: "Tejas Harane"
-    val date     = selectedTxDetail?.date ?: "2026-05-27"
-    val txId     = selectedTxDetail?.id ?: 1024
 
-    GlassModalDialog(
-        visible = true, onDismiss = onDismiss,
-        title = "PDF Receipt Preview",
-        darkTheme = dark, glowColor = AquaGlow,
-        scrollable = true
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Simulated PDF Sheet
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.White)
-                    .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
-                    .padding(24.dp)
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Header
-                    Box(
-                        modifier = Modifier.fillMaxWidth()
-                            .background(
-                                Brush.linearGradient(listOf(Color(0xFF0A0E1A), Color(0xFF0D1B3E))),
-                                RoundedCornerShape(8.dp)
-                            )
-                            .padding(vertical = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("CONSTRUCT PRO INC.", fontSize = 12.sp,
-                                color = Color.White, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                            Text("OFFICIAL PAYMENT RECEIPT", fontSize = 9.sp,
-                                color = Color(0xFF00D4FF), fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
-                        }
-                    }
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Receipt #TX-$txId", fontSize = 9.sp, color = Color(0xFF64748B))
-                        Text("Date: $date", fontSize = 9.sp, color = Color(0xFF64748B))
-                    }
-
-                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFEEF2FF)))
-
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("PAID TO / FROM", fontSize = 8.sp, color = Color(0xFF94A3B8), letterSpacing = 1.sp)
-                        Text(name, fontSize = 18.sp, color = Color(0xFF1E293B), fontWeight = FontWeight.Black)
-                    }
-
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("PRINCIPAL SUM", fontSize = 8.sp, color = Color(0xFF94A3B8), letterSpacing = 1.sp)
-                        Text(
-                            formatIndianRupees(amount),
-                            style = TextStyle(
-                                brush = Brush.linearGradient(listOf(Color(0xFF10B981), Color(0xFF059669))),
-                                fontSize = 28.sp, fontWeight = FontWeight.Black
-                            )
-                        )
-                    }
-
-                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFEEF2FF)))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Box(modifier = Modifier.size(8.dp).background(Color(0xFF10B981), CircleShape))
-                        Text("Digitally Verified & Authenticated", fontSize = 9.sp,
-                            color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-
-            // Actions
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .border(1.dp, RoseGlow.copy(0.4f), RoundedCornerShape(12.dp))
-                        .background(RoseGlow.copy(0.08f))
-                        .clickable(onClick = onDismiss)
-                        .padding(vertical = 12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("CLOSE", color = RoseGlow, fontWeight = FontWeight.Black, fontSize = 12.sp)
-                }
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(GradientAqua)
-                        .clickable {
-                            try {
-                                val pdfFile = PdfUtils.generateReceiptPdfFile(
-                                    context = context,
-                                    txId = txId,
-                                    name = name,
-                                    amount = formatIndianRupees(amount),
-                                    date = date
-                                )
-                                val fileName = pdfFile.name
-                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                                    val contentValues = android.content.ContentValues().apply {
-                                        put(android.provider.MediaStore.Downloads.DISPLAY_NAME, fileName)
-                                        put(android.provider.MediaStore.Downloads.MIME_TYPE, "application/pdf")
-                                        put(android.provider.MediaStore.Downloads.RELATIVE_PATH,
-                                            android.os.Environment.DIRECTORY_DOWNLOADS + "/ConstructPro")
-                                    }
-                                    val uri = context.contentResolver.insert(
-                                        android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-                                        contentValues
-                                    )
-                                    if (uri != null) {
-                                        context.contentResolver.openOutputStream(uri)?.use { out ->
-                                            pdfFile.inputStream().use { input -> input.copyTo(out) }
-                                        }
-                                        Toast.makeText(context,
-                                            "Saved to Downloads/ConstructPro/$fileName",
-                                            Toast.LENGTH_LONG).show()
-                                    } else {
-                                        Toast.makeText(context,
-                                            "Download failed: could not create file",
-                                            Toast.LENGTH_LONG).show()
-                                    }
-                                } else {
-                                    // Pre-Q fallback: save directly to Downloads
-                                    val dir = android.os.Environment.getExternalStoragePublicDirectory(
-                                        android.os.Environment.DIRECTORY_DOWNLOADS
-                                    )
-                                    val folder = java.io.File(dir, "ConstructPro").also { it.mkdirs() }
-                                    val dest = java.io.File(folder, fileName)
-                                    pdfFile.copyTo(dest, overwrite = true)
-                                    Toast.makeText(context,
-                                        "Saved to Downloads/ConstructPro/$fileName",
-                                        Toast.LENGTH_LONG).show()
-                                }
-                            } catch (e: Exception) {
-                                Toast.makeText(context,
-                                    "Download failed: ${e.localizedMessage}",
-                                    Toast.LENGTH_LONG).show()
-                            }
-                            onDismiss()
-                        }
-                        .padding(vertical = 12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Icon(Icons.Default.Download, null, tint = Color.White, modifier = Modifier.size(14.dp))
-                        Text("DOWNLOAD", color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
-                    }
-                }
-            }
-        }
-    }
-}
 
 // ─────────────────────────────────────────────
 // DETAIL ROW (kept for backward compat)

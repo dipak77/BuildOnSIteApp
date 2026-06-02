@@ -1,5 +1,6 @@
 package com.example.ui
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -16,7 +18,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -25,6 +29,24 @@ import com.example.data.Project
 import com.example.data.Worker
 import com.example.data.Transaction
 import com.example.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
+import kotlin.math.absoluteValue
+
+// ─────────────────────────────────────────────
+// PREMIUM THEME COMPATIBILITY GETTERS
+// ─────────────────────────────────────────────
+private val AquaGlow @Composable get() = MaterialTheme.colorScheme.ext.accentPrimary
+private val VioletGlow @Composable get() = MaterialTheme.colorScheme.ext.accentSecondary
+private val EmeraldGlow @Composable get() = MaterialTheme.colorScheme.ext.accentSuccess
+private val RoseGlow @Composable get() = MaterialTheme.colorScheme.ext.accentDanger
+
+private val GradientAqua @Composable get() = Brush.linearGradient(
+    if (MaterialTheme.colorScheme.ext.isDark) listOf(NeonCyan, NeonCyanDim)
+    else listOf(LightCyan, Color(0xFF0284C7))
+)
+
 
 @Composable
 fun QuickAddDialog(
@@ -1073,3 +1095,1252 @@ private fun TogglePill(
         )
     }
 }
+
+@Composable
+fun PremiumReportPreviewDialog(
+    dark: Boolean,
+    selectedTxDetail: Transaction?,
+    selectedPartyDetail: Worker?,
+    projectTransactions: List<Transaction>,
+    allWorkers: List<Worker>,
+    currentProject: Project?,
+    viewModel: MainViewModel,
+    dateRangeText: String = "All Time",
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    var reportType by remember {
+        mutableStateOf(
+            if (selectedTxDetail != null) "Receipt"
+            else if (selectedPartyDetail != null) "Party Ledger"
+            else "Party Balance"
+        )
+    }
+
+    val projectName = currentProject?.name ?: "Treasure Garden"
+    val siteAddress = currentProject?.location ?: "Treasure Garden Road Site, India"
+    val generatedBy = viewModel.userSession.value?.displayName ?: "Tejas Harane"
+
+    val textNavy = Color(0xFF0F172A)
+    val textGray = Color(0xFF64748B)
+    val dividerColor = Color(0xFFE2E8F0)
+
+    GlassModalDialog(
+        visible = true,
+        onDismiss = onDismiss,
+        title = "", 
+        darkTheme = dark,
+        glowColor = NeonCyan,
+        scrollable = false 
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Header with custom title/selector and close button
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(NeonCyan))
+                    
+                    var showDropdown by remember { mutableStateOf(false) }
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { showDropdown = true }
+                            .background(if (dark) Color(0xFF1E2D4A) else Color(0xFFE2E8F4))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val displayText = when (reportType) {
+                            "Receipt" -> "Payment Receipt"
+                            "Party Ledger" -> "Party Ledger Report"
+                            "Party Transactions" -> "Party Transactions Report"
+                            "Party Balance" -> "Party Balance Report"
+                            "Summary" -> "Payment Summary Report"
+                            "Transactions" -> "Payment Transactions Report"
+                            else -> "Report"
+                        }
+                        Text(
+                            text = "$displayText ▼",
+                            color = if (dark) Color.White else Color(0xFF1E293B),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        DropdownMenu(
+                            expanded = showDropdown,
+                            onDismissRequest = { showDropdown = false }
+                        ) {
+                            if (selectedTxDetail != null) {
+                                DropdownMenuItem(
+                                    text = { Text("Payment Receipt") },
+                                    onClick = { reportType = "Receipt"; showDropdown = false }
+                                )
+                            }
+                            if (selectedPartyDetail != null) {
+                                DropdownMenuItem(
+                                    text = { Text("Party Ledger Report") },
+                                    onClick = { reportType = "Party Ledger"; showDropdown = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Party Transactions Report") },
+                                    onClick = { reportType = "Party Transactions"; showDropdown = false }
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text("Party Balance Report") },
+                                onClick = { reportType = "Party Balance"; showDropdown = false }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Payment Summary Report") },
+                                onClick = { reportType = "Summary"; showDropdown = false }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Payment Transactions Report") },
+                                onClick = { reportType = "Transactions"; showDropdown = false }
+                            )
+                        }
+                    }
+                }
+                
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(32.dp).clip(CircleShape).background(if (dark) Color(0x1AFFFFFF) else Color(0x0D000000))
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = "Close", tint = if (dark) TextSecondary else TextSecondaryLight, modifier = Modifier.size(16.dp))
+                }
+            }
+
+            Text(
+                text = "Page 1 of 1",
+                fontSize = 11.sp,
+                color = if (dark) TextSecondary else TextSecondaryLight,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+
+            // Scrollable simulated A4 sheet preview
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(380.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.White)
+                    .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp)
+            ) {
+                when (reportType) {
+                    "Receipt" -> {
+                        val rxAmount = selectedTxDetail?.amount ?: 1000.0
+                        val rxName = selectedTxDetail?.partyName ?: selectedPartyDetail?.name ?: "Tejas Harane"
+                        val rxDate = selectedTxDetail?.date ?: "2026-05-27"
+                        val rxId = selectedTxDetail?.id ?: 1024
+                        val rxMethod = selectedTxDetail?.paymentMethod ?: "Cash"
+                        val rxRemark = selectedTxDetail?.description ?: ""
+                        val rxIsMoneyIn = selectedTxDetail?.type == "Money In"
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Header
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Column {
+                                    Text("Company", fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                    Text("Pune", fontSize = 8.sp, color = textGray)
+                                    Text("GST : N/A", fontSize = 8.sp, color = textGray)
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text("Payment Receipt", fontSize = 12.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text("Payment Date:", fontSize = 8.sp, color = textGray)
+                                        Text(rxDate, fontSize = 8.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                            Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(dividerColor))
+                            
+                            // Project
+                            Column {
+                                Text("Project:", fontSize = 8.sp, color = textGray)
+                                Text(projectName, fontSize = 9.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                            }
+                            
+                            // To
+                            Column {
+                                Text("To:", fontSize = 8.sp, color = textGray)
+                                Text(rxName, fontSize = 9.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                Text("GST: NA", fontSize = 8.sp, color = textGray)
+                            }
+                            
+                            // Subject
+                            Column {
+                                Text("Subject:", fontSize = 8.sp, color = textGray)
+                                Text(if (rxIsMoneyIn) "Payment In Receipt" else "Payment Out Receipt", fontSize = 9.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                            }
+                            
+                            // Body
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("Dear Sir/Madam,", fontSize = 9.sp, color = textNavy)
+                                Text("We confirm ${if (rxIsMoneyIn) "receipt" else "disbursal"} of below payment on $rxDate.", fontSize = 9.sp, color = textNavy)
+                            }
+                            
+                            // Table
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(0.5.dp, Color(0xFFCBD5E1))
+                            ) {
+                                val borderMod = Modifier.border(0.25.dp, Color(0xFFCBD5E1))
+                                
+                                // Amount Row
+                                Row(Modifier.fillMaxWidth().height(24.dp)) {
+                                    Box(Modifier.weight(1.2f).fillMaxHeight().then(borderMod).padding(horizontal = 6.dp, vertical = 4.dp)) {
+                                        Text("Amount", fontSize = 8.sp, color = Color(0xFF475569))
+                                    }
+                                    Box(Modifier.weight(2.8f).fillMaxHeight().then(borderMod).padding(horizontal = 6.dp, vertical = 4.dp), contentAlignment = Alignment.CenterEnd) {
+                                        Text(formatIndianRupees(rxAmount), fontSize = 8.sp, color = if (rxIsMoneyIn) Color(0xFF15803D) else Color(0xFFB91C1C), fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                
+                                // Payment Date Row
+                                Row(Modifier.fillMaxWidth().height(24.dp)) {
+                                    Box(Modifier.weight(1.2f).fillMaxHeight().then(borderMod).padding(horizontal = 6.dp, vertical = 4.dp)) {
+                                        Text("Payment Date", fontSize = 8.sp, color = Color(0xFF475569))
+                                    }
+                                    Box(Modifier.weight(2.8f).fillMaxHeight().then(borderMod).padding(horizontal = 6.dp, vertical = 4.dp)) {
+                                        Text(rxDate, fontSize = 8.sp, color = textNavy)
+                                    }
+                                }
+                                
+                                // Payment Method Row
+                                Row(Modifier.fillMaxWidth().height(24.dp)) {
+                                    Box(Modifier.weight(1.2f).fillMaxHeight().then(borderMod).padding(horizontal = 6.dp, vertical = 4.dp)) {
+                                        Text("Payment Method", fontSize = 8.sp, color = Color(0xFF475569))
+                                    }
+                                    Box(Modifier.weight(2.8f).fillMaxHeight().then(borderMod).padding(horizontal = 6.dp, vertical = 4.dp)) {
+                                        Text(rxMethod, fontSize = 8.sp, color = textNavy)
+                                    }
+                                }
+                                
+                                // Remark Row
+                                Row(Modifier.fillMaxWidth().height(24.dp)) {
+                                    Box(Modifier.weight(1.2f).fillMaxHeight().then(borderMod).padding(horizontal = 6.dp, vertical = 4.dp)) {
+                                        Text("Remark", fontSize = 8.sp, color = Color(0xFF475569))
+                                    }
+                                    Box(Modifier.weight(2.8f).fillMaxHeight().then(borderMod).padding(horizontal = 6.dp, vertical = 4.dp)) {
+                                        Text(rxRemark, fontSize = 8.sp, color = textNavy)
+                                    }
+                                }
+                                
+                                // Attachment Row
+                                Row(Modifier.fillMaxWidth().height(24.dp)) {
+                                    Box(Modifier.weight(1.2f).fillMaxHeight().then(borderMod).padding(horizontal = 6.dp, vertical = 4.dp)) {
+                                        Text("Attachment", fontSize = 8.sp, color = Color(0xFF475569))
+                                    }
+                                    Box(Modifier.weight(2.8f).fillMaxHeight().then(borderMod).padding(horizontal = 6.dp, vertical = 4.dp)) {
+                                        Text("", fontSize = 8.sp, color = textNavy)
+                                    }
+                                }
+                            }
+                            
+                            Spacer(Modifier.height(4.dp))
+                            Text("Thank you for your services . Please contact us for any clarifications.", fontSize = 7.sp, color = textGray)
+                            
+                            Spacer(Modifier.height(16.dp))
+                            Text("Authorised Signatory", fontSize = 8.sp, color = textNavy, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.End))
+                        }
+                    }
+                    "Party Ledger" -> {
+                        val party = selectedPartyDetail ?: allWorkers.firstOrNull()
+                        if (party != null) {
+                            val matchedTxs = projectTransactions.filter { it.partyId == party.id || it.partyName == party.name }
+                            val totalIn = matchedTxs.filter { it.type == "Money In" }.sumOf { it.amount }
+                            val totalOut = matchedTxs.filter { it.type == "Money Out" }.sumOf { it.amount }
+                            val balance = totalIn - totalOut
+
+                            val isClient = party.partyType == "Client" || party.partyType == "Investor"
+                            val payments = if (isClient) totalIn else totalOut
+                            val salesExpenses = if (isClient) totalOut else totalIn
+
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                // Header
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Column {
+                                        Text("Company", fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                        Text("Pune", fontSize = 8.sp, color = textGray)
+                                        Text("GST : N/A", fontSize = 8.sp, color = textGray)
+                                    }
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text("Party Ledger Report", fontSize = 12.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                        Text("Generated By: $generatedBy", fontSize = 8.sp, color = textGray)
+                                        Text("Date Range: $dateRangeText", fontSize = 8.sp, color = textGray)
+                                    }
+                                }
+                                Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(dividerColor))
+
+                                // Project Box
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFFF1F5F9), RoundedCornerShape(6.dp))
+                                        .padding(8.dp)
+                                ) {
+                                    Row {
+                                        Text("Project: ", fontSize = 8.sp, color = Color(0xFF1E293B), fontWeight = FontWeight.Bold)
+                                        Text(projectName, fontSize = 8.sp, color = textNavy)
+                                    }
+                                    Row {
+                                        Text("Site Address: ", fontSize = 8.sp, color = Color(0xFF1E293B), fontWeight = FontWeight.Bold)
+                                        Text(siteAddress.replace("\n", " "), fontSize = 8.sp, color = textNavy)
+                                    }
+                                }
+
+                                // Party details row
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .border(0.5.dp, dividerColor, RoundedCornerShape(4.dp))
+                                        .padding(6.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row {
+                                        Text("Party Name: ", fontSize = 9.sp, color = textGray)
+                                        Text(party.name, fontSize = 9.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                    }
+                                    Row {
+                                        Text("Type: ", fontSize = 9.sp, color = textGray)
+                                        Text(party.partyType, fontSize = 9.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+
+                                // Summary cards row
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .background(Color(0xFFF1F5F9), RoundedCornerShape(4.dp))
+                                            .padding(6.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(if (isClient) "RECEIVED" else "PAID TO", fontSize = 7.sp, color = textGray, fontWeight = FontWeight.Bold)
+                                        Text(formatIndianRupees(payments), fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                    }
+                                    Column(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .background(Color(0xFFF1F5F9), RoundedCornerShape(4.dp))
+                                            .padding(6.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(if (isClient) "TOTAL BILLING" else "TOTAL WORK", fontSize = 7.sp, color = textGray, fontWeight = FontWeight.Bold)
+                                        Text(formatIndianRupees(salesExpenses), fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                    }
+                                    
+                                    val balStatus = if (balance >= 0) "Advance" else "Pending"
+                                    val balColor = if (balance >= 0) Color(0xFF15803D) else Color(0xFFB91C1C)
+                                    val balBg = if (balance >= 0) Color(0xFFDCFCE7) else Color(0xFFFEE2E2)
+                                    Column(
+                                        modifier = Modifier
+                                            .weight(1.2f)
+                                            .background(balBg, RoundedCornerShape(4.dp))
+                                            .padding(6.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text("NET BALANCE", fontSize = 7.sp, color = balColor, fontWeight = FontWeight.Bold)
+                                        Text(formatIndianRupees(kotlin.math.abs(balance)), fontSize = 10.sp, color = balColor, fontWeight = FontWeight.Bold)
+                                        Text(balStatus, fontSize = 6.sp, color = balColor)
+                                    }
+                                }
+
+                                // Transactions Table
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Row(modifier = Modifier.fillMaxWidth().background(Color(0xFF1E293B)).padding(4.dp)) {
+                                        Text("S.No", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.5f))
+                                        Text("Date", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                        Text("Type", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                        Text("Method", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.2f))
+                                        Text("Amount", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
+                                    }
+                                    if (matchedTxs.isEmpty()) {
+                                        Text("No transactions found.", fontSize = 8.sp, color = textGray, modifier = Modifier.padding(8.dp).align(Alignment.CenterHorizontally))
+                                    } else {
+                                        matchedTxs.forEachIndexed { idx, tx ->
+                                            val isIn = tx.type == "Money In"
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth().background(if (idx % 2 == 0) Color(0xFFF8FAFC) else Color.White).padding(4.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text((idx + 1).toString(), fontSize = 8.sp, color = textNavy, modifier = Modifier.weight(0.5f))
+                                                Text(tx.date, fontSize = 8.sp, color = textNavy, modifier = Modifier.weight(1f))
+                                                Text(tx.type, fontSize = 8.sp, color = if (isIn) Color(0xFF15803D) else Color(0xFFB91C1C), modifier = Modifier.weight(1f))
+                                                Text(tx.paymentMethod, fontSize = 8.sp, color = textNavy, modifier = Modifier.weight(1.2f))
+                                                Text(String.format(Locale.US, "%,.2f", tx.amount), fontSize = 8.sp, color = if (isIn) Color(0xFF15803D) else Color(0xFFB91C1C), fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
+                                            }
+                                            Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(dividerColor))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    "Party Transactions" -> {
+                        val party = selectedPartyDetail ?: allWorkers.firstOrNull()
+                        if (party != null) {
+                            val matchedTxs = projectTransactions.filter { it.partyId == party.id || it.partyName == party.name }
+                            val totalIn = matchedTxs.filter { it.type == "Money In" }.sumOf { it.amount }
+                            val totalOut = matchedTxs.filter { it.type == "Money Out" }.sumOf { it.amount }
+                            val balance = totalIn - totalOut
+
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                // Header
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Column {
+                                        Text("Company", fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                        Text("Pune", fontSize = 8.sp, color = textGray)
+                                        Text("GST : N/A", fontSize = 8.sp, color = textGray)
+                                    }
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text("Party Transactions", fontSize = 12.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                        Text("Generated By: $generatedBy", fontSize = 8.sp, color = textGray)
+                                        Text("Date Range: $dateRangeText", fontSize = 8.sp, color = textGray)
+                                    }
+                                }
+                                Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(dividerColor))
+
+                                // Project Box
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFFF1F5F9), RoundedCornerShape(6.dp))
+                                        .padding(8.dp)
+                                ) {
+                                    Row {
+                                        Text("Project: ", fontSize = 8.sp, color = Color(0xFF1E293B), fontWeight = FontWeight.Bold)
+                                        Text(projectName, fontSize = 8.sp, color = textNavy)
+                                    }
+                                    Row {
+                                        Text("Site Address: ", fontSize = 8.sp, color = Color(0xFF1E293B), fontWeight = FontWeight.Bold)
+                                        Text(siteAddress.replace("\n", " "), fontSize = 8.sp, color = textNavy)
+                                    }
+                                }
+
+                                // Party details row
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .border(0.5.dp, dividerColor, RoundedCornerShape(4.dp))
+                                        .padding(6.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row {
+                                        Text("Party Name: ", fontSize = 9.sp, color = textGray)
+                                        Text(party.name, fontSize = 9.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                    }
+                                    Row {
+                                        Text("Type: ", fontSize = 9.sp, color = textGray)
+                                        Text(party.partyType, fontSize = 9.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+
+                                // Stats row
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFFF1F5F9))
+                                        .padding(6.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Total In: ${String.format(Locale.US, "%,.2f", totalIn)}", fontSize = 8.sp, color = Color(0xFF15803D), fontWeight = FontWeight.Bold)
+                                    Text("Total Out: ${String.format(Locale.US, "%,.2f", totalOut)}", fontSize = 8.sp, color = Color(0xFFB91C1C), fontWeight = FontWeight.Bold)
+                                    Text("Balance: ${String.format(Locale.US, "%,.2f", balance)}", fontSize = 8.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                }
+
+                                // Table
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Row(modifier = Modifier.fillMaxWidth().background(Color(0xFF1E293B)).padding(4.dp)) {
+                                        Text("Date", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                        Text("Sender", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.2f))
+                                        Text("Receiver", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.2f))
+                                        Text("Amount", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
+                                        Text("Balance", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
+                                    }
+                                    
+                                    val sorted = matchedTxs.sortedBy { it.date }
+                                    var bal = 0.0
+                                    if (sorted.isEmpty()) {
+                                        Text("No transactions found.", fontSize = 8.sp, color = textGray, modifier = Modifier.padding(8.dp).align(Alignment.CenterHorizontally))
+                                    } else {
+                                        sorted.forEachIndexed { idx, tx ->
+                                            val isIn = tx.type == "Money In"
+                                            bal += if (isIn) tx.amount else -tx.amount
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth().background(if (idx % 2 == 0) Color(0xFFF8FAFC) else Color.White).padding(4.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(tx.date, fontSize = 8.sp, color = textNavy, modifier = Modifier.weight(1f))
+                                                
+                                                val sender = if (isIn) (tx.partyName ?: "Client") else "Company"
+                                                Text(sender, fontSize = 8.sp, color = textNavy, modifier = Modifier.weight(1.2f))
+                                                
+                                                val receiver = if (!isIn) (tx.partyName ?: "Staff") else "Company"
+                                                Text(receiver, fontSize = 8.sp, color = textNavy, modifier = Modifier.weight(1.2f))
+                                                
+                                                val amtColor = if (isIn) Color(0xFF15803D) else Color(0xFFB91C1C)
+                                                Text(String.format(Locale.US, "%,.2f", tx.amount), fontSize = 8.sp, color = amtColor, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
+                                                
+                                                Text(String.format(Locale.US, "%,.2f", bal), fontSize = 8.sp, color = textNavy, textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
+                                            }
+                                            Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(dividerColor))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    "Party Balance" -> {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Column {
+                                    Text("Company", fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                    Text("Pune", fontSize = 8.sp, color = textGray)
+                                    Text("GST : N/A", fontSize = 8.sp, color = textGray)
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text("Party Balance Report", fontSize = 12.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                    Text("Generated By: $generatedBy", fontSize = 8.sp, color = textGray)
+                                    Text("Date Range: $dateRangeText", fontSize = 8.sp, color = textGray)
+                                }
+                            }
+                            Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(dividerColor))
+                            
+                            // Project Box
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFFF1F5F9), RoundedCornerShape(6.dp))
+                                    .padding(8.dp)
+                            ) {
+                                Row {
+                                    Text("Project: ", fontSize = 8.sp, color = Color(0xFF1E293B), fontWeight = FontWeight.Bold)
+                                    Text(projectName, fontSize = 8.sp, color = textNavy)
+                                }
+                                Row {
+                                    Text("Site Address: ", fontSize = 8.sp, color = Color(0xFF1E293B), fontWeight = FontWeight.Bold)
+                                    Text(siteAddress.replace("\n", " "), fontSize = 8.sp, color = textNavy)
+                                }
+                            }
+                            
+                            Spacer(Modifier.height(4.dp))
+                            
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().background(Color(0xFF1E293B)).padding(6.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Party Name", fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.5f))
+                                    Text("Sales & Exp", fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                                    Text("Payments", fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                                    Text("Net Balance", fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1.5f))
+                                }
+                                
+                                if (allWorkers.isEmpty()) {
+                                    Text("No parties registered.", fontSize = 10.sp, color = textGray, modifier = Modifier.padding(8.dp).align(Alignment.CenterHorizontally))
+                                } else {
+                                    allWorkers.forEachIndexed { idx, worker ->
+                                        val partyTx = projectTransactions.filter { it.partyId == worker.id || it.partyName == worker.name }
+                                        val totalIn = partyTx.filter { it.type == "Money In" }.sumOf { it.amount }
+                                        val totalOut = partyTx.filter { it.type == "Money Out" }.sumOf { it.amount }
+                                        val netBalance = totalIn - totalOut
+
+                                        val isClient = worker.partyType == "Client" || worker.partyType == "Investor"
+                                        val payments = if (isClient) totalIn else totalOut
+                                        val salesExpenses = if (isClient) totalOut else totalIn
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().background(if (idx % 2 == 0) Color(0xFFF8FAFC) else Color.White).padding(6.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(worker.name, fontSize = 9.sp, color = textNavy, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.5f))
+                                            
+                                            val salesText = if (salesExpenses > 0) String.format(Locale.US, "%,.2f", salesExpenses) else ""
+                                            Text(salesText, fontSize = 9.sp, color = textNavy, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                                            
+                                            val paymentsText = if (payments > 0) String.format(Locale.US, "%,.2f", payments) else ""
+                                            Text(paymentsText, fontSize = 9.sp, color = textNavy, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                                            
+                                            val balColor = if (netBalance >= 0) Color(0xFF15803D) else Color(0xFFB91C1C)
+                                            val balStatus = if (netBalance >= 0) "Advance Paid" else "Pending to Pay"
+                                            val balText = String.format(Locale.US, "%,.2f", netBalance.absoluteValue) + " " + balStatus
+                                            Text(balText, fontSize = 9.sp, color = balColor, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1.5f))
+                                        }
+                                        Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(dividerColor))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    "Summary" -> {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Column {
+                                    Text("Company", fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                    Text("Pune", fontSize = 8.sp, color = textGray)
+                                    Text("GST : N/A", fontSize = 8.sp, color = textGray)
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text("Payment Report", fontSize = 12.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                    Text("Date Range: $dateRangeText", fontSize = 8.sp, color = textGray)
+                                }
+                            }
+                            Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(dividerColor))
+                            
+                            // Project Box
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFFF1F5F9), RoundedCornerShape(6.dp))
+                                    .padding(8.dp)
+                            ) {
+                                Row {
+                                    Text("Project: ", fontSize = 8.sp, color = Color(0xFF1E293B), fontWeight = FontWeight.Bold)
+                                    Text(projectName, fontSize = 8.sp, color = textNavy)
+                                }
+                                Row {
+                                    Text("Site Address: ", fontSize = 8.sp, color = Color(0xFF1E293B), fontWeight = FontWeight.Bold)
+                                    Text(siteAddress.replace("\n", " "), fontSize = 8.sp, color = textNavy)
+                                }
+                            }
+                            
+                            Spacer(Modifier.height(4.dp))
+                            Text("Summary", fontSize = 12.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                            
+                            val tradeGroups = projectTransactions.groupBy { tx ->
+                                val w = allWorkers.find { it.id == tx.partyId || it.name == tx.partyName }
+                                w?.partyType ?: "-"
+                            }
+                            Text("Trade Summary", fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Row(modifier = Modifier.fillMaxWidth().background(Color(0xFF1E293B)).padding(4.dp)) {
+                                    Text("Trade", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.5f))
+                                    Text("#Entries", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(0.8f))
+                                    Text("In", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
+                                    Text("Out", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
+                                }
+                                tradeGroups.toList().forEachIndexed { idx, (trade, txs) ->
+                                    val totalIn = txs.filter { it.type == "Money In" }.sumOf { it.amount }
+                                    val totalOut = txs.filter { it.type == "Money Out" }.sumOf { it.amount }
+                                    Row(modifier = Modifier.fillMaxWidth().background(if (idx % 2 == 0) Color(0xFFF8FAFC) else Color.White).padding(4.dp)) {
+                                        Text(trade, fontSize = 8.sp, color = textNavy, modifier = Modifier.weight(1.5f))
+                                        Text(txs.size.toString(), fontSize = 8.sp, color = textNavy, textAlign = TextAlign.End, modifier = Modifier.weight(0.8f))
+                                        Text(String.format(Locale.US, "%,.2f", totalIn), fontSize = 8.sp, color = Color(0xFF15803D), textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
+                                        Text(String.format(Locale.US, "%,.2f", totalOut), fontSize = 8.sp, color = Color(0xFFB91C1C), textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
+                                    }
+                                }
+                            }
+                            
+                            Spacer(Modifier.height(4.dp))
+                            
+                            val catGroups = projectTransactions.groupBy { it.category }
+                            Text("Category Summary", fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Row(modifier = Modifier.fillMaxWidth().background(Color(0xFF1E293B)).padding(4.dp)) {
+                                    Text("Category", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.5f))
+                                    Text("#Entries", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(0.8f))
+                                    Text("In", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
+                                    Text("Out", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
+                                }
+                                catGroups.toList().forEachIndexed { idx, (cat, txs) ->
+                                    val totalIn = txs.filter { it.type == "Money In" }.sumOf { it.amount }
+                                    val totalOut = txs.filter { it.type == "Money Out" }.sumOf { it.amount }
+                                    Row(modifier = Modifier.fillMaxWidth().background(if (idx % 2 == 0) Color(0xFFF8FAFC) else Color.White).padding(4.dp)) {
+                                        Text(cat, fontSize = 8.sp, color = textNavy, modifier = Modifier.weight(1.5f))
+                                        Text(txs.size.toString(), fontSize = 8.sp, color = textNavy, textAlign = TextAlign.End, modifier = Modifier.weight(0.8f))
+                                        Text(String.format(Locale.US, "%,.2f", totalIn), fontSize = 8.sp, color = Color(0xFF15803D), textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
+                                        Text(String.format(Locale.US, "%,.2f", totalOut), fontSize = 8.sp, color = Color(0xFFB91C1C), textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    "Transactions" -> {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Column {
+                                    Text("Company", fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Black)
+                                    Text("Pune", fontSize = 8.sp, color = textGray)
+                                    Text("GST : N/A", fontSize = 8.sp, color = textGray)
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text("Payment Report", fontSize = 12.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                                    Text("Generated By: $generatedBy", fontSize = 8.sp, color = textGray)
+                                    Text("Date Range: $dateRangeText", fontSize = 8.sp, color = textGray)
+                                }
+                            }
+                            Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(dividerColor))
+                            
+                            // Project Box
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFFF1F5F9), RoundedCornerShape(6.dp))
+                                    .padding(8.dp)
+                            ) {
+                                Row {
+                                    Text("Project: ", fontSize = 8.sp, color = Color(0xFF1E293B), fontWeight = FontWeight.Bold)
+                                    Text(projectName, fontSize = 8.sp, color = textNavy)
+                                }
+                                Row {
+                                    Text("Site Address: ", fontSize = 8.sp, color = Color(0xFF1E293B), fontWeight = FontWeight.Bold)
+                                    Text(siteAddress.replace("\n", " "), fontSize = 8.sp, color = textNavy)
+                                }
+                            }
+                            
+                            val totalIn = projectTransactions.filter { it.type == "Money In" }.sumOf { it.amount }
+                            val totalOut = projectTransactions.filter { it.type == "Money Out" }.sumOf { it.amount }
+                            val totalBalance = totalIn - totalOut
+                            Row(
+                                modifier = Modifier.fillMaxWidth().background(Color(0xFFF1F5F9)).padding(6.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Total In: ${String.format(Locale.US, "%,.2f", totalIn)}", fontSize = 9.sp, color = Color(0xFF15803D), fontWeight = FontWeight.Bold)
+                                Text("Total Out: ${String.format(Locale.US, "%,.2f", totalOut)}", fontSize = 9.sp, color = Color(0xFFB91C1C), fontWeight = FontWeight.Bold)
+                                Text("Balance: ${String.format(Locale.US, "%,.2f", totalBalance)}", fontSize = 9.sp, color = textNavy, fontWeight = FontWeight.Bold)
+                            }
+                            
+                            Spacer(Modifier.height(4.dp))
+                            
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Row(modifier = Modifier.fillMaxWidth().background(Color(0xFF1E293B)).padding(4.dp)) {
+                                    Text("Date", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                    Text("Sender", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.2f))
+                                    Text("Receiver", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.2f))
+                                    Text("Amount", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
+                                    Text("Balance", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
+                                }
+                                
+                                val sorted = projectTransactions.sortedBy { it.date }
+                                var bal = 0.0
+                                sorted.forEachIndexed { idx, tx ->
+                                    val isIn = tx.type == "Money In"
+                                    bal += if (isIn) tx.amount else -tx.amount
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().background(if (idx % 2 == 0) Color(0xFFF8FAFC) else Color.White).padding(4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(tx.date, fontSize = 8.sp, color = textNavy, modifier = Modifier.weight(1f))
+                                        
+                                        val sender = if (isIn) (tx.partyName ?: "Client") else "Company"
+                                        Text(sender, fontSize = 8.sp, color = textNavy, modifier = Modifier.weight(1.2f))
+                                        
+                                        val receiver = if (!isIn) (tx.partyName ?: "Staff") else "Company"
+                                        Text(receiver, fontSize = 8.sp, color = textNavy, modifier = Modifier.weight(1.2f))
+                                        
+                                        val amtColor = if (isIn) Color(0xFF15803D) else Color(0xFFB91C1C)
+                                        Text(String.format(Locale.US, "%,.2f", tx.amount), fontSize = 8.sp, color = amtColor, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
+                                        
+                                        Text(String.format(Locale.US, "%,.2f", bal), fontSize = 8.sp, color = textNavy, textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
+                                    }
+                                    Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(dividerColor))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Bottom Actions Box
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .border(1.dp, RoseGlow.copy(0.4f), RoundedCornerShape(12.dp))
+                        .background(RoseGlow.copy(0.08f))
+                        .clickable(onClick = onDismiss)
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("CLOSE", color = RoseGlow, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                }
+                
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(GradientAqua)
+                        .clickable {
+                            try {
+                                val pdfFile = when (reportType) {
+                                    "Receipt" -> {
+                                        val rxAmount = selectedTxDetail?.amount ?: 1000.0
+                                        val rxName = selectedTxDetail?.partyName ?: selectedPartyDetail?.name ?: "Tejas Harane"
+                                        val rxDate = selectedTxDetail?.date ?: "2026-05-27"
+                                        val rxId = selectedTxDetail?.id ?: 1024
+                                        val rxMethod = selectedTxDetail?.paymentMethod ?: "Cash"
+                                        val rxRemark = selectedTxDetail?.description ?: ""
+                                        val rxIsMoneyIn = selectedTxDetail?.type == "Money In"
+                                        PdfUtils.generateReceiptPdfFile(
+                                            context = context,
+                                            txId = rxId,
+                                            name = rxName,
+                                            amount = formatIndianRupees(rxAmount),
+                                            date = rxDate,
+                                            paymentMethod = rxMethod,
+                                            remark = rxRemark,
+                                            isMoneyIn = rxIsMoneyIn,
+                                            projectName = projectName
+                                        )
+                                    }
+                                    "Party Ledger" -> {
+                                        val party = selectedPartyDetail ?: allWorkers.firstOrNull() ?: throw IllegalArgumentException("No party selected")
+                                        val matchedTxs = projectTransactions.filter { it.partyId == party.id || it.partyName == party.name }
+                                        val totalIn = matchedTxs.filter { it.type == "Money In" }.sumOf { it.amount }
+                                        val totalOut = matchedTxs.filter { it.type == "Money Out" }.sumOf { it.amount }
+                                        val balance = totalIn - totalOut
+
+                                        val isClient = party.partyType == "Client" || party.partyType == "Investor"
+                                        val payments = if (isClient) totalIn else totalOut
+                                        val salesExpenses = if (isClient) totalOut else totalIn
+
+                                        val statusText = if (balance >= 0) "Advance Paid" else "Pending to Pay"
+
+                                        PdfUtils.generateBalanceReviewPdfFile(
+                                            context = context,
+                                            partyName = party.name,
+                                            projectName = projectName,
+                                            balance = formatIndianRupees(kotlin.math.abs(balance)),
+                                            statusText = statusText,
+                                            received = formatIndianRupees(payments),
+                                            paid = formatIndianRupees(salesExpenses),
+                                            transactions = matchedTxs,
+                                            siteAddress = siteAddress,
+                                            generatedBy = generatedBy,
+                                            dateRange = dateRangeText
+                                        )
+                                    }
+                                    "Party Transactions" -> {
+                                        val party = selectedPartyDetail ?: allWorkers.firstOrNull() ?: throw IllegalArgumentException("No party selected")
+                                        PdfUtils.generatePartyTransactionsReportPdfFile(
+                                            context = context,
+                                            projectName = projectName,
+                                            siteAddress = siteAddress,
+                                            generatedBy = generatedBy,
+                                            party = party,
+                                            transactions = projectTransactions,
+                                            dateRange = dateRangeText
+                                        )
+                                    }
+                                    "Party Balance" -> {
+                                        PdfUtils.generatePartyBalanceReportPdfFile(
+                                            context = context,
+                                            projectName = projectName,
+                                            siteAddress = siteAddress,
+                                            generatedBy = generatedBy,
+                                            parties = allWorkers,
+                                            transactions = projectTransactions,
+                                            dateRange = dateRangeText
+                                        )
+                                    }
+                                    "Summary" -> {
+                                        PdfUtils.generatePaymentSummaryReportPdfFile(
+                                            context = context,
+                                            projectName = projectName,
+                                            siteAddress = siteAddress,
+                                            generatedBy = generatedBy,
+                                            transactions = projectTransactions,
+                                            parties = allWorkers,
+                                            dateRange = dateRangeText
+                                        )
+                                    }
+                                    "Transactions" -> {
+                                        PdfUtils.generatePaymentTransactionsReportPdfFile(
+                                            context = context,
+                                            projectName = projectName,
+                                            siteAddress = siteAddress,
+                                            generatedBy = generatedBy,
+                                            transactions = projectTransactions,
+                                            dateRange = dateRangeText
+                                        )
+                                    }
+                                    else -> throw IllegalArgumentException("Unknown type")
+                                }
+                                val fileName = pdfFile.name
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                                    val contentValues = android.content.ContentValues().apply {
+                                        put(android.provider.MediaStore.Downloads.DISPLAY_NAME, fileName)
+                                        put(android.provider.MediaStore.Downloads.MIME_TYPE, "application/pdf")
+                                        put(android.provider.MediaStore.Downloads.RELATIVE_PATH,
+                                            android.os.Environment.DIRECTORY_DOWNLOADS + "/ConstructPro")
+                                    }
+                                    val uri = context.contentResolver.insert(
+                                        android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                                        contentValues
+                                    )
+                                    if (uri != null) {
+                                        context.contentResolver.openOutputStream(uri)?.use { out ->
+                                            pdfFile.inputStream().use { input -> input.copyTo(out) }
+                                        }
+                                        Toast.makeText(context, "Saved to Downloads/ConstructPro/$fileName", Toast.LENGTH_LONG).show()
+                                    } else {
+                                        Toast.makeText(context, "Download failed: could not create file", Toast.LENGTH_LONG).show()
+                                    }
+                                } else {
+                                    val dir = android.os.Environment.getExternalStoragePublicDirectory(
+                                        android.os.Environment.DIRECTORY_DOWNLOADS
+                                    )
+                                    val folder = java.io.File(dir, "ConstructPro").also { it.mkdirs() }
+                                    val dest = java.io.File(folder, fileName)
+                                    pdfFile.copyTo(dest, overwrite = true)
+                                    Toast.makeText(context, "Saved to Downloads/ConstructPro/$fileName", Toast.LENGTH_LONG).show()
+                                }
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Download failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                            }
+                            onDismiss()
+                        }
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(Icons.Default.Download, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                        Text("DOWNLOAD", color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────
+// DATE FILTER AND RANGE HELPERS
+// ─────────────────────────────────────────────
+fun getPresetDateRange(preset: String): Pair<String, String>? {
+    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+    val cal = Calendar.getInstance()
+    
+    when (preset) {
+        "Today" -> {
+            val today = sdf.format(cal.time)
+            return Pair(today, today)
+        }
+        "This Week" -> {
+            val currentDayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
+            val daysToSubtract = if (currentDayOfWeek == Calendar.SUNDAY) 6 else currentDayOfWeek - Calendar.MONDAY
+            val end = sdf.format(cal.time)
+            cal.add(Calendar.DAY_OF_YEAR, -daysToSubtract)
+            val start = sdf.format(cal.time)
+            return Pair(start, end)
+        }
+        "Last Week" -> {
+            val currentDayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
+            val daysToSubtract = if (currentDayOfWeek == Calendar.SUNDAY) 6 else currentDayOfWeek - Calendar.MONDAY
+            cal.add(Calendar.DAY_OF_YEAR, -daysToSubtract)
+            cal.add(Calendar.DAY_OF_YEAR, -1)
+            val end = sdf.format(cal.time)
+            cal.add(Calendar.DAY_OF_YEAR, -6)
+            val start = sdf.format(cal.time)
+            return Pair(start, end)
+        }
+        "This Month" -> {
+            val end = sdf.format(cal.time)
+            cal.set(Calendar.DAY_OF_MONTH, 1)
+            val start = sdf.format(cal.time)
+            return Pair(start, end)
+        }
+        "Last Month" -> {
+            cal.add(Calendar.MONTH, -1)
+            cal.set(Calendar.DAY_OF_MONTH, 1)
+            val start = sdf.format(cal.time)
+            val lastDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+            cal.set(Calendar.DAY_OF_MONTH, lastDay)
+            val end = sdf.format(cal.time)
+            return Pair(start, end)
+        }
+        else -> return null
+    }
+}
+
+@Composable
+fun ReportFilterDialog(
+    visible: Boolean,
+    onDismiss: () -> Unit,
+    dark: Boolean,
+    preset: String,
+    onPresetChange: (String) -> Unit,
+    startDate: String,
+    onStartDateChange: (String) -> Unit,
+    endDate: String,
+    onEndDateChange: (String) -> Unit,
+    onApply: () -> Unit
+) {
+    if (!visible) return
+
+    val context = LocalContext.current
+
+    val showDatePicker = { isStart: Boolean ->
+        val calendar = java.util.Calendar.getInstance()
+        val currentValue = if (isStart) startDate else endDate
+        if (currentValue.isNotEmpty()) {
+            try {
+                val parts = currentValue.split("-")
+                if (parts.size == 3) {
+                    calendar.set(java.util.Calendar.YEAR, parts[0].toInt())
+                    calendar.set(java.util.Calendar.MONTH, parts[1].toInt() - 1)
+                    calendar.set(java.util.Calendar.DAY_OF_MONTH, parts[2].toInt())
+                }
+            } catch (e: Exception) {
+                // ignore
+            }
+        }
+        android.app.DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                val formattedDate = String.format(java.util.Locale.US, "%04d-%02d-%02d", year, month + 1, dayOfMonth)
+                if (isStart) onStartDateChange(formattedDate) else onEndDateChange(formattedDate)
+            },
+            calendar.get(java.util.Calendar.YEAR),
+            calendar.get(java.util.Calendar.MONTH),
+            calendar.get(java.util.Calendar.DAY_OF_MONTH)
+        ).show()
+    }
+
+    GlassModalDialog(
+        visible = visible,
+        onDismiss = onDismiss,
+        title = "Filter Transactions",
+        darkTheme = dark,
+        glowColor = EmeraldGlow
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(
+                text = "DATE RANGE PRESETS",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (dark) TextSecondary else TextSecondaryLight,
+                letterSpacing = 1.sp
+            )
+
+            val presets = listOf("All", "Today", "This Week", "Last Week", "This Month", "Last Month", "Custom")
+            
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                presets.chunked(3).forEach { rowPresets ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        rowPresets.forEach { p ->
+                            val isSelected = preset == p
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(
+                                        if (isSelected) EmeraldGlow.copy(alpha = 0.15f)
+                                        else (if (dark) Color(0xFF1E2D4A).copy(alpha = 0.4f) else Color(0xFFF1F5FF))
+                                    )
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isSelected) EmeraldGlow else (if (dark) Color(0xFF2D3F5E) else Color(0xFFCBD5E1)),
+                                        shape = RoundedCornerShape(10.dp)
+                                    )
+                                    .clickable {
+                                        onPresetChange(p)
+                                        if (p != "Custom") {
+                                            val range = getPresetDateRange(p)
+                                            if (range != null) {
+                                                onStartDateChange(range.first)
+                                                onEndDateChange(range.second)
+                                            } else {
+                                                onStartDateChange("")
+                                                onEndDateChange("")
+                                            }
+                                        }
+                                    }
+                                    .padding(vertical = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = p,
+                                    color = if (isSelected) (if (dark) NeonGreen else Color(0xFF047857))
+                                            else (if (dark) TextSecondary else TextSecondaryLight),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                        if (rowPresets.size < 3) {
+                            repeat(3 - rowPresets.size) {
+                                Box(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (preset == "Custom") {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "START DATE",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (dark) TextSecondary else TextSecondaryLight,
+                            letterSpacing = 0.5.sp,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (dark) Color(0xFF1E2D4A).copy(alpha = 0.4f) else Color.White)
+                                .border(1.dp, if (dark) Color(0xFF2D3F5E) else Color(0xFFCBD5E1), RoundedCornerShape(10.dp))
+                                .clickable { showDatePicker(true) }
+                                .padding(horizontal = 12.dp, vertical = 12.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = if (startDate.isEmpty()) "Select Date" else startDate,
+                                    fontSize = 12.sp,
+                                    color = if (startDate.isEmpty()) (if (dark) TextMuted else TextMutedLight)
+                                            else (if (dark) Color.White else Color(0xFF1E293B)),
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.CalendarToday,
+                                    contentDescription = "Select Start Date",
+                                    tint = EmeraldGlow,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "END DATE",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (dark) TextSecondary else TextSecondaryLight,
+                            letterSpacing = 0.5.sp,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (dark) Color(0xFF1E2D4A).copy(alpha = 0.4f) else Color.White)
+                                .border(1.dp, if (dark) Color(0xFF2D3F5E) else Color(0xFFCBD5E1), RoundedCornerShape(10.dp))
+                                .clickable { showDatePicker(false) }
+                                .padding(horizontal = 12.dp, vertical = 12.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = if (endDate.isEmpty()) "Select Date" else endDate,
+                                    fontSize = 12.sp,
+                                    color = if (endDate.isEmpty()) (if (dark) TextMuted else TextMutedLight)
+                                            else (if (dark) Color.White else Color(0xFF1E293B)),
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.CalendarToday,
+                                    contentDescription = "Select End Date",
+                                    tint = EmeraldGlow,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .border(1.dp, RoseGlow.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                        .background(RoseGlow.copy(alpha = 0.08f))
+                        .clickable(onClick = onDismiss)
+                        .padding(vertical = 13.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "CANCEL",
+                        color = RoseGlow,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 12.sp
+                    )
+                }
+
+                val canApply = preset != "Custom" || (startDate.isNotEmpty() && endDate.isNotEmpty())
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (canApply) EmeraldGlow else Color.Gray.copy(alpha = 0.5f))
+                        .then(if (canApply) Modifier.clickable(onClick = onApply) else Modifier)
+                        .padding(vertical = 13.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "DONE",
+                        color = Color.White,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+
