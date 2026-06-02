@@ -1449,9 +1449,10 @@ fun PremiumReportPreviewDialog(
                                         Text(formatIndianRupees(salesExpenses), fontSize = 10.sp, color = textNavy, fontWeight = FontWeight.Bold)
                                     }
                                     
-                                    val balStatus = if (balance >= 0) "Advance" else "Pending"
-                                    val balColor = if (balance >= 0) Color(0xFF15803D) else Color(0xFFB91C1C)
-                                    val balBg = if (balance >= 0) Color(0xFFDCFCE7) else Color(0xFFFEE2E2)
+                                    val isReceived = balance >= 0
+                                    val balStatus = if (isReceived) "Received" else "Paid"
+                                    val balColor = if (isReceived) Color(0xFF15803D) else Color(0xFFB91C1C)
+                                    val balBg = if (isReceived) Color(0xFFDCFCE7) else Color(0xFFFEE2E2)
                                     Column(
                                         modifier = Modifier
                                             .weight(1.2f)
@@ -1688,8 +1689,9 @@ fun PremiumReportPreviewDialog(
                                             val paymentsText = if (payments > 0) String.format(Locale.US, "%,.2f", payments) else ""
                                             Text(paymentsText, fontSize = 9.sp, color = textNavy, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
                                             
-                                            val balColor = if (netBalance >= 0) Color(0xFF15803D) else Color(0xFFB91C1C)
-                                            val balStatus = if (netBalance >= 0) "Paid" else "Received"
+                                            val isReceived = netBalance >= 0
+                                            val balColor = if (isReceived) Color(0xFF15803D) else Color(0xFFB91C1C)
+                                            val balStatus = if (isReceived) "Received" else "Paid"
                                             val balText = String.format(Locale.US, "%,.2f", netBalance.absoluteValue) + " " + balStatus
                                             Text(balText, fontSize = 9.sp, color = balColor, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1.5f))
                                         }
@@ -1931,7 +1933,7 @@ fun PremiumReportPreviewDialog(
                                         val payments = if (isClient) totalIn else totalOut
                                         val salesExpenses = if (isClient) totalOut else totalIn
 
-                                        val statusText = if (balance >= 0) "Paid" else "Received"
+                                        val statusText = if (balance >= 0) "Received" else "Paid"
 
                                         PdfUtils.generateBalanceReviewPdfFile(
                                             context = context,

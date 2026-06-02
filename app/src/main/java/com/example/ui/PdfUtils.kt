@@ -575,8 +575,9 @@ object PdfUtils {
                 val paymentsText = if (payments > 0) indFmt.format(payments) else "0.00"
                 c.drawText(paymentsText, margin + 380f, yPos + 12f, p)
 
-                val balColor = if (netBalance >= 0) RED_DARK else GREEN_DARK
-                val balText = indFmt.format(kotlin.math.abs(netBalance)) + " " + if (netBalance >= 0) "Paid" else "Received"
+                val isReceived = netBalance >= 0
+                val balColor = if (isReceived) GREEN_DARK else RED_DARK
+                val balText = indFmt.format(kotlin.math.abs(netBalance)) + " " + if (isReceived) "Received" else "Paid"
                 p.color = balColor; p.isFakeBoldText = true
                 c.drawText(balText, pw - margin - 12f, yPos + 12f, p)
                 p.isFakeBoldText = false

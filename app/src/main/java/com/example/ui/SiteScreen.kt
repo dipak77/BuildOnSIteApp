@@ -959,24 +959,24 @@ private fun PartyTab(
                     dark = dark,
                     label = "PAID",
                     value = formatIndianRupees(totalAdvance),
-                    valueColor = EmeraldGlow,
-                    icon = Icons.Default.TrendingUp,
-                    gradient = Brush.linearGradient(
-                        listOf(EmeraldGlow.copy(alpha = 0.15f), EmeraldGlow.copy(alpha = 0.05f))
-                    ),
-                    borderColor = EmeraldGlow.copy(alpha = 0.3f)
-                )
-                PremiumStatCard(
-                    modifier = Modifier.weight(1f),
-                    dark = dark,
-                    label = "Received",
-                    value = formatIndianRupees(totalPending),
                     valueColor = RoseGlow,
-                    icon = Icons.Default.TrendingDown,
+                    icon = Icons.Default.TrendingUp,
                     gradient = Brush.linearGradient(
                         listOf(RoseGlow.copy(alpha = 0.15f), RoseGlow.copy(alpha = 0.05f))
                     ),
                     borderColor = RoseGlow.copy(alpha = 0.3f)
+                )
+                PremiumStatCard(
+                    modifier = Modifier.weight(1f),
+                    dark = dark,
+                    label = "RECEIVED",
+                    value = formatIndianRupees(totalPending),
+                    valueColor = EmeraldGlow,
+                    icon = Icons.Default.TrendingDown,
+                    gradient = Brush.linearGradient(
+                        listOf(EmeraldGlow.copy(alpha = 0.15f), EmeraldGlow.copy(alpha = 0.05f))
+                    ),
+                    borderColor = EmeraldGlow.copy(alpha = 0.3f)
                 )
             }
         }
@@ -1787,7 +1787,7 @@ private fun PremiumPartyDetailPage(
 
                 Column(horizontalAlignment = Alignment.End) {
                     val isAdvance = diff >= 0
-                    val statusColor = if (isAdvance) Color(0xFF0F766E) else Color(0xFFE11D48)
+                    val statusColor = if (isAdvance) Color(0xFFE11D48) else Color(0xFF0F766E)
                     val statusText = if (isAdvance) "Paid" else "Received"
                     Text(
                         text = formatIndianRupees(diff.absoluteValue),
@@ -2505,7 +2505,8 @@ private fun PremiumPartyCard(
     onClick: () -> Unit
 ) {
     val isPositive = diff >= 0
-    val accentColor = if (isPositive) EmeraldGlow else RoseGlow
+    val labelText = if (isPositive) "Paid" else "Received"
+    val accentColor = if (isPositive) RoseGlow else EmeraldGlow
 
     Box(
         modifier = Modifier
@@ -2575,7 +2576,7 @@ private fun PremiumPartyCard(
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = if (isPositive) "Advance" else "Pending",
+                        text = labelText,
                         fontSize = 9.sp, fontWeight = FontWeight.Bold, color = accentColor
                     )
                 }
