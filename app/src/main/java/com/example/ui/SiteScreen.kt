@@ -1191,6 +1191,17 @@ private fun TransactionTab(
                 }
             }
 
+            val txRunningBalances = remember(projectTransactions) {
+                val map = mutableMapOf<Int, Double>()
+                var running = 0.0
+                val chronological = projectTransactions.sortedWith(compareBy({ it.date }, { it.id }))
+                for (tx in chronological) {
+                    running += if (tx.type == "Money In") tx.amount else -tx.amount
+                    map[tx.id] = running
+                }
+                map
+            }
+
             if (projectTransactions.isEmpty()) {
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                     val emptyMessage = if (txSearchQuery.isNotEmpty() || txDatePreset != "All") {
@@ -1217,7 +1228,12 @@ private fun TransactionTab(
                         )
                     }
                     items(projectTransactions, key = { it.id }) { tx ->
-                        PremiumTransactionCard(tx = tx, dark = dark, onClick = { onSelectTx(tx) })
+                        PremiumTransactionCard(
+                            tx = tx,
+                            dark = dark,
+                            runningBalance = txRunningBalances[tx.id],
+                            onClick = { onSelectTx(tx) }
+                        )
                     }
                 }
             }
@@ -1989,6 +2005,17 @@ private fun PremiumPartyDetailPage(
                 .weight(1f)
                 .fillMaxWidth()
         ) {
+            val partyTxRunningBalances = remember(matchedTxs) {
+                val map = mutableMapOf<Int, Double>()
+                var running = 0.0
+                val chronological = matchedTxs.sortedWith(compareBy({ it.date }, { it.id }))
+                for (tx in chronological) {
+                    running += if (tx.type == "Money In") tx.amount else -tx.amount
+                    map[tx.id] = running
+                }
+                map
+            }
+
             if (historyTxs.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -2010,6 +2037,7 @@ private fun PremiumPartyDetailPage(
                             tx = tx,
                             dark = dark,
                             workerName = worker.name,
+                            runningBalance = partyTxRunningBalances[tx.id],
                             onClick = { onSelectTx(tx) }
                         )
                     }
@@ -2124,9 +2152,10 @@ private fun PartyTransactionCard(
     tx: Transaction,
     dark: Boolean,
     workerName: String,
+    runningBalance: Double? = null,
     onClick: () -> Unit
 ) {
-    TransactionCardLayout(tx = tx, dark = dark, workerName = workerName, onClick = onClick)
+    TransactionCardLayout(tx = tx, dark = dark, workerName = workerName, balanceAfter = runningBalance, onClick = onClick)
 }
 
 // ─────────────────────────────────────────────
@@ -2600,9 +2629,10 @@ private fun PremiumTransactionCard(
     tx: Transaction,
     dark: Boolean,
     workerName: String = "",
+    runningBalance: Double? = null,
     onClick: () -> Unit
 ) {
-    TransactionCardLayout(tx = tx, dark = dark, workerName = workerName, onClick = onClick)
+    TransactionCardLayout(tx = tx, dark = dark, workerName = workerName, balanceAfter = runningBalance, onClick = onClick)
 }
 
 @Composable
@@ -2610,30 +2640,25 @@ private fun TransactionCardLayout(
     tx: Transaction,
     dark: Boolean,
     workerName: String = "",
+    balanceAfter: Double? = null,
     onClick: () -> Unit
 ) {
     val isIn = tx.type == "Money In"
     val dateParts = tx.date.split("-")
-    val months = listOf("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
+    val months = listOf("JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC")
     val dayStr = dateParts.getOrNull(2) ?: "27"
-    val monStr = months.getOrElse((dateParts.getOrNull(1)?.toIntOrNull() ?: 1) - 1) { "May" }
+    val monIndex = (dateParts.getOrNull(1)?.toIntOrNull() ?: 1) - 1
+    val monStr = months.getOrElse(monIndex) { "MAY" }
+    val yearStr = dateParts.getOrNull(0) ?: "2024"
 
     val cardBg = if (dark) Color(0xFF1E293B) else Color.White
     val cardBorder = if (dark) Color(0xFF334155) else Color(0xFFE2E8F0)
     val textPrimary = if (dark) Color(0xFFF1F5F9) else Color(0xFF1E293B)
     val textSecondary = if (dark) Color(0xFF94A3B8) else Color(0xFF64748B)
 
-    val arrowBg = if (isIn) {
-        if (dark) Color(0xFF143A25) else Color(0xFFE6F4EA)
-    } else {
-        if (dark) Color(0xFF4C1B1B) else Color(0xFFFCE8E6)
-    }
-    val arrowTint = if (isIn) {
-        if (dark) Color(0xFF81C784) else Color(0xFF137333)
-    } else {
-        if (dark) Color(0xFFE57373) else Color(0xFFC5221F)
-    }
-    val amountColor = arrowTint
+    val themeGreen = if (dark) NeonGreen else Color(0xFF047857)
+    val themePink = if (dark) NeonPink else Color(0xFFBE123C)
+    val amountColor = if (isIn) themeGreen else themePink
 
     Box(
         modifier = Modifier
@@ -2646,51 +2671,46 @@ private fun TransactionCardLayout(
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // 1. Date Badge
+            // 1. Left Date Badge
             Box(
                 modifier = Modifier
-                    .size(width = 46.dp, height = 48.dp)
+                    .size(width = 54.dp, height = 66.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF5D53EA)),
+                    .background(if (dark) Color(0x285D53EA) else Color(0xFFF1F0FF)),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
                     Text(
                         text = dayStr,
-                        fontSize = 16.sp,
-                        color = Color.White,
+                        fontSize = 18.sp,
+                        color = Color(0xFF5D53EA),
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = monStr,
-                        fontSize = 11.sp,
-                        color = Color.White,
-                        fontWeight = FontWeight.Medium
+                        fontSize = 10.sp,
+                        color = Color(0xFF5D53EA),
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = yearStr,
+                        fontSize = 9.sp,
+                        color = Color(0xFF5D53EA).copy(alpha = 0.8f),
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
 
-            // 2. Arrow Indicator
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .background(arrowBg, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (isIn) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
-                    contentDescription = null,
-                    tint = arrowTint,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-
-            // 3. Name & Tag details Column
+            // 2. Middle Content Column (weight = 1f)
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 val partyText = tx.partyName ?: workerName.ifBlank { "Party" }
                 val line1 = if (isIn) partyText else "Company"
@@ -2698,7 +2718,7 @@ private fun TransactionCardLayout(
 
                 Text(
                     text = line1,
-                    fontSize = 14.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = textPrimary
                 )
@@ -2707,55 +2727,152 @@ private fun TransactionCardLayout(
                     fontSize = 12.sp,
                     color = textSecondary
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
+                
+                // Chips Row
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    // Type tag chip
+                    val typeBg = if (isIn) {
+                        if (dark) Color(0x2410B981) else Color(0xFFE6F4EA)
+                    } else {
+                        if (dark) Color(0x24EF4444) else Color(0xFFFCE8E6)
+                    }
+                    val typeTxtColor = if (isIn) {
+                        if (dark) Color(0xFF34D399) else Color(0xFF137333)
+                    } else {
+                        if (dark) Color(0xFFF87171) else Color(0xFFC5221F)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(typeBg)
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = if (isIn) "RECEIPT" else "PAYMENT",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = typeTxtColor
+                        )
+                    }
+
                     // Payment Method Tag
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
+                            .clip(RoundedCornerShape(6.dp))
                             .background(if (dark) Color(0xFF334155) else Color(0xFFE8F0FE))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = tx.paymentMethod,
-                            fontSize = 10.sp,
+                            fontSize = 9.sp,
                             color = if (dark) Color(0xFF90CDF4) else Color(0xFF1A73E8),
                             fontWeight = FontWeight.Bold
                         )
                     }
-
-                    if (tx.description.isNotBlank()) {
-                        Text(
-                            text = "·  ${tx.description}",
-                            fontSize = 11.sp,
-                            color = textSecondary
-                        )
-                    }
                 }
+
+                if (tx.description.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = tx.description,
+                        fontSize = 12.sp,
+                        color = textPrimary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(2.dp))
+                val refStr = if (tx.reference.isNotBlank()) tx.reference else "TXN${tx.id}"
+                Text(
+                    text = "Ref No: $refStr  |  Remarks: ${tx.description.ifBlank { "None" }}",
+                    fontSize = 10.sp,
+                    color = textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
 
-            // 4. Amount and Chevron
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            // 3. Right Content Column (horizontalAlignment = Alignment.End)
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
                     text = (if (isIn) "+" else "-") + formatIndianRupees(tx.amount),
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     color = amountColor,
                     maxLines = 1,
                     overflow = TextOverflow.Clip
                 )
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = if (dark) Color(0xFF64748B) else Color(0xFF94A3B8),
-                    modifier = Modifier.size(16.dp)
-                )
+
+                if (balanceAfter != null) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "Balance After",
+                            fontSize = 9.sp,
+                            color = textSecondary
+                        )
+                        Text(
+                            text = formatIndianRupees(balanceAfter),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textSecondary
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // View Btn
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .clickable(onClick = onClick)
+                            .padding(2.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Description,
+                            contentDescription = "View",
+                            tint = textSecondary,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Text(
+                            text = "View",
+                            fontSize = 8.sp,
+                            color = textSecondary
+                        )
+                    }
+
+                    // More Btn
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .clickable(onClick = onClick)
+                            .padding(2.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "More",
+                            tint = textSecondary,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Text(
+                            text = "More",
+                            fontSize = 8.sp,
+                            color = textSecondary
+                        )
+                    }
+                }
             }
         }
     }
