@@ -306,7 +306,10 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
                                 viewModel = viewModel,
                                 onMenuClick = { coroutineScope.launch { drawerState.open() } }
                             )
-                            AppScreen.Money -> MoneyScreen(viewModel = viewModel)
+                            AppScreen.Money -> MoneyScreen(
+                                viewModel = viewModel,
+                                onMenuClick = { coroutineScope.launch { drawerState.open() } }
+                            )
                             AppScreen.Tasks -> TasksScreen(viewModel = viewModel)
                             AppScreen.Site -> SiteScreen(viewModel = viewModel)
                             AppScreen.More -> MoreScreen(viewModel = viewModel)
@@ -328,7 +331,10 @@ fun ScaffoldFrame(viewModel: MainViewModel) {
                                     viewModel = viewModel,
                                     onMenuClick = { coroutineScope.launch { drawerState.open() } }
                                 )
-                                AppScreen.Money -> MoneyScreen(viewModel = viewModel)
+                                AppScreen.Money -> MoneyScreen(
+                                    viewModel = viewModel,
+                                    onMenuClick = { coroutineScope.launch { drawerState.open() } }
+                                )
                                 AppScreen.Tasks -> TasksScreen(viewModel = viewModel)
                                 AppScreen.Site -> SiteScreen(viewModel = viewModel)
                                 AppScreen.More -> MoreScreen(viewModel = viewModel)

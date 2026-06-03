@@ -46,10 +46,12 @@ private data class SummaryUiModel(
 @Composable
 fun MoneyScreen(
     viewModel: MainViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onMenuClick: () -> Unit = {}
 ) {
     val dark = viewModel.darkThemeEnabled
     val currentProject by viewModel.activeProject.collectAsState()
+    val allProjects by viewModel.projects.collectAsState()
     val allTransactions by viewModel.transactions.collectAsState()
 
     val selectedTxForDetails = viewModel.sharedSelectedTxDetails
@@ -171,8 +173,11 @@ fun MoneyScreen(
                         imageVector = Icons.Default.Menu,
                         contentDescription = "Menu",
                         tint = if (dark) Color.White else Color.Black,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable { onMenuClick() }
                     )
+                    var expanded by remember { mutableStateOf(false) }
                     Column {
                         Text(
                             text = "Money",
@@ -181,13 +186,52 @@ fun MoneyScreen(
                             fontWeight = FontWeight.Bold
                         )
                         if (currentProject != null) {
-                            Text(
-                                text = currentProject!!.name,
-                                color = if (dark) TextSecondary else TextSecondaryLight,
-                                fontSize = 11.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.clickable { expanded = true }
+                            ) {
+                                Text(
+                                    text = currentProject!!.name,
+                                    color = if (dark) TextSecondary else TextSecondaryLight,
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = "Switch Project",
+                                    tint = if (dark) TextSecondary else TextSecondaryLight,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false },
+                                modifier = Modifier.background(if (dark) Color(0xFF1E293B) else Color.White)
+                            ) {
+                                allProjects.forEach { proj ->
+                                    val isSelected = proj.id == currentProject?.id
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = proj.name,
+                                                color = if (isSelected) {
+                                                    if (dark) NeonGreen else Color(0xFF10B981)
+                                                } else {
+                                                    if (dark) TextPrimary else TextPrimaryLight
+                                                },
+                                                fontSize = 12.sp,
+                                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold
+                                            )
+                                        },
+                                        onClick = {
+                                            viewModel.selectedProjectId = proj.id
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -196,6 +240,15 @@ fun MoneyScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    val context = LocalContext.current
+                    Icon(
+                        imageVector = Icons.Default.FileDownload,
+                        contentDescription = "Download CSV",
+                        tint = if (dark) Color.White else Color.Black,
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clickable { viewModel.exportTransactionsCSV(context) }
+                    )
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Search",
