@@ -115,6 +115,8 @@ class MainActivity : ComponentActivity() {
             val dark = viewModel.darkThemeEnabled
             LaunchedEffect(Unit) {
                 viewModel.loadUserSessionFromPrefs(applicationContext)
+                viewModel.initDeviceAndRestrictions(applicationContext)
+                viewModel.trackDeviceRegistration(applicationContext)
             }
             LaunchedEffect(key1 = true) {
                 viewModel.uiEvents.collectLatest { event ->
@@ -155,11 +157,20 @@ class MainActivity : ComponentActivity() {
             MyApplicationTheme(darkTheme = dark) {
                 GlassAtmosphereBox(darkTheme = dark) {
                     val userSession by viewModel.userSession.collectAsState()
+                    val isBlocked by viewModel.isUserBlocked.collectAsState()
 
                     // PIN verification state — resets on every cold app open (not persisted)
                     var pinVerified by remember { mutableStateOf(false) }
 
                     when {
+                        isBlocked -> {
+                            BlockedScreen(
+                                dark = dark,
+                                email = userSession?.email ?: "",
+                                deviceId = viewModel.deviceId,
+                                onRefreshCheck = { viewModel.checkRemoteRestrictions(applicationContext) }
+                            )
+                        }
                         userSession == null -> {
                             // Step 1: not signed in → Google login
                             GoogleLoginScreen(viewModel = viewModel)

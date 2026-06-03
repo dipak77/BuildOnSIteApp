@@ -15,6 +15,11 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import android.provider.Settings
+import android.os.Build
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.remoteconfig.FirebaseRemoteConfig
+import org.json.JSONArray
 
 enum class AppScreen {
     Dashboard, Money, Tasks, Site, More
@@ -51,6 +56,125 @@ class MainViewModel(private val repository: ConstructionRepository) : ViewModel(
     // ==========================================
     private val _userSession = MutableStateFlow<GoogleUser?>(null)
     val userSession: StateFlow<GoogleUser?> = _userSession.asStateFlow()
+
+    // Unique device identifier
+    var deviceId: String = ""
+        private set
+
+    // State flow for remote restrictions blocking
+    private val _isUserBlocked = MutableStateFlow(false)
+    val isUserBlocked: StateFlow<Boolean> = _isUserBlocked.asStateFlow()
+
+    // Analytics instance
+    private var firebaseAnalytics: FirebaseAnalytics? = null
+
+    private fun getAnalytics(context: Context): FirebaseAnalytics? {
+        if (firebaseAnalytics == null) {
+            try {
+                firebaseAnalytics = FirebaseAnalytics.getInstance(context.applicationContext)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        return firebaseAnalytics
+    }
+
+    fun initDeviceAndRestrictions(context: Context) {
+        if (deviceId.isEmpty()) {
+            deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: ""
+        }
+        checkRemoteRestrictions(context)
+    }
+
+    fun trackUserLogin(context: Context, user: GoogleUser) {
+        val fa = getAnalytics(context) ?: return
+        val deviceModel = Build.MODEL
+        val deviceManufacturer = Build.MANUFACTURER
+
+        // Set User Properties
+        fa.setUserId(user.email)
+        fa.setUserProperty("user_email", user.email)
+        fa.setUserProperty("user_name", user.displayName)
+        fa.setUserProperty("device_id", deviceId)
+
+        // Log Event
+        val bundle = android.os.Bundle().apply {
+            putString("user_email", user.email)
+            putString("user_name", user.displayName)
+            putString("device_id", deviceId)
+            putString("device_model", "$deviceManufacturer $deviceModel")
+            putString("login_timestamp", SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()))
+        }
+        fa.logEvent("login_success", bundle)
+    }
+
+    fun trackDeviceRegistration(context: Context) {
+        val fa = getAnalytics(context) ?: return
+        val deviceModel = Build.MODEL
+        val deviceManufacturer = Build.MANUFACTURER
+
+        val bundle = android.os.Bundle().apply {
+            putString("device_id", deviceId)
+            putString("device_model", "$deviceManufacturer $deviceModel")
+            putString("registered_timestamp", SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()))
+        }
+        fa.logEvent("device_registered", bundle)
+    }
+
+    fun checkRemoteRestrictions(context: Context) {
+        if (deviceId.isEmpty()) {
+            deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: ""
+        }
+        try {
+            val remoteConfig = FirebaseRemoteConfig.getInstance()
+            val configSettings = com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings.Builder()
+                .setMinimumFetchIntervalInSeconds(if (com.example.BuildConfig.DEBUG) 0 else 3600)
+                .build()
+            remoteConfig.setConfigSettingsAsync(configSettings)
+            
+            // Set default values
+            val defaults = mapOf("restricted_identities" to "[]")
+            remoteConfig.setDefaultsAsync(defaults)
+
+            remoteConfig.fetchAndActivate().addOnCompleteListener { task ->
+                val restrictedIdentitiesJson = remoteConfig.getString("restricted_identities")
+                processRestrictions(context, restrictedIdentitiesJson)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun processRestrictions(context: Context, restrictedJson: String) {
+        val restrictedList = mutableListOf<String>()
+        try {
+            val jsonArray = JSONArray(restrictedJson)
+            for (i in 0 until jsonArray.length()) {
+                restrictedList.add(jsonArray.getString(i).trim().lowercase())
+            }
+        } catch (e: Exception) {
+            // Fallback: parse as comma-separated
+            restrictedJson.split(",").forEach {
+                if (it.trim().isNotEmpty()) {
+                    restrictedList.add(it.trim().lowercase())
+                }
+            }
+        }
+
+        val currentEmail = _userSession.value?.email?.trim()?.lowercase() ?: ""
+        val currentDeviceId = deviceId.trim().lowercase()
+
+        val isBlocked = (currentEmail.isNotEmpty() && restrictedList.contains(currentEmail)) ||
+                        (currentDeviceId.isNotEmpty() && restrictedList.contains(currentDeviceId))
+
+        if (isBlocked) {
+            _isUserBlocked.value = true
+            // Clear credentials from preferences
+            handleGoogleSignOut(context)
+        } else {
+            _isUserBlocked.value = false
+        }
+    }
 
     fun handleGoogleSignIn(user: GoogleUser, context: Context) {
         _userSession.value = user

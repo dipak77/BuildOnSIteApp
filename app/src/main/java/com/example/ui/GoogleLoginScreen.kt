@@ -40,7 +40,7 @@ import com.google.android.gms.common.api.ApiException
 fun GoogleLoginScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     val dark = viewModel.darkThemeEnabled
-    val allowDemoIdentity = com.example.BuildConfig.DEBUG
+    val allowDemoIdentity = false
     
     // UI controller states
     var isConnecting by remember { mutableStateOf(false) }
@@ -110,6 +110,7 @@ fun GoogleLoginScreen(viewModel: MainViewModel) {
                     isGuest = false
                 )
                 viewModel.handleGoogleSignIn(user, context)
+                viewModel.trackUserLogin(context, user)
                 Toast.makeText(context, "Welcome, ${user.displayName}!", Toast.LENGTH_SHORT).show()
             } else {
                 showAccountChooser = allowDemoIdentity
