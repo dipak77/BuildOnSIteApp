@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
@@ -8,6 +10,14 @@ plugins {
 }
 
 android {
+  val localProperties = Properties()
+  val localPropertiesFile = rootProject.file("local.properties")
+  if (localPropertiesFile.exists()) {
+    val stream = localPropertiesFile.inputStream()
+    localProperties.load(stream)
+    stream.close()
+  }
+
   namespace = "com.aistudio.constructpro.kgrmqd"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
@@ -23,11 +33,11 @@ android {
 
   signingConfigs {
     create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-      storeFile = file(keystorePath)
-      storePassword = System.getenv("STORE_PASSWORD")
-      keyAlias = "upload"
-      keyPassword = System.getenv("KEY_PASSWORD")
+      val keystorePath = localProperties.getProperty("RELEASE_KEYSTORE_PATH") ?: System.getenv("KEYSTORE_PATH") ?: "my-upload-key.jks"
+      storeFile = rootProject.file(keystorePath)
+      storePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD") ?: System.getenv("STORE_PASSWORD")
+      keyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS") ?: System.getenv("KEY_ALIAS") ?: "upload"
+      keyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD") ?: System.getenv("KEY_PASSWORD")
     }
     create("debugConfig") {
       storeFile = file("${rootDir}/debug.keystore")
