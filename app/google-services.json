@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "970298420983-2d158618ipn2g61k0286p60sp8pm4qfm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aistudio.constructpro.kgrmqd",
+            "certificate_hash": "2145b900945abe0a2149288ce6e8c385a7bc5cf3"
+          }
+        },
+        {
           "client_id": "970298420983-e4om6em7f4uq7ssv76r7dretc53e78hq.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -27,6 +35,14 @@
           "android_info": {
             "package_name": "com.aistudio.constructpro.kgrmqd",
             "certificate_hash": "bd71a8af844319de83ea43d0409589a94b9d5f23"
+          }
+        },
+        {
+          "client_id": "970298420983-p1dm6rs90u5r1s1autkgngb5n4ihlv7d.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aistudio.constructpro.kgrmqd",
+            "certificate_hash": "d0537d692fbe761df58b0a7268ab7b76ac22adf7"
           }
         },
         {
