@@ -4,8 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ConstructPro - Construction Site, Ledger & Team Management</title>
-    <meta name="description" content="Manage construction cash flow ledger, site tasks, and worker attendance in one secure app with real-time analytics.">
+    <meta name="description" content="ConstructPro is an all-in-one construction management app for cash ledger tracking, site tasks, worker attendance, payroll, reports, and secure cloud-backed operations.">
+    <meta name="keywords" content="construction app, site management, ledger app, attendance app, payroll management, contractor app, construction dashboard, project management">
+    <meta name="theme-color" content="#0B1220">
+    <link rel="canonical" href="index.html">
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
     <!-- FontAwesome for beautiful icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -14,132 +18,478 @@
     <!-- Header / Navigation -->
     <header>
         <div class="nav-container">
-            <a href="index.html" class="logo-section">
+            <a href="index.html" class="logo-section" aria-label="ConstructPro home">
                 <span class="logo-text">Construct</span>
                 <span class="logo-badge">PRO</span>
             </a>
+
             <ul class="nav-links">
                 <li><a href="index.html" class="active">Home</a></li>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#security">Security</a></li>
+                <li><a href="#faq">FAQ</a></li>
                 <li><a href="privacy.html">Privacy Policy</a></li>
                 <li><a href="support.html">Support</a></li>
                 <li><a href="terms.html">Terms</a></li>
             </ul>
-            <a href="https://play.google.com/store/apps/details?id=com.aistudio.constructpro.kgrmqd" class="btn btn-primary" target="_blank">
+
+            <a href="https://play.google.com/store/apps/details?id=com.aistudio.constructpro.kgrmqd"
+               class="btn btn-primary"
+               target="_blank"
+               rel="noopener noreferrer">
                 <i class="fa-brands fa-google-play"></i> Download
             </a>
         </div>
     </header>
 
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="hero-content">
-            <h1>Unified Site Management for Construction Teams</h1>
-            <p>
-                Empower your contractors, developers, and site engineers with offline-first cash ledger tracking, worker attendance logs, customized task boards, and remote cloud security.
-            </p>
-            <div class="hero-actions">
-                <a href="https://play.google.com/store/apps/details?id=com.aistudio.constructpro.kgrmqd" class="btn btn-primary btn-lg" target="_blank">
-                    <i class="fa-brands fa-google-play"></i> Get on Google Play
-                </a>
-                <a href="support.html" class="btn btn-secondary btn-lg">
-                    Contact Support
-                </a>
+    <main>
+
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="hero-content">
+                <div class="hero-kicker">
+                    <span class="hero-pill"><i class="fa-solid fa-screwdriver-wrench"></i> Built for Contractors & Site Teams</span>
+                </div>
+
+                <h1>Complete Construction Site, Ledger & Workforce Management</h1>
+
+                <p>
+                    Manage cash flow, worker attendance, payroll, task progress, site activity, and reports from one secure application designed for construction professionals.
+                </p>
+
+                <div class="hero-actions">
+                    <a href="https://play.google.com/store/apps/details?id=com.aistudio.constructpro.kgrmqd"
+                       class="btn btn-primary btn-lg"
+                       target="_blank"
+                       rel="noopener noreferrer">
+                        <i class="fa-brands fa-google-play"></i> Get on Google Play
+                    </a>
+                    <a href="support.html" class="btn btn-secondary btn-lg">
+                        <i class="fa-solid fa-headset"></i> Contact Support
+                    </a>
+                </div>
+
+                <div class="hero-meta">
+                    <div class="hero-meta-item">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>Offline-first workflow</span>
+                    </div>
+                    <div class="hero-meta-item">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>Secure Google sign-in</span>
+                    </div>
+                    <div class="hero-meta-item">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>PDF / CSV reports</span>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="hero-preview">
-            <!-- Glassmorphic Device Mockup -->
-            <div class="device-mockup">
-                <div class="device-screen-mock">
-                    <div class="device-logo" style="margin-top: 2rem;">
-                        <i class="fa-solid fa-trowel-bricks" style="font-size: 2rem; color: #00D4FF;"></i>
-                    </div>
-                    <div style="text-align: center; margin-top: 1rem;">
-                        <h3 style="font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 800;">ConstructPro</h3>
-                        <p style="font-size: 0.75rem; color: #94A3B8; margin-top: 0.25rem;">Unified Workspace Client</p>
-                    </div>
-                    <div style="width: 100%; padding: 1rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; margin: 2rem 0;">
-                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #94A3B8; margin-bottom: 0.5rem;">
-                            <span>NET CASH BALANCE</span>
-                            <span style="color: #00FF87;">LIVE</span>
+
+            <div class="hero-preview">
+                <!-- Glassmorphic Device Mockup -->
+                <div class="device-mockup">
+                    <div class="device-screen-mock">
+                        <div class="device-logo" style="margin-top: 2rem;">
+                            <i class="fa-solid fa-trowel-bricks" style="font-size: 2rem; color: #00D4FF;"></i>
                         </div>
-                        <h4 style="font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 800; color: #00FF87;">₹4,82,500.00</h4>
-                    </div>
-                    <div style="width: 100%; display: flex; flex-direction: column; gap: 0.50rem; margin-bottom: 2rem;">
-                        <div style="height: 6px; width: 100%; background: rgba(255,255,255,0.05); border-radius: 3px;">
-                            <div style="height: 100%; width: 75%; background: var(--accent-cyan); border-radius: 3px;"></div>
+
+                        <div style="text-align: center; margin-top: 1rem;">
+                            <h3 style="font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 800;">ConstructPro</h3>
+                            <p style="font-size: 0.75rem; color: #94A3B8; margin-top: 0.25rem;">Construction Workspace Dashboard</p>
                         </div>
-                        <span style="font-size: 0.65rem; color: #94A3B8; text-align: right;">Project Completion: 75%</span>
+
+                        <div style="width: 100%; padding: 1rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; margin: 1.5rem 0;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #94A3B8; margin-bottom: 0.5rem;">
+                                <span>NET CASH BALANCE</span>
+                                <span style="color: #00FF87;">LIVE</span>
+                            </div>
+                            <h4 style="font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 800; color: #00FF87;">₹4,82,500.00</h4>
+                        </div>
+
+                        <div style="width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem;">
+                            <div style="padding: 0.85rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px;">
+                                <div style="font-size: 0.65rem; color: #94A3B8; margin-bottom: 0.25rem;">ACTIVE SITES</div>
+                                <div style="font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 800;">08</div>
+                            </div>
+                            <div style="padding: 0.85rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px;">
+                                <div style="font-size: 0.65rem; color: #94A3B8; margin-bottom: 0.25rem;">WORKERS PRESENT</div>
+                                <div style="font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 800;">124</div>
+                            </div>
+                            <div style="padding: 0.85rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px;">
+                                <div style="font-size: 0.65rem; color: #94A3B8; margin-bottom: 0.25rem;">OPEN TASKS</div>
+                                <div style="font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 800;">14</div>
+                            </div>
+                            <div style="padding: 0.85rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px;">
+                                <div style="font-size: 0.65rem; color: #94A3B8; margin-bottom: 0.25rem;">PROJECT PROGRESS</div>
+                                <div style="font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 800;">84%</div>
+                            </div>
+                        </div>
+
+                        <div style="width: 100%; display: flex; flex-direction: column; gap: 0.50rem; margin-bottom: 1.25rem;">
+                            <div style="height: 6px; width: 100%; background: rgba(255,255,255,0.05); border-radius: 3px;">
+                                <div style="height: 100%; width: 84%; background: var(--accent-cyan); border-radius: 3px;"></div>
+                            </div>
+                            <span style="font-size: 0.65rem; color: #94A3B8; text-align: right;">Project Completion: 84%</span>
+                        </div>
+
+                        <div style="width: 100%; padding: 1rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 0.75rem; color: #94A3B8;">TODAY'S EXPENSES</span>
+                                <span style="font-family: 'Outfit', sans-serif; font-weight: 800;">₹24,000</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Features Section -->
-    <section class="features-section">
-        <div class="section-header">
-            <h2>Engineered For Construction Sites</h2>
-            <p>Every tool you need to run, track, and scale your field operations securely.</p>
-        </div>
-        <div class="features-grid">
-            
-            <!-- Feature 1: Ledger -->
-            <div class="feature-card">
-                <div class="feature-icon-box">
-                    <i class="fa-solid fa-wallet"></i>
-                </div>
-                <h3>Chronicle Cash Ledger</h3>
+        <!-- App Overview -->
+        <section class="overview-section">
+            <div class="section-header">
+                <h2>Designed For Construction Professionals</h2>
                 <p>
-                    Log Money In and Money Out transactions locally. Group records by payment date, classify by cost codes, search descriptors, and generate premium PDF party balance statements or spreadsheet CSVs.
+                    ConstructPro helps contractors, builders, site engineers, and project teams manage daily operations with clarity, speed, and security.
                 </p>
             </div>
 
-            <!-- Feature 2: Tasks -->
-            <div class="feature-card violet">
-                <div class="feature-icon-box">
-                    <i class="fa-solid fa-list-check"></i>
+            <div class="overview-grid">
+                <div class="overview-card">
+                    <i class="fa-solid fa-building-circle-check"></i>
+                    <h3>Built for Sites</h3>
+                    <p>Created specifically for construction workflows, field tracking, and project-level coordination.</p>
                 </div>
-                <h3>Velocity Tasks</h3>
+                <div class="overview-card">
+                    <i class="fa-solid fa-mobile-screen-button"></i>
+                    <h3>Mobile Friendly</h3>
+                    <p>Clean, practical mobile experience for on-site work, quick updates, and fast daily usage.</p>
+                </div>
+                <div class="overview-card">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <h3>Secure Cloud Support</h3>
+                    <p>Use cloud-backed security controls for access management and safer business operations.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Highlights / Statistics -->
+        <section class="stats-section">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Cash Ledger</h3>
+                    <p>Track income, expenses, advances, and balances with clear financial records.</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Attendance</h3>
+                    <p>Record worker presence, half-day, absent, and overtime entries with ease.</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Payroll</h3>
+                    <p>Maintain wage calculations, paid amounts, and pending salary balances.</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Reports</h3>
+                    <p>Generate exportable summaries and statements for review and record keeping.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="features-section">
+            <div class="section-header">
+                <h2>Engineered For Construction Sites</h2>
+                <p>Every tool you need to run, track, and scale your field operations securely.</p>
+            </div>
+
+            <div class="features-grid">
+
+                <!-- Feature 1 -->
+                <div class="feature-card">
+                    <div class="feature-icon-box">
+                        <i class="fa-solid fa-wallet"></i>
+                    </div>
+                    <h3>Smart Cash Ledger</h3>
+                    <p>
+                        Record money in and money out transactions, track party-wise balances, categorize entries by purpose, search records quickly, and maintain a clear daily cash history.
+                    </p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="feature-card violet">
+                    <div class="feature-icon-box">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                    <h3>Task & Work Tracking</h3>
+                    <p>
+                        Assign construction tasks to supervisors and team members, set due dates, mark progress status, and monitor overdue work to keep project activity organized.
+                    </p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="feature-card green">
+                    <div class="feature-icon-box">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <h3>Attendance & Payroll</h3>
+                    <p>
+                        Mark worker attendance as present, absent, half-day, or overtime. Calculate wages, track paid amounts, and review pending salary balances accurately.
+                    </p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="feature-card pink">
+                    <div class="feature-icon-box">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <h3>Secure Access Control</h3>
+                    <p>
+                        Protect app access with Google sign-in, restricted user access, and cloud-based security controls to help keep project data safe and private.
+                    </p>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="feature-card">
+                    <div class="feature-icon-box">
+                        <i class="fa-solid fa-diagram-project"></i>
+                    </div>
+                    <h3>Site Management</h3>
+                    <p>
+                        Manage multiple construction sites, organize project records by location, and keep site-level operations grouped in one place.
+                    </p>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="feature-card violet">
+                    <div class="feature-icon-box">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <h3>Analytics Dashboard</h3>
+                    <p>
+                        Review financial performance, attendance trends, task progress, and project completion status using simple visual summaries.
+                    </p>
+                </div>
+
+                <!-- Feature 7 -->
+                <div class="feature-card green">
+                    <div class="feature-icon-box">
+                        <i class="fa-solid fa-file-export"></i>
+                    </div>
+                    <h3>Reports & Export</h3>
+                    <p>
+                        Generate professional PDF statements and CSV exports for accounting, record keeping, and sharing project summaries.
+                    </p>
+                </div>
+
+                <!-- Feature 8 -->
+                <div class="feature-card pink">
+                    <div class="feature-icon-box">
+                        <i class="fa-solid fa-cloud"></i>
+                    </div>
+                    <h3>Cloud Backup & Sync</h3>
+                    <p>
+                        Use secure cloud support for better data protection, remote access control, and reliable app usage across devices.
+                    </p>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- App Details Section -->
+        <section class="details-section">
+            <div class="section-header">
+                <h2>What ConstructPro Helps You Manage</h2>
                 <p>
-                    Assign construction tasks to supervisors, track progress statuses (To Do, In Progress, Done), specify due dates, and monitor overdue warnings to keep works on schedule.
+                    One app for construction cash tracking, site coordination, attendance, and daily operational control.
                 </p>
             </div>
 
-            <!-- Feature 3: Attendance -->
-            <div class="feature-card green">
-                <div class="feature-icon-box">
-                    <i class="fa-solid fa-users"></i>
+            <div class="details-grid">
+                <div class="details-card">
+                    <h3><i class="fa-solid fa-sack-dollar"></i> Financial Management</h3>
+                    <ul>
+                        <li>Cash in and cash out tracking</li>
+                        <li>Party ledger records</li>
+                        <li>Expense monitoring</li>
+                        <li>Balance calculation</li>
+                        <li>Daily transaction history</li>
+                    </ul>
                 </div>
-                <h3>Crew Attendance & Payroll</h3>
-                <p>
-                    Mark daily worker check-ins (Present, Absent, Half Day, Overtime). Compute dynamic payroll payouts based on wage rates, track paid wages, and review pending balances.
-                </p>
+
+                <div class="details-card">
+                    <h3><i class="fa-solid fa-helmet-safety"></i> Workforce Management</h3>
+                    <ul>
+                        <li>Attendance marking</li>
+                        <li>Half-day and overtime support</li>
+                        <li>Worker wage tracking</li>
+                        <li>Pending balance review</li>
+                        <li>Payroll records</li>
+                    </ul>
+                </div>
+
+                <div class="details-card">
+                    <h3><i class="fa-solid fa-clipboard-list"></i> Project Operations</h3>
+                    <ul>
+                        <li>Task assignment</li>
+                        <li>Due date tracking</li>
+                        <li>Progress status control</li>
+                        <li>Site-level organization</li>
+                        <li>Completion monitoring</li>
+                    </ul>
+                </div>
+
+                <div class="details-card">
+                    <h3><i class="fa-solid fa-receipt"></i> Reporting & Records</h3>
+                    <ul>
+                        <li>PDF report generation</li>
+                        <li>CSV export support</li>
+                        <li>Searchable records</li>
+                        <li>Statement generation</li>
+                        <li>Business documentation</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- How it Works -->
+        <section class="workflow-section">
+            <div class="section-header">
+                <h2>How ConstructPro Works</h2>
+                <p>A simple flow that helps your team stay organized from site setup to reporting.</p>
             </div>
 
-            <!-- Feature 4: Security -->
-            <div class="feature-card pink">
-                <div class="feature-icon-box">
-                    <i class="fa-solid fa-shield-halved"></i>
+            <div class="workflow-grid">
+                <div class="workflow-step">
+                    <span class="workflow-number">01</span>
+                    <h3>Create Site</h3>
+                    <p>Start by creating your construction site or project entry.</p>
                 </div>
-                <h3>Remote Security Lock</h3>
-                <p>
-                    Protect app access using strict Google Sign-in. Restrict unauthorized users, block specific email identities, or deregister devices remotely from the Firebase Console.
-                </p>
+                <div class="workflow-step">
+                    <span class="workflow-number">02</span>
+                    <h3>Add Workers</h3>
+                    <p>Record team members, laborers, and site supervisors.</p>
+                </div>
+                <div class="workflow-step">
+                    <span class="workflow-number">03</span>
+                    <h3>Track Attendance</h3>
+                    <p>Mark present, absent, half-day, and overtime entries daily.</p>
+                </div>
+                <div class="workflow-step">
+                    <span class="workflow-number">04</span>
+                    <h3>Manage Ledger</h3>
+                    <p>Record income and expenses to maintain accurate balances.</p>
+                </div>
+                <div class="workflow-step">
+                    <span class="workflow-number">05</span>
+                    <h3>Assign Tasks</h3>
+                    <p>Keep site work organized with deadlines and progress tracking.</p>
+                </div>
+                <div class="workflow-step">
+                    <span class="workflow-number">06</span>
+                    <h3>Generate Reports</h3>
+                    <p>Export summaries, statements, and records whenever needed.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Security Section -->
+        <section id="security" class="security-section">
+            <div class="section-header">
+                <h2>Security & Privacy Controls</h2>
+                <p>ConstructPro includes secure access and cloud-based protection features for your project data.</p>
             </div>
 
-        </div>
-    </section>
+            <div class="security-grid">
+                <div class="security-card">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    <h3>Google Sign-In</h3>
+                    <p>Use secure authentication to reduce unauthorized access.</p>
+                </div>
+                <div class="security-card">
+                    <i class="fa-solid fa-user-shield"></i>
+                    <h3>Access Control</h3>
+                    <p>Restrict app access and manage allowed identities securely.</p>
+                </div>
+                <div class="security-card">
+                    <i class="fa-solid fa-database"></i>
+                    <h3>Cloud Security</h3>
+                    <p>Use Firebase-backed security controls for safer app data handling.</p>
+                </div>
+                <div class="security-card">
+                    <i class="fa-solid fa-lock"></i>
+                    <h3>Protected Data</h3>
+                    <p>Keep construction records, balances, and attendance data organized and protected.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ Section -->
+        <section id="faq" class="faq-section">
+            <div class="section-header">
+                <h2>Frequently Asked Questions</h2>
+                <p>Common questions about using ConstructPro.</p>
+            </div>
+
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <h3>Can I use ConstructPro without internet?</h3>
+                    <p>Yes. Core app usage is designed to support offline-first workflow so you can work on site more reliably.</p>
+                </div>
+
+                <div class="faq-item">
+                    <h3>Can I manage more than one construction site?</h3>
+                    <p>Yes. ConstructPro is designed to help you organize multiple sites and project records in one app.</p>
+                </div>
+
+                <div class="faq-item">
+                    <h3>Can I track worker attendance and payroll?</h3>
+                    <p>Yes. You can mark attendance, calculate wages, and review paid or pending balances.</p>
+                </div>
+
+                <div class="faq-item">
+                    <h3>Can I generate reports?</h3>
+                    <p>Yes. The app supports reporting and exporting for better business record keeping.</p>
+                </div>
+
+                <div class="faq-item">
+                    <h3>Is my data secure?</h3>
+                    <p>ConstructPro uses secure sign-in and cloud-based security controls to help protect your information.</p>
+                </div>
+
+                <div class="faq-item">
+                    <h3>Who is this app for?</h3>
+                    <p>It is intended for contractors, builders, site engineers, project managers, and construction teams.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Download CTA -->
+        <section class="download-section">
+            <div class="download-box">
+                <h2>Ready To Digitize Your Construction Business?</h2>
+                <p>
+                    Track cash flow, manage workers, organize tasks, and monitor site progress in one secure app.
+                </p>
+                <a href="https://play.google.com/store/apps/details?id=com.aistudio.constructpro.kgrmqd"
+                   class="btn btn-primary btn-lg"
+                   target="_blank"
+                   rel="noopener noreferrer">
+                    <i class="fa-brands fa-google-play"></i> Download on Google Play
+                </a>
+            </div>
+        </section>
+
+    </main>
 
     <!-- Footer -->
     <footer>
         <div class="footer-container">
             <div class="footer-top">
-                <a href="index.html" class="logo-section">
+                <a href="index.html" class="logo-section" aria-label="ConstructPro home">
                     <span class="logo-text">Construct</span>
                     <span class="logo-badge">PRO</span>
                 </a>
                 <span style="color: #94A3B8; font-size: 0.9rem;">Empowering contractors and engineers worldwide.</span>
             </div>
+
             <div class="footer-bottom">
                 <p>&copy; 2026 ConstructPro. All rights reserved.</p>
                 <div class="footer-bottom-links">
